@@ -1,5 +1,5 @@
 /// GraphQL module for the financial API
-/// 
+///
 /// Provides comprehensive GraphQL schema, resolvers, and types
 /// for portfolio and debt management operations.
 

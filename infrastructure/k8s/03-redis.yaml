@@ -28,26 +28,26 @@ data:
     # Redis production configuration
     bind 0.0.0.0
     port 6379
-    
+
     # Security
     protected-mode yes
-    
+
     # Persistence
     appendonly yes
     appendfsync everysec
     auto-aof-rewrite-percentage 100
     auto-aof-rewrite-min-size 64mb
-    
+
     # Memory management
     maxmemory-policy allkeys-lru
-    
+
     # Logging
     loglevel notice
-    
+
     # Performance
     tcp-keepalive 300
     timeout 0
-    
+
     # Disable dangerous commands
     rename-command FLUSHDB ""
     rename-command FLUSHALL ""

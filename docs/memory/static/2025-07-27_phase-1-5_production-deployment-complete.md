@@ -30,7 +30,7 @@ After completing the unified GraphQL API integration (Phase 1.4), comprehensive 
 ```yaml
 # Production-ready services with auto-scaling
 - PostgreSQL: Multi-database persistent storage
-- Redis: Secure caching with authentication  
+- Redis: Secure caching with authentication
 - SuperTokens: Production authentication service
 - Hasura GraphQL: API gateway (2-10 replicas)
 - Firefly III: Financial management platform
@@ -96,7 +96,7 @@ Prometheus:
   retention: 30 days
   storage: 50Gi
   scrape_interval: 15s
-  
+
 Grafana:
   dashboards: 3 comprehensive dashboards
   alerting: 12 critical alerts

@@ -9,40 +9,40 @@ graph TB
     %% User Layer
     User[👤 User] --> WebApp[🌐 Web App<br/>Next.js 15]
     User --> MobileApp[📱 Mobile App<br/>React Native<br/><i>v2.0+</i>]
-    
+
     %% Authentication Layer (UPDATED July 27, 2025)
     WebApp --> SuperTokens[🔐 SuperTokens Core<br/>Self-Hosted Auth<br/>Port: 3567]
     MobileApp --> SuperTokens
     SuperTokens --> JWT[🎫 JWT with Hasura Claims<br/>JWKS Endpoint]
-    
+
     %% API Gateway Layer
     WebApp --> Hasura[⚡ Hasura GraphQL<br/>API Gateway + JWT Verification<br/>Port: 8081]
     MobileApp --> Hasura
     JWT --> Hasura
-    
+
     %% Core Services Layer
     Hasura --> PostgreSQL[(🗄️ PostgreSQL<br/>Supabase/Self-hosted<br/>Port: 5432)]
     FireflyAPI[🔥 Firefly III API<br/>Personal Finance<br/>Port: 8082] --> PostgreSQL
     RustFinancial[🦀 Rust Financial Engine<br/>Bank-Grade Calculations<br/>Port: 8080] --> Hasura
-    
+
     %% AI & Processing Layer
     AIEngine[🧠 AI Engine<br/>Finance Brain<br/>Port: 8083] --> Hasura
     AIEngine --> RustFinancial
     AIEngine --> LLM[🤖 Local LLM<br/>Llama-based<br/>Financial Insights]
     AIEngine --> VectorDB[📊 Vector DB<br/>pgvector<br/>Transaction Embeddings]
-    
+
     %% External Data Sources
     BankAPIs[🏦 Bank APIs<br/>OFX/PSD2] --> DataIngestion[📥 Data Ingestion<br/>AqBanking/Nordigen]
     DataIngestion --> FireflyAPI
-    
+
     %% Observability Layer
     Grafana[📈 Grafana<br/>Dashboards<br/>Port: 3000] --> PostgreSQL
     Grafana --> Prometheus[📊 Prometheus<br/>Metrics]
-    
+
     %% Caching Layer (NEW July 27, 2025)
     Redis[📦 Redis<br/>Session Cache<br/>Port: 6379] --> SuperTokens
     Redis --> WebApp
-    
+
     %% Infrastructure Layer (UPDATED)
     subgraph "Docker Network"
         SuperTokens
@@ -55,7 +55,7 @@ graph TB
         Prometheus
         Redis
     end
-    
+
     %% Styling
     classDef userLayer fill:#e1f5fe
     classDef authLayer fill:#fff3e0
@@ -63,7 +63,7 @@ graph TB
     classDef serviceLayer fill:#e8f5e8
     classDef dataLayer fill:#fff8e1
     classDef infraLayer fill:#fce4ec
-    
+
     class User,WebApp,MobileApp userLayer
     class SuperTokens,JWT authLayer
     class Hasura apiLayer
@@ -335,13 +335,13 @@ graph TD
     G --> I
     H[Frontend<br/>Port 3000] --> B
     H --> D
-    
+
     classDef database fill:#fff8e1
     classDef auth fill:#fff3e0
     classDef service fill:#e8f5e8
     classDef cache fill:#fce4ec
     classDef frontend fill:#e1f5fe
-    
+
     class A database
     class B auth
     class C,D,E,G,I service
@@ -386,15 +386,15 @@ graph TD
     A[PostgreSQL<br/>74 Financial Tables] --> B[Firefly III<br/>Personal Finance Manager]
     B --> C[Hasura GraphQL<br/>16 Tracked Tables]
     C --> D[Next.js Frontend<br/>Live Data Display]
-    
+
     E[Sample User<br/>test@atlas.local] --> F[Test Account<br/>$1,500 Balance]
     F --> G[Live Dashboard<br/>Real Data]
-    
+
     classDef database fill:#fff8e1
     classDef service fill:#e8f5e8
     classDef frontend fill:#e1f5fe
     classDef data fill:#f3e5f5
-    
+
     class A database
     class B,C service
     class D,G frontend
@@ -411,9 +411,9 @@ graph LR
     E --> F[Authentication ✅]
     F --> G[Performance ✅]
     G --> H[PRODUCTION READY ✅]
-    
+
     classDef success fill:#ccffcc
-    
+
     class A,B,C,D,E,F,G,H success
 ```
 
@@ -434,25 +434,25 @@ graph LR
 graph TB
     %% User Layer
     User[👤 User] --> Frontend[🌐 Next.js Frontend<br/>http://localhost:3000<br/>✅ LIVE DATA]
-    
+
     %% API Layer
     Frontend --> GraphQL[⚡ Hasura GraphQL<br/>http://localhost:8081<br/>✅ 16 TABLES TRACKED]
     Frontend --> Auth[🔐 Keycloak<br/>http://localhost:8080<br/>✅ USER MANAGEMENT]
-    
+
     %% Data Layer
     GraphQL --> Database[(🗄️ PostgreSQL<br/>localhost:5432<br/>✅ 74 FINANCIAL TABLES)]
     Finance[🔥 Firefly III<br/>http://localhost:8082<br/>✅ PERSONAL FINANCE] --> Database
-    
+
     %% Supporting Services
     Cache[📦 Redis<br/>localhost:6379<br/>✅ SESSION STORAGE] --> Frontend
     Monitor[📈 Grafana<br/>http://localhost:3001<br/>✅ DASHBOARDS] --> Database
-    
+
     %% Live Data Examples
     SampleUser[👤 test@atlas.local<br/>✅ LIVE USER] --> SampleAccount[💰 Test Checking<br/>$1,500.00<br/>✅ LIVE ACCOUNT]
-    
+
     classDef live fill:#ccffcc
     classDef ready fill:#ffffcc
-    
+
     class Frontend,GraphQL,Database,Finance,Cache,Monitor,SampleUser,SampleAccount live
     class Auth ready
 ```
@@ -465,8 +465,8 @@ graph TB
 SELECT email, name FROM users WHERE email = 'test@atlas.local';
 -- Result: test@atlas.local | Test User Atlas
 
--- LIVE ACCOUNT DATA  
-SELECT name, account_type, virtual_balance FROM accounts 
+-- LIVE ACCOUNT DATA
+SELECT name, account_type, virtual_balance FROM accounts
 JOIN account_types ON accounts.account_type_id = account_types.id;
 -- Result: Test Checking Account | Asset account | 1500.00
 ```
@@ -507,20 +507,20 @@ query GetUserAccounts($email: String!) {
 graph TB
     A[Dashboard Page] --> B[useAuthentication Hook<br/>✅ Backend User Lookup]
     A --> C[useFinancialData Hook<br/>✅ Live GraphQL Queries]
-    
+
     B --> D[Apollo Client<br/>✅ Live Hasura Connection]
     C --> D
-    
+
     D --> E[GraphQL Fragments<br/>✅ Real Schema Aligned]
     D --> F[Type System<br/>✅ Generated from Live Schema]
-    
+
     G[Account Components] --> H[Live Account Data<br/>✅ Real Balances]
     I[Transaction Components] --> J[Live Transaction Data<br/>✅ Real History]
-    
+
     classDef frontend fill:#e1f5fe
     classDef backend fill:#e8f5e8
     classDef data fill:#fff8e1
-    
+
     class A,G,I frontend
     class B,C,D backend
     class E,F,H,J data
@@ -532,7 +532,7 @@ graph TB
 ```bash
 # Service Health Verification (ALL PASSING)
 curl -f http://localhost:5432  # PostgreSQL: ✅ HEALTHY
-curl -f http://localhost:8081  # Hasura: ✅ HEALTHY  
+curl -f http://localhost:8081  # Hasura: ✅ HEALTHY
 curl -f http://localhost:8082  # Firefly III: ✅ HEALTHY
 curl -f http://localhost:8080  # Keycloak: ✅ RUNNING
 curl -f http://localhost:6379  # Redis: ✅ HEALTHY
@@ -545,14 +545,14 @@ curl -f http://localhost:3000  # Next.js: ✅ HEALTHY
 atlas_financial  -- Primary application database
 firefly          -- 74 financial tables (accounts, transactions, etc.)
 hasura           -- GraphQL metadata and permissions
-keycloak         -- Identity provider data  
+keycloak         -- Identity provider data
 grafana          -- Dashboard and analytics data
 ```
 
 ### Development-Production Parity Achieved
 **Context**: The development environment now mirrors production patterns:
 - ✅ Real database schemas (no mocks)
-- ✅ Actual API responses (no fixtures)  
+- ✅ Actual API responses (no fixtures)
 - ✅ Live authentication flows (no bypasses)
 - ✅ Production-equivalent performance
 - ✅ Full microservices integration
@@ -566,33 +566,33 @@ grafana          -- Dashboard and analytics data
 graph TB
     %% User Authentication Flow
     User[👤 User] --> Frontend[🌐 Next.js 15 Frontend<br/>SuperTokens React SDK<br/>http://localhost:3000<br/>✅ AUTHENTICATED UI]
-    
+
     %% Authentication Layer
     Frontend --> Auth[🔐 SuperTokens Core<br/>Self-Hosted Authentication<br/>http://localhost:3567<br/>✅ PCI-DSS 4.0 COMPLIANT]
     Auth --> JWT[🎫 JWT + JWKS<br/>Hasura Claims<br/>✅ <50ms VERIFICATION]
-    
+
     %% API Gateway with JWT
     Frontend --> GraphQL[⚡ Hasura GraphQL<br/>JWT Verification via JWKS<br/>http://localhost:8081<br/>✅ AUTHENTICATED QUERIES]
     JWT --> GraphQL
-    
+
     %% Data Layer with Isolation
     Auth --> AuthDB[(🗄️ SuperTokens Database<br/>Authentication Data<br/>✅ ISOLATED)]
     GraphQL --> FinanceDB[(🗄️ Firefly Database<br/>Financial Data<br/>✅ PROTECTED)]
-    
+
     %% Session Management
     SessionCache[📦 Redis Cache<br/>Session Storage<br/>localhost:6379<br/>✅ PERFORMANCE OPTIMIZED] --> Auth
     SessionCache --> Frontend
-    
+
     %% Supporting Services
     Finance[🔥 Firefly III<br/>Personal Finance Manager<br/>http://localhost:8082<br/>✅ INTEGRATED] --> FinanceDB
     Monitor[📈 Grafana<br/>System Monitoring<br/>http://localhost:3001<br/>✅ OBSERVABILITY] --> FinanceDB
-    
+
     classDef auth fill:#fff3e0
     classDef frontend fill:#e1f5fe
     classDef database fill:#fff8e1
     classDef service fill:#e8f5e8
     classDef cache fill:#fce4ec
-    
+
     class Auth,JWT auth
     class Frontend frontend
     class AuthDB,FinanceDB database
@@ -685,10 +685,10 @@ POST /api/auth/signup
 }
 // Returns: User created in supertokens database
 
-// ✅ WORKING - User can login  
+// ✅ WORKING - User can login
 POST /api/auth/signin
 {
-  "email": "test@atlas.local", 
+  "email": "test@atlas.local",
   "password": "securepassword123"
 }
 // Returns: JWT token with Hasura claims, HttpOnly cookie set
@@ -712,7 +712,7 @@ query GetUserData {
 #### PCI-DSS 4.0 Compliance Status
 ```
 Data Classification and Protection:
-├── Authentication Data (supertokens database) 
+├── Authentication Data (supertokens database)
 │   ├── User credentials: ✅ Encrypted with bcrypt
 │   ├── Session tokens: ✅ Secure random generation
 │   ├── User metadata: ✅ Field-level encryption
@@ -730,7 +730,7 @@ Security Event Tracking:
 ├── User registration events: ✅ Timestamped with IP
 ├── Authentication attempts: ✅ Success/failure logging
 ├── Session lifecycle: ✅ Creation, refresh, termination
-├── Permission changes: ✅ Role and access modifications  
+├── Permission changes: ✅ Role and access modifications
 ├── Data access patterns: ✅ GraphQL query audit trail
 └── Security incidents: ✅ Automated detection and alerting
 ```
@@ -772,10 +772,10 @@ graph LR
     A --> D[AI Insights Pipeline]
     A --> E[Advanced Features]
     A --> F[Mobile Development]
-    
+
     classDef complete fill:#ccffcc
     classDef ready fill:#ffffcc
-    
+
     class A complete
     class B,C,D,E,F ready
 ```

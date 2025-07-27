@@ -1,5 +1,5 @@
 /// Atlas Financial API Monitoring Module
-/// 
+///
 /// Comprehensive monitoring and observability for the financial API
 /// including Prometheus metrics, health checks, and performance tracking.
 
@@ -44,7 +44,7 @@ impl HealthCheck {
             },
         }
     }
-    
+
     pub fn with_database_check(mut self, status: String) -> Self {
         self.checks.database = Some(status);
         self

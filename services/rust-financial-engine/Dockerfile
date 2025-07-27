@@ -6,11 +6,11 @@ FROM rust:1.82-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache \
-    musl-dev \
-    openssl-dev \
-    openssl-libs-static \
-    pkgconfig \
-    curl
+    musl-dev=1.2.4_git20230717-r4 \
+    openssl-dev=3.1.4-r5 \
+    openssl-libs-static=3.1.4-r5 \
+    pkgconfig=0.29.2-r2 \
+    curl=8.5.0-r0
 
 # Set environment variables for static linking
 ENV RUSTFLAGS="-C target-feature=-crt-static"
@@ -38,9 +38,9 @@ FROM alpine:3.18
 
 # Install runtime dependencies
 RUN apk add --no-cache \
-    ca-certificates \
-    curl \
-    libgcc
+    ca-certificates=20240705-r0 \
+    curl=8.5.0-r0 \
+    libgcc=13.2.1_git20231014-r0
 
 # Create non-root user
 RUN addgroup -g 1001 -S atlas && \

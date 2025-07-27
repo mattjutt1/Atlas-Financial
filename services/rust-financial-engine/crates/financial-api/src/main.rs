@@ -1,8 +1,7 @@
 /// Atlas Financial API Server
-/// 
+///
 /// High-performance GraphQL API server for financial calculations
 /// Built with Axum, async-graphql, and Tokio for maximum concurrency
-
 use axum::{
     extract::State,
     http::{header, StatusCode},
@@ -54,14 +53,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Setup metrics
     let metrics_handle = setup_metrics()?;
-    
+
     // Initialize API service
     let api_service = ApiService::new(config.clone()).await?;
-    
+
     // Create GraphQL schema
     let schema = create_schema(api_service.clone()).await?;
 
-    info!("🎯 GraphQL schema created with {} types", schema.sdl().lines().count());
+    info!(
+        "🎯 GraphQL schema created with {} types",
+        schema.sdl().lines().count()
+    );
 
     // Setup CORS
     let cors = CorsLayer::new()
@@ -91,35 +93,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             config: config.clone(),
             api_service: api_service.clone(),
         })
-        .layer(
-            ServiceBuilder::new()
-                .layer(trace_layer)
-                .layer(cors)
-                .layer(axum::middleware::from_fn_with_state(
-                    config.clone(),
-                    auth_middleware,
-                ))
-        );
+        .layer(ServiceBuilder::new().layer(trace_layer).layer(cors).layer(
+            axum::middleware::from_fn_with_state(config.clone(), auth_middleware),
+        ));
 
     // Start server
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
-    
+
     info!("🎉 Atlas Financial API Server starting on {}", addr);
     info!("📊 GraphQL Playground available at http://{}/", addr);
     info!("🔍 Health check available at http://{}/health", addr);
     info!("📈 Metrics available at http://{}/metrics", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    
+
     info!("✅ Server successfully bound to {}", addr);
     info!("🚀 Atlas Financial API Server is now running!");
 
-    axum::serve(listener, app)
-        .await
-        .map_err(|e| {
-            warn!("Server error: {}", e);
-            e
-        })?;
+    axum::serve(listener, app).await.map_err(|e| {
+        warn!("Server error: {}", e);
+        e
+    })?;
 
     Ok(())
 }
@@ -185,9 +179,9 @@ async fn playground() -> Html<&'static str> {
                     {
                         endpoint: '/graphql',
                         query: `# Welcome to Atlas Financial API GraphQL Playground
-# 
+#
 # This is a comprehensive financial calculation API with precise decimal arithmetic
-# 
+#
 # Example queries:
 
 # Get debt optimization analysis
@@ -238,7 +232,9 @@ query GetPortfolioRisk {
 }
 
 /// Health check handler
-async fn health_check(State(state): State<AppState>) -> Result<axum::Json<serde_json::Value>, ApiError> {
+async fn health_check(
+    State(state): State<AppState>,
+) -> Result<axum::Json<serde_json::Value>, ApiError> {
     // Perform basic health checks
     let health_status = serde_json::json!({
         "status": "healthy",
@@ -260,11 +256,12 @@ async fn health_check(State(state): State<AppState>) -> Result<axum::Json<serde_
 /// Metrics handler for Prometheus
 async fn metrics_handler() -> Result<String, ApiError> {
     use prometheus::{Encoder, TextEncoder};
-    
+
     let encoder = TextEncoder::new();
     let metric_families = prometheus::gather();
-    
-    encoder.encode_to_string(&metric_families)
+
+    encoder
+        .encode_to_string(&metric_families)
         .map_err(|e| ApiError::Internal(format!("Failed to encode metrics: {}", e)))
 }
 

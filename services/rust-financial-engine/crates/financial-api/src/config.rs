@@ -1,5 +1,5 @@
 /// Configuration management for Atlas Financial API
-/// 
+///
 /// Loads configuration from environment variables with sensible defaults
 /// for development and production environments.
 
@@ -15,19 +15,19 @@ pub struct Config {
     pub host: String,
     pub port: u16,
     pub environment: Environment,
-    
+
     /// JWT authentication configuration
     pub jwt: JwtConfig,
-    
+
     /// GraphQL configuration
     pub graphql: GraphqlConfig,
-    
+
     /// Redis cache configuration
     pub redis: RedisConfig,
-    
+
     /// Monitoring and metrics
     pub monitoring: MonitoringConfig,
-    
+
     /// Performance settings
     pub performance: PerformanceConfig,
 }
@@ -127,13 +127,13 @@ pub struct PerformanceConfig {
 pub enum ConfigError {
     #[error("Environment variable not found: {var}")]
     MissingEnvVar { var: String },
-    
+
     #[error("Invalid environment variable value: {var} = {value}")]
     InvalidEnvVar { var: String, value: String },
-    
+
     #[error("Invalid URL: {url}")]
     InvalidUrl { url: String },
-    
+
     #[error("Parse error: {source}")]
     ParseError { source: String },
 }
@@ -158,10 +158,10 @@ impl Config {
         // JWT configuration
         let jwt_issuer = Self::get_env_var("JWT_ISSUER")
             .unwrap_or_else(|| "http://localhost:3567".to_string());
-        
+
         let jwt_audience = Self::get_env_var("JWT_AUDIENCE")
             .unwrap_or_else(|| "atlas-financial".to_string());
-        
+
         let jwks_url = Self::get_env_var("JWKS_URL")
             .unwrap_or_else(|| format!("{}/auth/jwt/jwks.json", jwt_issuer));
 
@@ -401,7 +401,7 @@ mod tests {
         assert_eq!("test".parse::<Environment>().unwrap(), Environment::Test);
         assert_eq!("dev".parse::<Environment>().unwrap(), Environment::Development);
         assert_eq!("prod".parse::<Environment>().unwrap(), Environment::Production);
-        
+
         assert!("invalid".parse::<Environment>().is_err());
     }
 
@@ -419,7 +419,7 @@ mod tests {
     fn test_config_validation() {
         let config = Config::test_config();
         assert!(config.validate().is_ok());
-        
+
         let mut invalid_config = config;
         invalid_config.jwt.issuer = "invalid-url".to_string();
         assert!(invalid_config.validate().is_err());
@@ -450,7 +450,7 @@ mod tests {
         env::remove_var("ENVIRONMENT");
         env::remove_var("HOST");
         env::remove_var("PORT");
-        
+
         let config = Config::from_env().unwrap();
         assert_eq!(config.environment, Environment::Development);
         assert_eq!(config.host, "0.0.0.0");

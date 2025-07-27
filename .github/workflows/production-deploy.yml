@@ -180,7 +180,7 @@ jobs:
         run: |
           # Wait for services to be ready
           kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=atlas-financial -n atlas-financial-staging --timeout=300s
-          
+
           # Run smoke tests
           npm run test:smoke -- --environment=staging
 
@@ -244,10 +244,10 @@ jobs:
           kubectl set image deployment/atlas-hasura atlas-hasura=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-hasura:${{ github.ref_name }} -n ${{ env.KUBE_NAMESPACE }}
           kubectl set image deployment/atlas-firefly atlas-firefly=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-firefly:${{ github.ref_name }} -n ${{ env.KUBE_NAMESPACE }}
           kubectl set image deployment/atlas-grafana atlas-grafana=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-grafana:${{ github.ref_name }} -n ${{ env.KUBE_NAMESPACE }}
-          
+
           # Apply all manifests
           kubectl apply -f infrastructure/k8s/ -n ${{ env.KUBE_NAMESPACE }}
-          
+
           # Wait for rollout to complete
           kubectl rollout status deployment -n ${{ env.KUBE_NAMESPACE }} --timeout=600s
 
@@ -255,7 +255,7 @@ jobs:
         run: |
           # Wait for all services to be ready
           kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=atlas-financial -n ${{ env.KUBE_NAMESPACE }} --timeout=600s
-          
+
           # Run comprehensive health checks
           npm run test:production-health
 
@@ -310,7 +310,7 @@ jobs:
         run: |
           # Wait 5 minutes for metrics to stabilize
           sleep 300
-          
+
           # Check key metrics and alert if anomalies detected
           python scripts/check-deployment-metrics.py \
             --prometheus-url="https://prometheus.atlas-financial.com" \

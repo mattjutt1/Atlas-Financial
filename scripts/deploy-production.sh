@@ -49,25 +49,25 @@ trap handle_error ERR
 # Utility functions
 check_prerequisites() {
     log_info "Checking prerequisites..."
-    
+
     # Check if kubectl is installed and configured
     if ! command -v kubectl &> /dev/null; then
         log_error "kubectl is not installed or not in PATH"
         exit 1
     fi
-    
+
     # Check if we can connect to the cluster
     if ! kubectl cluster-info &> /dev/null; then
         log_error "Cannot connect to Kubernetes cluster"
         exit 1
     fi
-    
+
     # Check if namespace exists
     if ! kubectl get namespace "$KUBE_NAMESPACE" &> /dev/null; then
         log_warning "Namespace $KUBE_NAMESPACE does not exist, creating it..."
         kubectl apply -f "$PROJECT_ROOT/infrastructure/k8s/00-namespace.yaml"
     fi
-    
+
     # Check if required secrets exist
     local required_secrets=("atlas-financial-secrets" "atlas-financial-tls")
     for secret in "${required_secrets[@]}"; do
@@ -77,14 +77,14 @@ check_prerequisites() {
             exit 1
         fi
     done
-    
+
     log_success "Prerequisites check passed"
 }
 
 # Validate configuration
 validate_configuration() {
     log_info "Validating configuration..."
-    
+
     # Check if all required environment variables are set
     local required_env_vars=(
         "POSTGRES_PASSWORD"
@@ -94,25 +94,25 @@ validate_configuration() {
         "FIREFLY_APP_KEY"
         "GRAFANA_ADMIN_PASSWORD"
     )
-    
+
     for var in "${required_env_vars[@]}"; do
         if [[ -z "${!var:-}" ]]; then
             log_error "Required environment variable $var is not set"
             exit 1
         fi
     done
-    
+
     # Validate Kubernetes manifests
     log_info "Validating Kubernetes manifests..."
     kubectl apply --dry-run=client -f "$PROJECT_ROOT/infrastructure/k8s/" -n "$KUBE_NAMESPACE" > /dev/null
-    
+
     log_success "Configuration validation passed"
 }
 
 # Create or update secrets
 update_secrets() {
     log_info "Updating secrets..."
-    
+
     # Update main secrets
     kubectl create secret generic atlas-financial-secrets \
         --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
@@ -125,14 +125,14 @@ update_secrets() {
         --from-literal=NEXTAUTH_SECRET="${NEXTAUTH_SECRET:-$(openssl rand -base64 32)}" \
         --namespace="$KUBE_NAMESPACE" \
         --dry-run=client -o yaml | kubectl apply -f -
-    
+
     log_success "Secrets updated successfully"
 }
 
 # Deploy infrastructure components
 deploy_infrastructure() {
     log_info "Deploying infrastructure components..."
-    
+
     # Deploy in order of dependencies
     local deployment_order=(
         "00-namespace.yaml"
@@ -140,24 +140,24 @@ deploy_infrastructure() {
         "02-postgresql.yaml"
         "03-redis.yaml"
     )
-    
+
     for manifest in "${deployment_order[@]}"; do
         log_info "Applying $manifest..."
         kubectl apply -f "$PROJECT_ROOT/infrastructure/k8s/$manifest"
     done
-    
+
     # Wait for infrastructure to be ready
     log_info "Waiting for infrastructure components to be ready..."
     kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=database -n "$KUBE_NAMESPACE" --timeout="$DEPLOYMENT_TIMEOUT"
     kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=cache -n "$KUBE_NAMESPACE" --timeout="$DEPLOYMENT_TIMEOUT"
-    
+
     log_success "Infrastructure components deployed successfully"
 }
 
 # Deploy application services
 deploy_applications() {
     log_info "Deploying application services..."
-    
+
     local deployment_order=(
         "04-supertokens.yaml"
         "05-hasura.yaml"
@@ -166,39 +166,39 @@ deploy_applications() {
         "08-prometheus.yaml"
         "11-development-placeholders.yaml"
     )
-    
+
     for manifest in "${deployment_order[@]}"; do
         log_info "Applying $manifest..."
         kubectl apply -f "$PROJECT_ROOT/infrastructure/k8s/$manifest"
     done
-    
+
     # Wait for application services to be ready
     log_info "Waiting for application services to be ready..."
     kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=authentication -n "$KUBE_NAMESPACE" --timeout="$DEPLOYMENT_TIMEOUT"
     kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=api-gateway -n "$KUBE_NAMESPACE" --timeout="$DEPLOYMENT_TIMEOUT"
     kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=finance-manager -n "$KUBE_NAMESPACE" --timeout="$DEPLOYMENT_TIMEOUT"
     kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=observability -n "$KUBE_NAMESPACE" --timeout="$DEPLOYMENT_TIMEOUT"
-    
+
     log_success "Application services deployed successfully"
 }
 
 # Deploy networking and security
 deploy_networking() {
     log_info "Deploying networking and security components..."
-    
+
     kubectl apply -f "$PROJECT_ROOT/infrastructure/k8s/09-ingress.yaml"
     kubectl apply -f "$PROJECT_ROOT/infrastructure/k8s/10-network-policies.yaml"
-    
+
     log_success "Networking and security components deployed successfully"
 }
 
 # Run health checks
 run_health_checks() {
     log_info "Running health checks..."
-    
+
     # Check if all deployments are ready
     kubectl rollout status deployment -n "$KUBE_NAMESPACE" --timeout="$DEPLOYMENT_TIMEOUT"
-    
+
     # Check service endpoints
     local services=(
         "atlas-postgres:5432"
@@ -209,11 +209,11 @@ run_health_checks() {
         "atlas-grafana:3000"
         "atlas-prometheus:9090"
     )
-    
+
     for service in "${services[@]}"; do
         local service_name="${service%%:*}"
         local port="${service##*:}"
-        
+
         log_info "Checking $service_name on port $port..."
         if kubectl exec -n "$KUBE_NAMESPACE" deployment/atlas-prometheus -- timeout 10 sh -c "nc -z $service_name $port"; then
             log_success "$service_name is accessible"
@@ -222,34 +222,34 @@ run_health_checks() {
             return 1
         fi
     done
-    
+
     log_success "All health checks passed"
 }
 
 # Rollback deployment
 rollback_deployment() {
     log_warning "Rolling back deployment..."
-    
+
     # Get all deployments and rollback
     local deployments=($(kubectl get deployments -n "$KUBE_NAMESPACE" -o name))
-    
+
     for deployment in "${deployments[@]}"; do
         log_info "Rolling back $deployment..."
         kubectl rollout undo "$deployment" -n "$KUBE_NAMESPACE" || true
     done
-    
+
     # Wait for rollback to complete
     kubectl rollout status deployment -n "$KUBE_NAMESPACE" --timeout=300s || true
-    
+
     log_warning "Rollback completed"
 }
 
 # Generate deployment report
 generate_report() {
     log_info "Generating deployment report..."
-    
+
     local report_file="deployment-report-$(date +%Y%m%d-%H%M%S).txt"
-    
+
     cat > "$report_file" << EOF
 Atlas Financial Production Deployment Report
 ===========================================
@@ -292,7 +292,7 @@ main() {
     log_info "Timestamp: $(date)"
     log_info "Kubernetes context: $(kubectl config current-context)"
     log_info "Target namespace: $KUBE_NAMESPACE"
-    
+
     check_prerequisites
     validate_configuration
     update_secrets
@@ -301,7 +301,7 @@ main() {
     deploy_networking
     run_health_checks
     generate_report
-    
+
     log_success "Atlas Financial production deployment completed successfully!"
     log_info "Access the application at: https://atlas-financial.com"
     log_info "Grafana dashboard: https://grafana.atlas-financial.com"

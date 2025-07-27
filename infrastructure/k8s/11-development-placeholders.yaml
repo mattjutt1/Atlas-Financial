@@ -143,11 +143,11 @@ data:
         <div class="container">
             <h1>🦀 Rust Financial Engine</h1>
             <div class="status">Development Placeholder</div>
-            
+
             <div class="info">
                 <h3>Current Status</h3>
                 <p>The Rust Financial Engine is currently under development. This placeholder service will be replaced with the production-ready Rust application once development is complete.</p>
-                
+
                 <h3>Planned Features</h3>
                 <div class="feature pending">⏳ High-performance financial calculations</div>
                 <div class="feature pending">⏳ Portfolio optimization algorithms</div>
@@ -157,14 +157,14 @@ data:
                 <div class="feature pending">⏳ GraphQL API integration</div>
                 <div class="feature pending">⏳ JWT authentication with SuperTokens</div>
                 <div class="feature pending">⏳ Redis caching layer</div>
-                
+
                 <h3>Development Progress</h3>
                 <p><strong>Core Library:</strong> ✅ Complete</p>
                 <p><strong>API Layer:</strong> 🔄 In Progress</p>
                 <p><strong>Authentication:</strong> 🔄 In Progress</p>
                 <p><strong>Production Deployment:</strong> ⏳ Pending</p>
             </div>
-            
+
             <p><small>Atlas Financial Production Environment</small></p>
         </div>
     </body>
@@ -335,11 +335,11 @@ data:
         <div class="container">
             <h1>🤖 AI Financial Engine</h1>
             <div class="status">Development Placeholder</div>
-            
+
             <div class="info">
                 <h3>Current Status</h3>
                 <p>The AI Financial Engine is currently under development. This placeholder service will be replaced with the production-ready AI application once development is complete.</p>
-                
+
                 <h3>Planned Features</h3>
                 <div class="feature pending">⏳ Intelligent financial insights</div>
                 <div class="feature pending">⏳ Spending pattern analysis</div>
@@ -349,14 +349,14 @@ data:
                 <div class="feature pending">⏳ Risk assessment AI models</div>
                 <div class="feature pending">⏳ Natural language financial queries</div>
                 <div class="feature pending">⏳ Predictive analytics</div>
-                
+
                 <h3>Development Progress</h3>
                 <p><strong>Core Structure:</strong> 🔄 In Progress</p>
                 <p><strong>AI Models:</strong> ⏳ Pending</p>
                 <p><strong>API Integration:</strong> ⏳ Pending</p>
                 <p><strong>Production Deployment:</strong> ⏳ Pending</p>
             </div>
-            
+
             <p><small>Atlas Financial Production Environment</small></p>
         </div>
     </body>

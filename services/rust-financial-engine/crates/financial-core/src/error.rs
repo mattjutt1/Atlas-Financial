@@ -1,10 +1,9 @@
+use crate::types::Currency;
 /// Comprehensive error handling for financial calculations
-/// 
+///
 /// Provides specific error types for different categories of failures
 /// in financial computations with detailed context.
-
 use thiserror::Error;
-use crate::types::Currency;
 
 /// Result type alias for financial operations
 pub type Result<T> = std::result::Result<T, FinancialError>;
@@ -181,8 +180,9 @@ impl FinancialError {
             FinancialError::BudgetAnalysisFailed { .. }
             | FinancialError::InvalidBudgetData { .. } => ErrorCategory::Budget,
 
-            FinancialError::DatabaseError { .. }
-            | FinancialError::CacheError { .. } => ErrorCategory::Storage,
+            FinancialError::DatabaseError { .. } | FinancialError::CacheError { .. } => {
+                ErrorCategory::Storage
+            }
 
             FinancialError::ExternalServiceError { .. }
             | FinancialError::RateLimitExceeded { .. } => ErrorCategory::External,
@@ -207,12 +207,7 @@ impl FinancialError {
     }
 
     /// Create a parameter out of range error
-    pub fn parameter_out_of_range(
-        parameter: &str,
-        min: &str,
-        max: &str,
-        actual: &str,
-    ) -> Self {
+    pub fn parameter_out_of_range(parameter: &str, min: &str, max: &str, actual: &str) -> Self {
         FinancialError::ParameterOutOfRange {
             parameter: parameter.to_string(),
             min: min.to_string(),
@@ -303,7 +298,12 @@ mod tests {
 
         let range_error = FinancialError::parameter_out_of_range("amount", "0", "1000", "1500");
         match range_error {
-            FinancialError::ParameterOutOfRange { parameter, min, max, actual } => {
+            FinancialError::ParameterOutOfRange {
+                parameter,
+                min,
+                max,
+                actual,
+            } => {
                 assert_eq!(parameter, "amount");
                 assert_eq!(min, "0");
                 assert_eq!(max, "1000");

@@ -1,5 +1,5 @@
 /// GraphQL schema module
-/// 
+///
 /// Contains all GraphQL type definitions for portfolio and debt operations
 
 pub mod portfolio;

@@ -1,5 +1,5 @@
 /// Comprehensive error handling for the financial API
-/// 
+///
 /// Provides GraphQL-compatible error types and automatic mapping
 /// from core financial errors to API responses.
 
@@ -124,7 +124,7 @@ impl ApiError {
         match self {
             ApiError::Financial(e) => match e.category() {
                 ErrorCategory::Mathematical => "MATH_ERROR",
-                ErrorCategory::Currency => "CURRENCY_ERROR", 
+                ErrorCategory::Currency => "CURRENCY_ERROR",
                 ErrorCategory::Validation => "VALIDATION_ERROR",
                 ErrorCategory::Portfolio => "PORTFOLIO_ERROR",
                 ErrorCategory::Debt => "DEBT_ERROR",
@@ -165,17 +165,17 @@ impl ApiError {
     pub fn category(&self) -> &'static str {
         match self {
             ApiError::Financial(e) => e.category().to_string().as_str(),
-            ApiError::AuthenticationFailed { .. } | ApiError::AuthorizationFailed { .. } 
+            ApiError::AuthenticationFailed { .. } | ApiError::AuthorizationFailed { .. }
             | ApiError::InvalidToken { .. } | ApiError::TokenExpired => "authentication",
-            ApiError::ValidationError { .. } | ApiError::InvalidInput { .. } 
+            ApiError::ValidationError { .. } | ApiError::InvalidInput { .. }
             | ApiError::MissingField { .. } => "validation",
-            ApiError::PortfolioNotFound { .. } | ApiError::AssetNotFound { .. } 
+            ApiError::PortfolioNotFound { .. } | ApiError::AssetNotFound { .. }
             | ApiError::DebtAccountNotFound { .. } | ApiError::UserNotFound { .. } => "not_found",
             ApiError::InsufficientPermissions { .. } => "authorization",
-            ApiError::AtlasApiError { .. } | ApiError::CacheError { .. } 
+            ApiError::AtlasApiError { .. } | ApiError::CacheError { .. }
             | ApiError::DatabaseError { .. } => "external",
             ApiError::RateLimitExceeded { .. } | ApiError::RequestTimeout => "throttling",
-            ApiError::ConfigurationError { .. } | ApiError::ServiceUnavailable { .. } 
+            ApiError::ConfigurationError { .. } | ApiError::ServiceUnavailable { .. }
             | ApiError::InternalError { .. } => "system",
             ApiError::GraphQLSchemaError { .. } | ApiError::FieldResolutionError { .. } => "graphql",
         }
@@ -185,18 +185,18 @@ impl ApiError {
     pub fn status_code(&self) -> StatusCode {
         match self {
             ApiError::Financial(_) => StatusCode::BAD_REQUEST,
-            ApiError::AuthenticationFailed { .. } | ApiError::InvalidToken { .. } 
+            ApiError::AuthenticationFailed { .. } | ApiError::InvalidToken { .. }
             | ApiError::TokenExpired => StatusCode::UNAUTHORIZED,
             ApiError::AuthorizationFailed { .. } | ApiError::InsufficientPermissions { .. } => {
                 StatusCode::FORBIDDEN
             }
-            ApiError::ValidationError { .. } | ApiError::InvalidInput { .. } 
+            ApiError::ValidationError { .. } | ApiError::InvalidInput { .. }
             | ApiError::MissingField { .. } => StatusCode::BAD_REQUEST,
             ApiError::PortfolioNotFound { .. } | ApiError::AssetNotFound { .. }
             | ApiError::DebtAccountNotFound { .. } | ApiError::UserNotFound { .. } => {
                 StatusCode::NOT_FOUND
             }
-            ApiError::AtlasApiError { .. } | ApiError::DatabaseError { .. } 
+            ApiError::AtlasApiError { .. } | ApiError::DatabaseError { .. }
             | ApiError::ServiceUnavailable { .. } => StatusCode::BAD_GATEWAY,
             ApiError::CacheError { .. } => StatusCode::SERVICE_UNAVAILABLE,
             ApiError::RateLimitExceeded { .. } => StatusCode::TOO_MANY_REQUESTS,
@@ -212,7 +212,7 @@ impl ApiError {
     pub fn is_retryable(&self) -> bool {
         match self {
             ApiError::Financial(e) => e.is_recoverable(),
-            ApiError::AtlasApiError { .. } | ApiError::CacheError { .. } 
+            ApiError::AtlasApiError { .. } | ApiError::CacheError { .. }
             | ApiError::DatabaseError { .. } | ApiError::ServiceUnavailable { .. }
             | ApiError::RequestTimeout => true,
             ApiError::RateLimitExceeded { .. } => true,
@@ -282,7 +282,7 @@ impl ApiError {
 impl From<ApiError> for FieldError {
     fn from(err: ApiError) -> Self {
         let mut field_error = FieldError::new(err.to_string());
-        
+
         // Add error extensions for GraphQL introspection
         field_error = field_error
             .extend_with(|_, e| {
@@ -399,7 +399,7 @@ mod tests {
     fn test_financial_error_mapping() {
         let financial_error = FinancialError::DivisionByZero;
         let api_error = ApiError::Financial(financial_error);
-        
+
         assert_eq!(api_error.code(), "MATH_ERROR");
         assert_eq!(api_error.category(), "mathematical");
         assert_eq!(api_error.status_code(), StatusCode::BAD_REQUEST);
@@ -411,7 +411,7 @@ mod tests {
             limit: 100,
             window: "minute".to_string(),
         };
-        
+
         let suggestions = rate_limit_error.suggestions().unwrap();
         assert!(suggestions.len() > 0);
         assert!(suggestions[0].contains("frequency"));
@@ -423,7 +423,7 @@ mod tests {
             message: "Invalid token".to_string(),
         };
         assert!(!auth_error.is_retryable());
-        
+
         let service_error = ApiError::ServiceUnavailable {
             service: "atlas-api".to_string(),
         };
@@ -440,7 +440,7 @@ mod tests {
             }
             _ => panic!("Expected validation error"),
         }
-        
+
         let auth_err = auth_error!("Token expired");
         match auth_err {
             ApiError::AuthenticationFailed { message } => {

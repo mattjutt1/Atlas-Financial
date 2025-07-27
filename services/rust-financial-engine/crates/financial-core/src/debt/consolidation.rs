@@ -1,19 +1,18 @@
+use crate::debt::types::{
+    ConsolidationAnalysis, ConsolidationOpportunity, ConsolidationType, DebtAccount, DebtStrategy,
+    PaymentPlan, RiskLevel,
+};
+use crate::types::{Percentage, Period, Rate};
+use crate::{FinancialError, Money, Result};
+use chrono::{DateTime, Utc};
+use rust_decimal::prelude::ToPrimitive;
 /// Debt consolidation strategies and analysis
-/// 
+///
 /// Provides analysis and recommendations for debt consolidation options
 /// including balance transfers, personal loans, and home equity loans.
-
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use rust_decimal::prelude::ToPrimitive;
-use chrono::{DateTime, Utc};
 use uuid::Uuid;
-use crate::{Money, FinancialError, Result};
-use crate::debt::types::{
-    DebtAccount, ConsolidationOpportunity, ConsolidationType, ConsolidationAnalysis, 
-    RiskLevel, DebtStrategy, PaymentPlan
-};
-use crate::types::{Rate, Percentage, Period};
 
 /// Debt consolidation analyzer
 pub struct ConsolidationAnalyzer {
@@ -25,7 +24,10 @@ impl ConsolidationAnalyzer {
     /// Create a new consolidation analyzer
     pub fn new() -> Self {
         Self {
-            min_consolidation_balance: Money::new_unchecked(dec!(5000), crate::types::Currency::USD),
+            min_consolidation_balance: Money::new_unchecked(
+                dec!(5000),
+                crate::types::Currency::USD,
+            ),
             max_loan_to_income_ratio: dec!(0.36), // 36% debt-to-income ratio
         }
     }
@@ -42,7 +44,7 @@ impl ConsolidationAnalyzer {
         }
 
         let total_debt = self.calculate_total_debt(debts)?;
-        
+
         if total_debt.amount() < self.min_consolidation_balance.amount() {
             return Ok(Vec::new());
         }
@@ -50,7 +52,9 @@ impl ConsolidationAnalyzer {
         let mut opportunities = Vec::new();
 
         // Analyze personal loan consolidation
-        if let Some(personal_loan_opp) = self.analyze_personal_loan(debts, monthly_income, credit_score)? {
+        if let Some(personal_loan_opp) =
+            self.analyze_personal_loan(debts, monthly_income, credit_score)?
+        {
             opportunities.push(personal_loan_opp);
         }
 
@@ -75,10 +79,10 @@ impl ConsolidationAnalyzer {
     ) -> Result<Option<ConsolidationOpportunity>> {
         let total_debt = self.calculate_total_debt(debts)?;
         let weighted_avg_rate = self.calculate_weighted_average_rate(debts)?;
-        
+
         // Estimate personal loan rate based on credit score
         let estimated_rate = self.estimate_personal_loan_rate(credit_score);
-        
+
         // Only recommend if rate is better
         if estimated_rate.as_decimal() >= weighted_avg_rate.as_decimal() {
             return Ok(None);
@@ -92,7 +96,7 @@ impl ConsolidationAnalyzer {
         )?;
 
         let new_monthly_payment = Money::new_unchecked(monthly_payment, total_debt.currency());
-        
+
         // Check debt-to-income ratio
         if monthly_payment / monthly_income.amount() > self.max_loan_to_income_ratio {
             return Ok(None);
@@ -142,7 +146,8 @@ impl ConsolidationAnalyzer {
         credit_score: Option<u32>,
     ) -> Result<Option<ConsolidationOpportunity>> {
         // Only analyze credit card debts for balance transfer
-        let cc_debts: Vec<&DebtAccount> = debts.iter()
+        let cc_debts: Vec<&DebtAccount> = debts
+            .iter()
             .filter(|d| matches!(d.debt_type, crate::debt::types::DebtType::CreditCard))
             .collect();
 
@@ -150,10 +155,10 @@ impl ConsolidationAnalyzer {
             return Ok(None);
         }
 
-        let total_cc_debt = cc_debts.iter()
-            .try_fold(Money::new_unchecked(Decimal::ZERO, cc_debts[0].balance.currency()), |acc, debt| {
-                acc.add(&debt.balance)
-            })?;
+        let total_cc_debt = cc_debts.iter().try_fold(
+            Money::new_unchecked(Decimal::ZERO, cc_debts[0].balance.currency()),
+            |acc, debt| acc.add(&debt.balance),
+        )?;
 
         // Estimate balance transfer offer
         let intro_rate = Rate::new(
@@ -201,12 +206,9 @@ impl ConsolidationAnalyzer {
         monthly_income: Money,
     ) -> Result<Option<ConsolidationOpportunity>> {
         let total_debt = self.calculate_total_debt(debts)?;
-        
+
         // Conservative home equity rate estimate
-        let he_rate = Rate::new(
-            Percentage::from_percentage(dec!(7.5))?,
-            Period::Annual,
-        );
+        let he_rate = Rate::new(Percentage::from_percentage(dec!(7.5))?, Period::Annual);
 
         let estimated_term_months = 120; // 10 years typical
         let monthly_payment = self.calculate_loan_payment(
@@ -248,26 +250,33 @@ impl ConsolidationAnalyzer {
     }
 
     // Helper methods
-    
+
     fn calculate_total_debt(&self, debts: &[DebtAccount]) -> Result<Money> {
         if debts.is_empty() {
-            return Ok(Money::new_unchecked(Decimal::ZERO, crate::types::Currency::USD));
+            return Ok(Money::new_unchecked(
+                Decimal::ZERO,
+                crate::types::Currency::USD,
+            ));
         }
 
-        debts.iter()
-            .try_fold(Money::new_unchecked(Decimal::ZERO, debts[0].balance.currency()), |acc, debt| {
-                acc.add(&debt.balance)
-            })
+        debts.iter().try_fold(
+            Money::new_unchecked(Decimal::ZERO, debts[0].balance.currency()),
+            |acc, debt| acc.add(&debt.balance),
+        )
     }
 
     fn calculate_weighted_average_rate(&self, debts: &[DebtAccount]) -> Result<Rate> {
         let total_debt = self.calculate_total_debt(debts)?;
-        
+
         if total_debt.amount().is_zero() {
-            return Ok(Rate::new(Percentage::from_percentage(Decimal::ZERO)?, Period::Annual));
+            return Ok(Rate::new(
+                Percentage::from_percentage(Decimal::ZERO)?,
+                Period::Annual,
+            ));
         }
 
-        let weighted_rate: Decimal = debts.iter()
+        let weighted_rate: Decimal = debts
+            .iter()
             .map(|debt| {
                 let weight = debt.balance.amount() / total_debt.amount();
                 weight * debt.interest_rate.as_decimal()
@@ -310,23 +319,29 @@ impl ConsolidationAnalyzer {
         )
     }
 
-    fn calculate_loan_payment(&self, principal: Decimal, annual_rate: Decimal, term_months: u32) -> Result<Decimal> {
+    fn calculate_loan_payment(
+        &self,
+        principal: Decimal,
+        annual_rate: Decimal,
+        term_months: u32,
+    ) -> Result<Decimal> {
         if annual_rate.is_zero() {
             return Ok(principal / Decimal::from(term_months));
         }
 
         let monthly_rate = annual_rate / dec!(12);
         let factor = (dec!(1) + monthly_rate).powf(Decimal::from(term_months));
-        
+
         Ok(principal * (monthly_rate * factor) / (factor - dec!(1)))
     }
 
     fn calculate_current_total_interest(&self, debts: &[DebtAccount]) -> Result<Money> {
         // Simplified calculation - would need payment schedules for accuracy
-        let currency = debts.first()
+        let currency = debts
+            .first()
             .map(|d| d.balance.currency())
             .unwrap_or(crate::types::Currency::USD);
-        
+
         // Placeholder calculation
         Ok(Money::new_unchecked(dec!(10000), currency))
     }
@@ -361,12 +376,12 @@ impl DecimalPower for Decimal {
         if exp.is_zero() {
             return Decimal::ONE;
         }
-        
+
         // Convert to f64 for power calculation
         let base_f64 = self.to_f64().unwrap_or(1.0);
         let exp_f64 = exp.to_f64().unwrap_or(1.0);
         let result = base_f64.powf(exp_f64);
-        
+
         Decimal::from_f64_retain(result).unwrap_or(Decimal::ONE)
     }
 }
@@ -374,9 +389,9 @@ impl DecimalPower for Decimal {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rust_decimal_macros::dec;
-    use crate::types::Currency;
     use crate::debt::types::DebtType;
+    use crate::types::Currency;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_consolidation_analyzer_creation() {
@@ -387,14 +402,17 @@ mod tests {
     #[test]
     fn test_total_debt_calculation() {
         let analyzer = ConsolidationAnalyzer::new();
-        
+
         let debts = vec![
             DebtAccount::new(
                 Uuid::new_v4(),
                 "Card 1".to_string(),
                 DebtType::CreditCard,
                 Money::new(dec!(3000), Currency::USD).unwrap(),
-                Rate::new(Percentage::from_percentage(dec!(18.9)).unwrap(), Period::Annual),
+                Rate::new(
+                    Percentage::from_percentage(dec!(18.9)).unwrap(),
+                    Period::Annual,
+                ),
                 Money::new(dec!(90), Currency::USD).unwrap(),
             ),
             DebtAccount::new(
@@ -402,7 +420,10 @@ mod tests {
                 "Card 2".to_string(),
                 DebtType::CreditCard,
                 Money::new(dec!(2000), Currency::USD).unwrap(),
-                Rate::new(Percentage::from_percentage(dec!(22.9)).unwrap(), Period::Annual),
+                Rate::new(
+                    Percentage::from_percentage(dec!(22.9)).unwrap(),
+                    Period::Annual,
+                ),
                 Money::new(dec!(60), Currency::USD).unwrap(),
             ),
         ];
@@ -414,14 +435,17 @@ mod tests {
     #[test]
     fn test_weighted_average_rate() {
         let analyzer = ConsolidationAnalyzer::new();
-        
+
         let debts = vec![
             DebtAccount::new(
                 Uuid::new_v4(),
                 "Low Rate".to_string(),
                 DebtType::PersonalLoan,
                 Money::new(dec!(6000), Currency::USD).unwrap(),
-                Rate::new(Percentage::from_percentage(dec!(10.0)).unwrap(), Period::Annual),
+                Rate::new(
+                    Percentage::from_percentage(dec!(10.0)).unwrap(),
+                    Period::Annual,
+                ),
                 Money::new(dec!(120), Currency::USD).unwrap(),
             ),
             DebtAccount::new(
@@ -429,7 +453,10 @@ mod tests {
                 "High Rate".to_string(),
                 DebtType::CreditCard,
                 Money::new(dec!(4000), Currency::USD).unwrap(),
-                Rate::new(Percentage::from_percentage(dec!(20.0)).unwrap(), Period::Annual),
+                Rate::new(
+                    Percentage::from_percentage(dec!(20.0)).unwrap(),
+                    Period::Annual,
+                ),
                 Money::new(dec!(100), Currency::USD).unwrap(),
             ),
         ];

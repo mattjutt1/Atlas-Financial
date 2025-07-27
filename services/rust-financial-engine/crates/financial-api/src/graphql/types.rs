@@ -1,5 +1,5 @@
 /// GraphQL type definitions and scalar types
-/// 
+///
 /// Provides GraphQL-compatible types that map to core financial types
 /// with proper serialization and validation.
 
@@ -421,7 +421,7 @@ impl<T> Connection<T> {
     {
         let has_next_page = offset + limit < total_count;
         let has_previous_page = offset > 0;
-        
+
         let edges: Vec<Edge<T>> = items
             .into_iter()
             .enumerate()
@@ -457,7 +457,7 @@ mod tests {
         let core_currency = CoreCurrency::USD;
         let gql_currency: Currency = core_currency.into();
         assert_eq!(gql_currency, Currency::USD);
-        
+
         let back_to_core: CoreCurrency = gql_currency.into();
         assert_eq!(back_to_core, CoreCurrency::USD);
     }
@@ -466,7 +466,7 @@ mod tests {
     fn test_money_conversion() {
         let core_money = financial_core::types::Money::new(dec!(100.50), CoreCurrency::USD).unwrap();
         let gql_money: Money = core_money.into();
-        
+
         assert_eq!(gql_money.amount.0, dec!(100.50));
         assert_eq!(gql_money.currency, Currency::USD);
     }
@@ -475,7 +475,7 @@ mod tests {
     fn test_connection_creation() {
         let items = vec!["item1", "item2", "item3"];
         let connection = Connection::new(items, 10, 0, 3);
-        
+
         assert_eq!(connection.edges.len(), 3);
         assert_eq!(connection.total_count, 10);
         assert!(connection.page_info.has_next_page);

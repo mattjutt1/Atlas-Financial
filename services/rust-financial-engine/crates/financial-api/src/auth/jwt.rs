@@ -36,12 +36,12 @@ impl JwtManager {
         let algorithm = Algorithm::HS256;
         let encoding_key = EncodingKey::from_secret(secret.as_bytes());
         let decoding_key = DecodingKey::from_secret(secret.as_bytes());
-        
+
         let mut validation = Validation::new(algorithm);
         validation.set_issuer(&allowed_issuers);
         validation.set_audience(&["financial-api"]);
         validation.leeway = 60; // Allow 60 second clock skew
-        
+
         Ok(Self {
             encoding_key,
             decoding_key,
@@ -53,7 +53,7 @@ impl JwtManager {
     /// Encode JWT claims into a token
     pub fn encode_token(&self, claims: &JwtClaims) -> ApiResult<String> {
         let header = Header::new(self.algorithm);
-        
+
         encode(&header, claims, &self.encoding_key)
             .map_err(|e| {
                 warn!("Failed to encode JWT token: {}", e);
@@ -96,7 +96,7 @@ impl JwtManager {
             })?;
 
         let claims = token_data.claims;
-        
+
         // Additional custom validation
         claims.validate_basic()
             .map_err(|msg| ApiError::InvalidToken { reason: msg })?;
@@ -234,7 +234,7 @@ mod tests {
 
         let claims = create_test_claims();
         let token = jwt_manager.encode_token(&claims).unwrap();
-        
+
         assert!(!token.is_empty());
 
         let decoded_claims = jwt_manager.decode_token(&token).unwrap();
@@ -270,7 +270,7 @@ mod tests {
 
         let token = jwt_manager.encode_token(&claims).unwrap();
         let result = jwt_manager.decode_token(&token);
-        
+
         assert!(result.is_err());
         if let Err(ApiError::TokenExpired) = result {
             // Expected
@@ -282,12 +282,12 @@ mod tests {
     #[test]
     fn test_token_blacklist() {
         let mut blacklist = TokenBlacklist::new();
-        
+
         assert!(!blacklist.is_token_blacklisted("token1"));
-        
+
         blacklist.blacklist_token("token1");
         assert!(blacklist.is_token_blacklisted("token1"));
-        
+
         blacklist.blacklist_session("session1");
         assert!(blacklist.is_session_blacklisted("session1"));
         assert!(blacklist.is_blacklisted("any_token", "session1"));

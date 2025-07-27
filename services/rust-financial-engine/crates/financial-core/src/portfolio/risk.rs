@@ -1,9 +1,9 @@
+use crate::portfolio::types::{HistoricalReturns, PeriodReturn, Portfolio};
+use crate::{FinancialError, Money, Result};
+use rust_decimal::prelude::ToPrimitive;
 /// Risk analysis and calculation module for portfolios
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use rust_decimal::prelude::ToPrimitive;
-use crate::{Money, FinancialError, Result};
-use crate::portfolio::types::{Portfolio, HistoricalReturns, PeriodReturn};
 
 /// Risk analysis engine for portfolio calculations
 pub struct RiskAnalyzer {
@@ -92,22 +92,28 @@ impl RiskAnalyzer {
         benchmark_returns: Option<&[PeriodReturn]>,
     ) -> Result<RiskMetrics> {
         let portfolio_returns = self.calculate_portfolio_returns(portfolio, returns)?;
-        
+
         let volatility = self.calculate_volatility(&portfolio_returns)?;
         let downside_deviation = self.calculate_downside_deviation(&portfolio_returns)?;
-        
+
         let total_value = portfolio.total_value();
         let var_95 = self.calculate_value_at_risk(&portfolio_returns, total_value, dec!(0.95))?;
         let var_99 = self.calculate_value_at_risk(&portfolio_returns, total_value, dec!(0.99))?;
-        
-        let cvar_95 = self.calculate_conditional_var(&portfolio_returns, total_value, dec!(0.95))?;
-        let cvar_99 = self.calculate_conditional_var(&portfolio_returns, total_value, dec!(0.99))?;
-        
+
+        let cvar_95 =
+            self.calculate_conditional_var(&portfolio_returns, total_value, dec!(0.95))?;
+        let cvar_99 =
+            self.calculate_conditional_var(&portfolio_returns, total_value, dec!(0.99))?;
+
         let max_drawdown = self.calculate_maximum_drawdown(&portfolio_returns)?;
         let annual_return = self.calculate_annualized_return(&portfolio_returns)?;
-        let calmar_ratio = if max_drawdown.is_zero() { Decimal::ZERO } else { annual_return / max_drawdown };
+        let calmar_ratio = if max_drawdown.is_zero() {
+            Decimal::ZERO
+        } else {
+            annual_return / max_drawdown
+        };
         let sortino_ratio = self.calculate_sortino_ratio(&portfolio_returns)?;
-        
+
         let (beta, tracking_error, information_ratio) = if let Some(benchmark) = benchmark_returns {
             let beta = self.calculate_beta(&portfolio_returns, benchmark)?;
             let tracking_error = self.calculate_tracking_error(&portfolio_returns, benchmark)?;
@@ -141,43 +147,43 @@ impl RiskAnalyzer {
     ) -> Result<ScenarioAnalysis> {
         let portfolio_returns = self.calculate_portfolio_returns(portfolio, returns)?;
         let current_value = portfolio.total_value();
-        
+
         // Calculate scenarios based on historical distribution
         let mean_return = self.calculate_mean(&portfolio_returns)?;
         let volatility = self.calculate_volatility(&portfolio_returns)?;
-        
+
         let base_case = ScenarioResult {
             scenario_name: "Base Case".to_string(),
             portfolio_return: mean_return,
             portfolio_value: Money::new_unchecked(
                 current_value.amount() * (Decimal::ONE + mean_return),
-                current_value.currency()
+                current_value.currency(),
             ),
             probability: Some(dec!(0.50)),
         };
-        
+
         let best_case = ScenarioResult {
             scenario_name: "Best Case (95th percentile)".to_string(),
             portfolio_return: mean_return + dec!(1.645) * volatility,
             portfolio_value: Money::new_unchecked(
                 current_value.amount() * (Decimal::ONE + mean_return + dec!(1.645) * volatility),
-                current_value.currency()
+                current_value.currency(),
             ),
             probability: Some(dec!(0.05)),
         };
-        
+
         let worst_case = ScenarioResult {
             scenario_name: "Worst Case (5th percentile)".to_string(),
             portfolio_return: mean_return - dec!(1.645) * volatility,
             portfolio_value: Money::new_unchecked(
                 current_value.amount() * (Decimal::ONE + mean_return - dec!(1.645) * volatility),
-                current_value.currency()
+                current_value.currency(),
             ),
             probability: Some(dec!(0.05)),
         };
-        
+
         let stress_tests = self.perform_stress_tests(portfolio, returns)?;
-        
+
         Ok(ScenarioAnalysis {
             base_case,
             best_case,
@@ -196,48 +202,70 @@ impl RiskAnalyzer {
         let portfolio_returns = self.calculate_portfolio_returns(portfolio, returns)?;
         let mean_return = self.calculate_mean(&portfolio_returns)?;
         let volatility = self.calculate_volatility(&portfolio_returns)?;
-        
+
         // Convert to annual figures
         let annual_return = mean_return * dec!(252); // Assuming daily returns
         let annual_volatility = volatility * calculate_sqrt(dec!(252));
-        
+
         let mut final_values = Vec::with_capacity(parameters.num_simulations);
         let mut random_generator = SimpleRandomGenerator::new(42); // Fixed seed for reproducibility
-        
+
         for _ in 0..parameters.num_simulations {
             let random_return = self.generate_normal_return(
                 annual_return,
                 annual_volatility,
                 &mut random_generator,
             );
-            
-            let final_value = parameters.initial_portfolio_value.amount() 
+
+            let final_value = parameters.initial_portfolio_value.amount()
                 * decimal_power(Decimal::ONE + random_return, parameters.time_horizon_years);
-            
+
             final_values.push(Money::new_unchecked(
                 final_value,
                 parameters.initial_portfolio_value.currency(),
             ));
         }
-        
+
         // Sort values for percentile calculations
         final_values.sort_by(|a, b| a.amount().cmp(&b.amount()));
-        
+
         let percentiles = vec![
-            (dec!(0.05), final_values[parameters.num_simulations * 5 / 100].clone()),
-            (dec!(0.10), final_values[parameters.num_simulations * 10 / 100].clone()),
-            (dec!(0.25), final_values[parameters.num_simulations * 25 / 100].clone()),
-            (dec!(0.50), final_values[parameters.num_simulations * 50 / 100].clone()),
-            (dec!(0.75), final_values[parameters.num_simulations * 75 / 100].clone()),
-            (dec!(0.90), final_values[parameters.num_simulations * 90 / 100].clone()),
-            (dec!(0.95), final_values[parameters.num_simulations * 95 / 100].clone()),
+            (
+                dec!(0.05),
+                final_values[parameters.num_simulations * 5 / 100].clone(),
+            ),
+            (
+                dec!(0.10),
+                final_values[parameters.num_simulations * 10 / 100].clone(),
+            ),
+            (
+                dec!(0.25),
+                final_values[parameters.num_simulations * 25 / 100].clone(),
+            ),
+            (
+                dec!(0.50),
+                final_values[parameters.num_simulations * 50 / 100].clone(),
+            ),
+            (
+                dec!(0.75),
+                final_values[parameters.num_simulations * 75 / 100].clone(),
+            ),
+            (
+                dec!(0.90),
+                final_values[parameters.num_simulations * 90 / 100].clone(),
+            ),
+            (
+                dec!(0.95),
+                final_values[parameters.num_simulations * 95 / 100].clone(),
+            ),
         ];
-        
-        let losses = final_values.iter()
+
+        let losses = final_values
+            .iter()
             .filter(|&value| value.amount() < parameters.initial_portfolio_value.amount())
             .count();
         let probability_of_loss = Decimal::from(losses) / Decimal::from(parameters.num_simulations);
-        
+
         let expected_final_value = {
             let sum: Decimal = final_values.iter().map(|v| v.amount()).sum();
             Money::new_unchecked(
@@ -245,19 +273,21 @@ impl RiskAnalyzer {
                 parameters.initial_portfolio_value.currency(),
             )
         };
-        
-        let variance: Decimal = final_values.iter()
+
+        let variance: Decimal = final_values
+            .iter()
             .map(|v| {
                 let diff = v.amount() - expected_final_value.amount();
                 diff * diff
             })
-            .sum::<Decimal>() / Decimal::from(parameters.num_simulations);
-        
+            .sum::<Decimal>()
+            / Decimal::from(parameters.num_simulations);
+
         let standard_deviation = Money::new_unchecked(
             calculate_sqrt(variance),
             parameters.initial_portfolio_value.currency(),
         );
-        
+
         Ok(MonteCarloResult {
             parameters,
             final_values,
@@ -269,49 +299,48 @@ impl RiskAnalyzer {
     }
 
     // Private helper methods
-    
+
     fn calculate_portfolio_returns(
         &self,
         portfolio: &Portfolio,
         returns: &[HistoricalReturns],
     ) -> Result<Vec<Decimal>> {
         let weights = self.get_asset_weights(portfolio)?;
-        let max_periods = returns.iter()
-            .map(|r| r.returns.len())
-            .min()
-            .unwrap_or(0);
-        
+        let max_periods = returns.iter().map(|r| r.returns.len()).min().unwrap_or(0);
+
         if max_periods == 0 {
             return Err(FinancialError::InsufficientRiskData {
                 missing: "No return data available".to_string(),
             });
         }
-        
+
         let mut portfolio_returns = Vec::with_capacity(max_periods);
-        
+
         for period in 0..max_periods {
             let mut period_return = Decimal::ZERO;
-            
+
             for (i, asset_returns) in returns.iter().enumerate() {
                 if period < asset_returns.returns.len() && i < weights.len() {
                     period_return += weights[i] * asset_returns.returns[period].return_value;
                 }
             }
-            
+
             portfolio_returns.push(period_return);
         }
-        
+
         Ok(portfolio_returns)
     }
 
     fn get_asset_weights(&self, portfolio: &Portfolio) -> Result<Vec<Decimal>> {
         let total_value = portfolio.total_value();
-        
+
         if total_value.amount().is_zero() {
             return Err(FinancialError::DivisionByZero);
         }
-        
-        Ok(portfolio.assets.iter()
+
+        Ok(portfolio
+            .assets
+            .iter()
             .map(|asset| asset.current_value.amount() / total_value.amount())
             .collect())
     }
@@ -322,37 +351,41 @@ impl RiskAnalyzer {
                 missing: "No returns provided".to_string(),
             });
         }
-        
+
         Ok(returns.iter().sum::<Decimal>() / Decimal::from(returns.len()))
     }
 
     fn calculate_volatility(&self, returns: &[Decimal]) -> Result<Decimal> {
         let mean = self.calculate_mean(returns)?;
-        let variance: Decimal = returns.iter()
+        let variance: Decimal = returns
+            .iter()
             .map(|r| {
                 let diff = *r - mean;
                 diff * diff
             })
-            .sum::<Decimal>() / Decimal::from(returns.len() - 1);
-        
+            .sum::<Decimal>()
+            / Decimal::from(returns.len() - 1);
+
         Ok(calculate_sqrt(variance))
     }
 
     fn calculate_downside_deviation(&self, returns: &[Decimal]) -> Result<Decimal> {
         let target_return = Decimal::ZERO; // Using 0 as target return
-        let downside_returns: Vec<Decimal> = returns.iter()
+        let downside_returns: Vec<Decimal> = returns
+            .iter()
             .filter(|&&r| r < target_return)
             .map(|&r| {
                 let diff = r - target_return;
                 diff * diff
             })
             .collect();
-        
+
         if downside_returns.is_empty() {
             return Ok(Decimal::ZERO);
         }
-        
-        let downside_variance = downside_returns.iter().sum::<Decimal>() / Decimal::from(downside_returns.len());
+
+        let downside_variance =
+            downside_returns.iter().sum::<Decimal>() / Decimal::from(downside_returns.len());
         Ok(calculate_sqrt(downside_variance))
     }
 
@@ -364,10 +397,12 @@ impl RiskAnalyzer {
     ) -> Result<Money> {
         let mut sorted_returns = returns.to_vec();
         sorted_returns.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        
-        let index = ((Decimal::ONE - confidence_level) * Decimal::from(sorted_returns.len())).to_usize().unwrap_or(0);
+
+        let index = ((Decimal::ONE - confidence_level) * Decimal::from(sorted_returns.len()))
+            .to_usize()
+            .unwrap_or(0);
         let var_return = sorted_returns.get(index).copied().unwrap_or(Decimal::ZERO);
-        
+
         let var_amount = portfolio_value.amount() * var_return.abs();
         Ok(Money::new_unchecked(var_amount, portfolio_value.currency()))
     }
@@ -380,55 +415,65 @@ impl RiskAnalyzer {
     ) -> Result<Money> {
         let mut sorted_returns = returns.to_vec();
         sorted_returns.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        
-        let cutoff_index = ((Decimal::ONE - confidence_level) * Decimal::from(sorted_returns.len())).to_usize().unwrap_or(0);
+
+        let cutoff_index = ((Decimal::ONE - confidence_level)
+            * Decimal::from(sorted_returns.len()))
+        .to_usize()
+        .unwrap_or(0);
         let tail_returns = &sorted_returns[..cutoff_index];
-        
+
         if tail_returns.is_empty() {
-            return Ok(Money::new_unchecked(Decimal::ZERO, portfolio_value.currency()));
+            return Ok(Money::new_unchecked(
+                Decimal::ZERO,
+                portfolio_value.currency(),
+            ));
         }
-        
+
         let tail_mean = tail_returns.iter().sum::<Decimal>() / Decimal::from(tail_returns.len());
         let cvar_amount = portfolio_value.amount() * tail_mean.abs();
-        
-        Ok(Money::new_unchecked(cvar_amount, portfolio_value.currency()))
+
+        Ok(Money::new_unchecked(
+            cvar_amount,
+            portfolio_value.currency(),
+        ))
     }
 
     fn calculate_maximum_drawdown(&self, returns: &[Decimal]) -> Result<Decimal> {
         let mut cumulative_return = Decimal::ONE;
         let mut peak = Decimal::ONE;
         let mut max_drawdown = Decimal::ZERO;
-        
+
         for &return_val in returns {
             cumulative_return *= Decimal::ONE + return_val;
-            
+
             if cumulative_return > peak {
                 peak = cumulative_return;
             }
-            
+
             let drawdown = (peak - cumulative_return) / peak;
             if drawdown > max_drawdown {
                 max_drawdown = drawdown;
             }
         }
-        
+
         Ok(max_drawdown)
     }
 
     fn calculate_annualized_return(&self, returns: &[Decimal]) -> Result<Decimal> {
-        let cumulative_return: Decimal = returns.iter()
+        let cumulative_return: Decimal = returns
+            .iter()
             .fold(Decimal::ONE, |acc, &r| acc * (Decimal::ONE + r));
-        
+
         let periods_per_year = dec!(252); // Assuming daily returns
         let years = Decimal::from(returns.len()) / periods_per_year;
-        
+
         Ok(decimal_power(cumulative_return, Decimal::ONE / years) - Decimal::ONE)
     }
 
     fn calculate_sortino_ratio(&self, returns: &[Decimal]) -> Result<Decimal> {
         let mean_return = self.calculate_mean(returns)?;
         let downside_deviation = self.calculate_downside_deviation(returns)?;
-        
+
         if downside_deviation.is_zero() {
             Ok(Decimal::ZERO)
         } else {
@@ -436,27 +481,32 @@ impl RiskAnalyzer {
         }
     }
 
-    fn calculate_beta(&self, portfolio_returns: &[Decimal], benchmark_returns: &[PeriodReturn]) -> Result<Decimal> {
-        let benchmark_values: Vec<Decimal> = benchmark_returns.iter().map(|r| r.return_value).collect();
-        
+    fn calculate_beta(
+        &self,
+        portfolio_returns: &[Decimal],
+        benchmark_returns: &[PeriodReturn],
+    ) -> Result<Decimal> {
+        let benchmark_values: Vec<Decimal> =
+            benchmark_returns.iter().map(|r| r.return_value).collect();
+
         if portfolio_returns.len() != benchmark_values.len() {
             return Err(FinancialError::InsufficientRiskData {
                 missing: "Mismatched return series lengths".to_string(),
             });
         }
-        
+
         let portfolio_mean = self.calculate_mean(portfolio_returns)?;
         let benchmark_mean = self.calculate_mean(&benchmark_values)?;
-        
+
         let mut covariance = Decimal::ZERO;
         let mut benchmark_variance = Decimal::ZERO;
-        
+
         for (p, b) in portfolio_returns.iter().zip(benchmark_values.iter()) {
             covariance += (p - portfolio_mean) * (b - benchmark_mean);
             let diff = b - benchmark_mean;
             benchmark_variance += diff * diff;
         }
-        
+
         if benchmark_variance.is_zero() {
             Ok(Decimal::ZERO)
         } else {
@@ -464,28 +514,40 @@ impl RiskAnalyzer {
         }
     }
 
-    fn calculate_tracking_error(&self, portfolio_returns: &[Decimal], benchmark_returns: &[PeriodReturn]) -> Result<Decimal> {
-        let benchmark_values: Vec<Decimal> = benchmark_returns.iter().map(|r| r.return_value).collect();
-        
-        let excess_returns: Vec<Decimal> = portfolio_returns.iter()
+    fn calculate_tracking_error(
+        &self,
+        portfolio_returns: &[Decimal],
+        benchmark_returns: &[PeriodReturn],
+    ) -> Result<Decimal> {
+        let benchmark_values: Vec<Decimal> =
+            benchmark_returns.iter().map(|r| r.return_value).collect();
+
+        let excess_returns: Vec<Decimal> = portfolio_returns
+            .iter()
             .zip(benchmark_values.iter())
             .map(|(p, b)| p - b)
             .collect();
-        
+
         self.calculate_volatility(&excess_returns)
     }
 
-    fn calculate_information_ratio(&self, portfolio_returns: &[Decimal], benchmark_returns: &[PeriodReturn]) -> Result<Decimal> {
-        let benchmark_values: Vec<Decimal> = benchmark_returns.iter().map(|r| r.return_value).collect();
-        
-        let excess_returns: Vec<Decimal> = portfolio_returns.iter()
+    fn calculate_information_ratio(
+        &self,
+        portfolio_returns: &[Decimal],
+        benchmark_returns: &[PeriodReturn],
+    ) -> Result<Decimal> {
+        let benchmark_values: Vec<Decimal> =
+            benchmark_returns.iter().map(|r| r.return_value).collect();
+
+        let excess_returns: Vec<Decimal> = portfolio_returns
+            .iter()
             .zip(benchmark_values.iter())
             .map(|(p, b)| p - b)
             .collect();
-        
+
         let excess_return_mean = self.calculate_mean(&excess_returns)?;
         let tracking_error = self.calculate_tracking_error(portfolio_returns, benchmark_returns)?;
-        
+
         if tracking_error.is_zero() {
             Ok(Decimal::ZERO)
         } else {
@@ -493,7 +555,11 @@ impl RiskAnalyzer {
         }
     }
 
-    fn perform_stress_tests(&self, _portfolio: &Portfolio, _returns: &[HistoricalReturns]) -> Result<Vec<StressTestResult>> {
+    fn perform_stress_tests(
+        &self,
+        _portfolio: &Portfolio,
+        _returns: &[HistoricalReturns],
+    ) -> Result<Vec<StressTestResult>> {
         // Implement common stress test scenarios
         Ok(vec![
             StressTestResult {
@@ -526,9 +592,9 @@ impl RiskAnalyzer {
         // Box-Muller transformation for normal distribution
         let u1 = rng.next_uniform();
         let u2 = rng.next_uniform();
-        
+
         let z0 = (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos();
-        
+
         mean + std_dev * Decimal::from_f64_retain(z0).unwrap_or(Decimal::ZERO)
     }
 }
@@ -542,7 +608,7 @@ impl SimpleRandomGenerator {
     fn new(seed: u64) -> Self {
         Self { seed }
     }
-    
+
     fn next_uniform(&mut self) -> f64 {
         // Linear congruential generator
         self.seed = self.seed.wrapping_mul(1664525).wrapping_add(1013904223);
@@ -561,7 +627,7 @@ fn calculate_sqrt(value: Decimal) -> Decimal {
     if value.is_zero() || value.is_sign_negative() {
         return Decimal::ZERO;
     }
-    
+
     // Convert to f64 for sqrt calculation, then back to Decimal
     let f64_val = value.to_f64().unwrap_or(0.0);
     let sqrt_result = f64_val.sqrt();
@@ -576,19 +642,19 @@ fn decimal_power(base: Decimal, exponent: Decimal) -> Decimal {
     if exponent.is_zero() {
         return Decimal::ONE;
     }
-    
+
     let base_f64 = base.to_f64().unwrap_or(1.0);
     let exp_f64 = exponent.to_f64().unwrap_or(1.0);
     let result = base_f64.powf(exp_f64);
-    
+
     Decimal::from_f64_retain(result).unwrap_or(Decimal::ONE)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use uuid::Uuid;
     use crate::types::Currency;
+    use uuid::Uuid;
 
     #[test]
     fn test_risk_analyzer_creation() {
@@ -601,7 +667,7 @@ mod tests {
     fn test_volatility_calculation() {
         let analyzer = RiskAnalyzer::new();
         let returns = vec![dec!(0.05), dec!(-0.02), dec!(0.03), dec!(-0.01), dec!(0.04)];
-        
+
         let volatility = analyzer.calculate_volatility(&returns).unwrap();
         assert!(volatility > Decimal::ZERO);
     }
@@ -610,7 +676,7 @@ mod tests {
     fn test_maximum_drawdown() {
         let analyzer = RiskAnalyzer::new();
         let returns = vec![dec!(0.10), dec!(-0.05), dec!(-0.10), dec!(0.15), dec!(0.02)];
-        
+
         let max_dd = analyzer.calculate_maximum_drawdown(&returns).unwrap();
         assert!(max_dd >= Decimal::ZERO);
     }
@@ -618,10 +684,10 @@ mod tests {
     #[test]
     fn test_simple_random_generator() {
         let mut rng = SimpleRandomGenerator::new(42);
-        
+
         let val1 = rng.next_uniform();
         let val2 = rng.next_uniform();
-        
+
         assert!(val1 >= 0.0 && val1 <= 1.0);
         assert!(val2 >= 0.0 && val2 <= 1.0);
         assert_ne!(val1, val2);

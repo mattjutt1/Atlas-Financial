@@ -4,10 +4,10 @@ FROM rust:1.75-alpine AS builder
 
 # Security: Install build dependencies
 RUN apk update && apk add --no-cache \
-    musl-dev \
-    pkgconfig \
-    openssl-dev \
-    ca-certificates \
+    musl-dev=1.2.4_git20230717-r4 \
+    pkgconfig=0.29.2-r2 \
+    openssl-dev=3.1.4-r5 \
+    ca-certificates=20240705-r0 \
     && rm -rf /var/cache/apk/*
 
 # Security: Create build user
@@ -25,11 +25,9 @@ COPY crates/ ./crates/
 RUN chown -R builder:builder /app
 USER builder
 
-# Build dependencies (cached layer)
-RUN cargo fetch
-
-# Build the application in release mode
-RUN cargo build --release --bin financial-api
+# Build dependencies (cached layer) and build application
+RUN cargo fetch && \
+    cargo build --release --bin financial-api
 
 # Runtime stage
 FROM alpine:3.19 AS runner
@@ -37,9 +35,9 @@ FROM alpine:3.19 AS runner
 # Security: Install security updates and runtime dependencies
 RUN apk update && apk upgrade && \
     apk add --no-cache \
-    ca-certificates \
-    tzdata \
-    openssl \
+    ca-certificates=20240705-r0 \
+    tzdata=2024b-r1 \
+    openssl=3.1.4-r5 \
     && rm -rf /var/cache/apk/*
 
 # Security: Create non-root user

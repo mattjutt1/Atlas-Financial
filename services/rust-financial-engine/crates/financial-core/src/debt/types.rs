@@ -1,9 +1,9 @@
+use crate::types::{Money, Percentage, Rate};
+use chrono::{DateTime, Utc};
 /// Debt management types and structures
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
 use uuid::Uuid;
-use crate::types::{Money, Rate, Percentage};
 
 /// Debt account with payment information
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -39,10 +39,10 @@ pub enum DebtType {
 /// Debt payoff strategy options
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DebtStrategy {
-    Snowball,       // Pay minimum on all, extra on lowest balance
-    Avalanche,      // Pay minimum on all, extra on highest interest rate
-    Custom,         // User-defined payment allocation
-    Consolidation,  // Combine debts into single payment
+    Snowball,      // Pay minimum on all, extra on lowest balance
+    Avalanche,     // Pay minimum on all, extra on highest interest rate
+    Custom,        // User-defined payment allocation
+    Consolidation, // Combine debts into single payment
 }
 
 /// Payment plan for a single debt
@@ -139,10 +139,10 @@ pub struct DebtComparison {
 /// Psychological factors in debt payoff
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PsychologicalFactors {
-    pub motivation_score_snowball: u32,     // 1-10 scale
-    pub motivation_score_avalanche: u32,    // 1-10 scale
-    pub quick_wins_importance: Decimal,     // 0-1 scale
-    pub mathematical_optimality: Decimal,   // 0-1 scale
+    pub motivation_score_snowball: u32,   // 1-10 scale
+    pub motivation_score_avalanche: u32,  // 1-10 scale
+    pub quick_wins_importance: Decimal,   // 0-1 scale
+    pub mathematical_optimality: Decimal, // 0-1 scale
     pub estimated_success_probability: Percentage,
 }
 
@@ -202,9 +202,10 @@ impl DebtAccount {
     pub fn debt_to_limit_ratio(&self) -> Option<Percentage> {
         if let Some(limit) = &self.credit_limit {
             if !limit.amount().is_zero() {
-                Some(Percentage::from_decimal(self.balance.amount() / limit.amount()).unwrap_or_else(|_| 
-                    Percentage::from_percentage(Decimal::ZERO).unwrap()
-                ))
+                Some(
+                    Percentage::from_decimal(self.balance.amount() / limit.amount())
+                        .unwrap_or_else(|_| Percentage::from_percentage(Decimal::ZERO).unwrap()),
+                )
             } else {
                 None
             }
@@ -215,7 +216,9 @@ impl DebtAccount {
 
     /// Calculate monthly interest charge
     pub fn monthly_interest_charge(&self) -> crate::Result<Money> {
-        let monthly_rate = self.interest_rate.convert_to_period(crate::types::Period::Monthly)
+        let monthly_rate = self
+            .interest_rate
+            .convert_to_period(crate::types::Period::Monthly)
             .unwrap_or_else(|_| self.interest_rate);
         self.balance.multiply(monthly_rate.as_decimal())
     }
@@ -224,11 +227,13 @@ impl DebtAccount {
     pub fn payment_to_principal_ratio(&self) -> crate::Result<Percentage> {
         let monthly_interest = self.monthly_interest_charge()?;
         let principal_payment = self.minimum_payment.subtract(&monthly_interest)?;
-        
+
         if self.minimum_payment.amount().is_zero() {
             Ok(Percentage::from_percentage(Decimal::ZERO)?)
         } else {
-            Ok(Percentage::from_decimal(principal_payment.amount() / self.minimum_payment.amount())?)
+            Ok(Percentage::from_decimal(
+                principal_payment.amount() / self.minimum_payment.amount(),
+            )?)
         }
     }
 
@@ -247,7 +252,7 @@ impl DebtAccount {
         self.interest_rate.as_decimal()
     }
 
-    /// Get debt priority score for snowball method  
+    /// Get debt priority score for snowball method
     pub fn snowball_priority_score(&self) -> Decimal {
         // Inverse of balance (lower balance = higher priority)
         if self.balance.amount().is_zero() {
@@ -267,9 +272,11 @@ impl PaymentPlan {
     /// Calculate interest as percentage of original balance
     pub fn interest_percentage(&self) -> Percentage {
         if let Some(first_payment) = self.payment_schedule.first() {
-            let original_balance = first_payment.remaining_balance.add(&first_payment.principal)
+            let original_balance = first_payment
+                .remaining_balance
+                .add(&first_payment.principal)
                 .unwrap_or_else(|_| first_payment.remaining_balance.clone());
-            
+
             if original_balance.amount().is_zero() {
                 Percentage::from_percentage(Decimal::ZERO).unwrap()
             } else {
@@ -291,8 +298,11 @@ impl PaymentPlan {
         if self.payment_schedule.is_empty() {
             Money::new_unchecked(Decimal::ZERO, self.total_payments.currency())
         } else {
-            self.total_payments.divide(Decimal::from(self.payment_schedule.len()))
-                .unwrap_or_else(|_| Money::new_unchecked(Decimal::ZERO, self.total_payments.currency()))
+            self.total_payments
+                .divide(Decimal::from(self.payment_schedule.len()))
+                .unwrap_or_else(|_| {
+                    Money::new_unchecked(Decimal::ZERO, self.total_payments.currency())
+                })
         }
     }
 }
@@ -326,8 +336,8 @@ impl std::fmt::Display for DebtStrategy {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rust_decimal_macros::dec;
     use crate::types::{Currency, Percentage, Period};
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_debt_account_creation() {
@@ -338,7 +348,7 @@ mod tests {
             Money::new(dec!(5000), Currency::USD).unwrap(),
             crate::types::Rate::new(
                 Percentage::from_percentage(dec!(18.99)).unwrap(),
-                Period::Annual
+                Period::Annual,
             ),
             Money::new(dec!(100), Currency::USD).unwrap(),
         );
@@ -357,7 +367,7 @@ mod tests {
             Money::new(dec!(1000), Currency::USD).unwrap(),
             crate::types::Rate::new(
                 Percentage::from_percentage(dec!(12.0)).unwrap(), // 12% annual = 1% monthly
-                Period::Annual
+                Period::Annual,
             ),
             Money::new(dec!(50), Currency::USD).unwrap(),
         );
@@ -375,7 +385,7 @@ mod tests {
             Money::new(dec!(2500), Currency::USD).unwrap(),
             crate::types::Rate::new(
                 Percentage::from_percentage(dec!(18.99)).unwrap(),
-                Period::Annual
+                Period::Annual,
             ),
             Money::new(dec!(75), Currency::USD).unwrap(),
         );
@@ -398,7 +408,7 @@ mod tests {
             Money::new(dec!(5000), Currency::USD).unwrap(),
             crate::types::Rate::new(
                 Percentage::from_percentage(dec!(24.99)).unwrap(),
-                Period::Annual
+                Period::Annual,
             ),
             Money::new(dec!(150), Currency::USD).unwrap(),
         );
@@ -412,7 +422,7 @@ mod tests {
             Money::new(dec!(500), Currency::USD).unwrap(),
             crate::types::Rate::new(
                 Percentage::from_percentage(dec!(19.99)).unwrap(),
-                Period::Annual
+                Period::Annual,
             ),
             Money::new(dec!(25), Currency::USD).unwrap(),
         );
@@ -429,7 +439,7 @@ mod tests {
             Money::new(dec!(3000), Currency::USD).unwrap(),
             crate::types::Rate::new(
                 Percentage::from_percentage(dec!(24.99)).unwrap(),
-                Period::Annual
+                Period::Annual,
             ),
             Money::new(dec!(90), Currency::USD).unwrap(),
         );
@@ -441,15 +451,21 @@ mod tests {
             Money::new(dec!(1000), Currency::USD).unwrap(),
             crate::types::Rate::new(
                 Percentage::from_percentage(dec!(8.5)).unwrap(),
-                Period::Annual
+                Period::Annual,
             ),
             Money::new(dec!(50), Currency::USD).unwrap(),
         );
 
         // Avalanche should prioritize high interest
-        assert!(high_interest_debt.avalanche_priority_score() > low_balance_debt.avalanche_priority_score());
+        assert!(
+            high_interest_debt.avalanche_priority_score()
+                > low_balance_debt.avalanche_priority_score()
+        );
 
         // Snowball should prioritize low balance
-        assert!(low_balance_debt.snowball_priority_score() > high_interest_debt.snowball_priority_score());
+        assert!(
+            low_balance_debt.snowball_priority_score()
+                > high_interest_debt.snowball_priority_score()
+        );
     }
 }

@@ -1,1 +1,0 @@
-cargo:rustc-env=MIME_TYPES_GENERATED_PATH=/home/matt/Atlas-Financial/services/rust-financial-engine/target/debug/build/mime_guess-7c145ce3dabe0342/out/mime_types_generated.rs

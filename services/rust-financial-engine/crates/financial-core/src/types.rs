@@ -1,8 +1,7 @@
 /// Core financial types with exact decimal precision
-/// 
+///
 /// All monetary calculations use rust_decimal to ensure
 /// exact decimal arithmetic without floating-point errors.
-
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -48,7 +47,7 @@ impl Money {
         // Basic validation for reasonable money amounts
         if amount.abs() > Decimal::from(1_000_000_000) {
             return Err(crate::error::FinancialError::ValidationError(
-                "Amount exceeds maximum allowed value".to_string()
+                "Amount exceeds maximum allowed value".to_string(),
             ));
         }
         Ok(Self { amount, currency })
@@ -77,7 +76,10 @@ impl Money {
                 actual: other.currency,
             });
         }
-        Ok(Money::new_unchecked(self.amount + other.amount, self.currency))
+        Ok(Money::new_unchecked(
+            self.amount + other.amount,
+            self.currency,
+        ))
     }
 
     /// Subtract two money amounts (must be same currency)
@@ -88,12 +90,17 @@ impl Money {
                 actual: other.currency,
             });
         }
-        Ok(Money::new_unchecked(self.amount - other.amount, self.currency))
+        Ok(Money::new_unchecked(
+            self.amount - other.amount,
+            self.currency,
+        ))
     }
 
     /// Multiply money by a decimal factor
     pub fn multiply(&self, factor: Decimal) -> crate::Result<Money> {
-        let result = self.amount.checked_mul(factor)
+        let result = self
+            .amount
+            .checked_mul(factor)
             .ok_or_else(|| crate::error::FinancialError::Overflow)?;
         Ok(Money::new_unchecked(result, self.currency))
     }
@@ -141,10 +148,12 @@ impl Percentage {
         // Basic validation for reasonable percentage ranges
         if percentage_value < Decimal::from(-100) || percentage_value > Decimal::from(10000) {
             return Err(crate::error::FinancialError::ValidationError(
-                "Percentage value out of valid range".to_string()
+                "Percentage value out of valid range".to_string(),
             ));
         }
-        Ok(Self { value: percentage_value })
+        Ok(Self {
+            value: percentage_value,
+        })
     }
 
     /// Create a percentage from a percentage value (e.g., 5.0 for 5%)
@@ -152,7 +161,7 @@ impl Percentage {
         // Basic validation for reasonable percentage ranges
         if value < Decimal::from(-100) || value > Decimal::from(10000) {
             return Err(crate::error::FinancialError::ValidationError(
-                "Percentage value out of valid range".to_string()
+                "Percentage value out of valid range".to_string(),
             ));
         }
         Ok(Self { value })
@@ -257,16 +266,16 @@ mod tests {
     fn test_money_operations() {
         let m1 = Money::new(dec!(100.50), Currency::USD).unwrap();
         let m2 = Money::new(dec!(50.25), Currency::USD).unwrap();
-        
+
         let sum = m1.add(&m2).unwrap();
         assert_eq!(sum.amount(), dec!(150.75));
-        
+
         let diff = m1.subtract(&m2).unwrap();
         assert_eq!(diff.amount(), dec!(50.25));
-        
+
         let product = m1.multiply(dec!(2.0)).unwrap();
         assert_eq!(product.amount(), dec!(201.00));
-        
+
         let quotient = m1.divide(dec!(2.0)).unwrap();
         assert_eq!(quotient.amount(), dec!(50.25));
     }
@@ -275,7 +284,7 @@ mod tests {
     fn test_currency_mismatch() {
         let m1 = Money::new(dec!(100.00), Currency::USD).unwrap();
         let m2 = Money::new(dec!(50.00), Currency::EUR).unwrap();
-        
+
         assert!(m1.add(&m2).is_err());
         assert!(m1.subtract(&m2).is_err());
     }
@@ -285,7 +294,7 @@ mod tests {
         let pct = Percentage::from_percentage(dec!(5.5)).unwrap();
         assert_eq!(pct.as_decimal(), dec!(0.055));
         assert_eq!(pct.as_percentage(), dec!(5.5));
-        
+
         let pct2 = Percentage::from_decimal(dec!(0.075)).unwrap();
         assert_eq!(pct2.as_percentage(), dec!(7.5));
     }
@@ -294,9 +303,9 @@ mod tests {
     fn test_rate_conversion() {
         let monthly_rate = Rate::new(
             Percentage::from_percentage(dec!(1.0)).unwrap(),
-            Period::Monthly
+            Period::Monthly,
         );
-        
+
         let annual_rate = monthly_rate.convert_to_period(Period::Annual).unwrap();
         assert_eq!(annual_rate.as_decimal(), dec!(0.12)); // 12% annually
     }

@@ -95,7 +95,7 @@ impl AtlasApiClient {
         debug!("Validating user with Atlas API: {}", user_id);
 
         let url = format!("{}/api/v1/users/{}", self.base_url, user_id);
-        
+
         let response = self
             .client
             .get(&url)
@@ -123,9 +123,9 @@ impl AtlasApiClient {
         } else {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            
+
             warn!("Atlas API returned error {}: {}", status, error_text);
-            
+
             match status.as_u16() {
                 404 => Err(ApiError::UserNotFound { id: user_id.to_string() }),
                 401 => Err(ApiError::AuthenticationFailed {
@@ -146,7 +146,7 @@ impl AtlasApiClient {
         debug!("Validating session with Atlas API: {}", session_id);
 
         let url = format!("{}/api/v1/sessions/{}", self.base_url, session_id);
-        
+
         let response = self
             .client
             .get(&url)
@@ -184,7 +184,7 @@ impl AtlasApiClient {
         } else {
             let status = response.status();
             warn!("Session validation failed with status: {}", status);
-            
+
             match status.as_u16() {
                 404 => Err(ApiError::InvalidToken {
                     reason: "Session not found".to_string(),
@@ -238,7 +238,7 @@ impl AtlasApiClient {
         } else {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            
+
             error!("Session creation failed {}: {}", status, error_text);
             Err(ApiError::AtlasApiError {
                 message: format!("Session creation error {}: {}", status, error_text),
@@ -251,7 +251,7 @@ impl AtlasApiClient {
         debug!("Invalidating session: {}", session_id);
 
         let url = format!("{}/api/v1/sessions/{}", self.base_url, session_id);
-        
+
         let response = self
             .client
             .delete(&url)
@@ -271,7 +271,7 @@ impl AtlasApiClient {
         } else {
             let status = response.status();
             warn!("Session invalidation failed with status: {}", status);
-            
+
             // Treat 404 as success (session already doesn't exist)
             if status.as_u16() == 404 {
                 Ok(())
@@ -288,7 +288,7 @@ impl AtlasApiClient {
         debug!("Fetching permissions for user: {}", user_id);
 
         let url = format!("{}/api/v1/users/{}/permissions", self.base_url, user_id);
-        
+
         let response = self
             .client
             .get(&url)
@@ -324,7 +324,7 @@ impl AtlasApiClient {
         } else {
             let status = response.status();
             warn!("Permission fetch failed with status: {}", status);
-            
+
             match status.as_u16() {
                 404 => Err(ApiError::UserNotFound { id: user_id.to_string() }),
                 403 => Ok(vec![]), // User exists but has no permissions

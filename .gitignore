@@ -25,6 +25,10 @@ yarn-error.log*
 # Local env files
 .env*.local
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Vercel
 .vercel
@@ -43,3 +47,11 @@ Thumbs.db
 # Logs
 logs
 *.log
+
+# Rust build artifacts
+/services/rust-financial-engine/target/
+**/target/debug/
+**/target/release/
+**/target/doc/
+**/*.rs.bk
+Cargo.lock

@@ -1,5 +1,14 @@
+use crate::debt::avalanche::{AvalancheCalculator, AvalancheSavings, StrategyComparison};
+use crate::debt::snowball::{SnowballCalculator, SnowballSavings};
+use crate::debt::types::{
+    ConsolidationOpportunity, DebtAccount, DebtComparison, DebtOptimizationResult, DebtStrategy,
+    NegotiationOpportunity, PaymentPlan, PsychologicalFactors, RiskLevel,
+};
+use crate::types::Percentage;
+use crate::{FinancialError, Money, Result};
+use chrono::{DateTime, Utc};
 /// Debt optimization engine combining multiple strategies
-/// 
+///
 /// This module provides comprehensive debt optimization analysis including:
 /// - Strategy comparison (snowball vs avalanche)
 /// - Custom payment allocation
@@ -7,16 +16,6 @@
 /// - Negotiation recommendations
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use chrono::{DateTime, Utc};
-use crate::{Money, FinancialError, Result};
-use crate::debt::types::{
-    DebtAccount, PaymentPlan, DebtStrategy, DebtOptimizationResult, 
-    DebtComparison, PsychologicalFactors, ConsolidationOpportunity,
-    NegotiationOpportunity, RiskLevel
-};
-use crate::debt::snowball::{SnowballCalculator, SnowballSavings};
-use crate::debt::avalanche::{AvalancheCalculator, AvalancheSavings, StrategyComparison};
-use crate::types::Percentage;
 
 /// Comprehensive debt optimization engine
 pub struct DebtOptimizer {
@@ -28,9 +27,9 @@ pub struct DebtOptimizer {
 /// User's psychological preference for debt payoff
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PsychologicalPreference {
-    QuickWins,          // Prefers early victories (snowball-friendly)
-    Mathematical,       // Prefers optimal savings (avalanche-friendly)
-    Balanced,           // No strong preference
+    QuickWins,    // Prefers early victories (snowball-friendly)
+    Mathematical, // Prefers optimal savings (avalanche-friendly)
+    Balanced,     // No strong preference
 }
 
 /// Comprehensive optimization analysis
@@ -107,22 +106,21 @@ impl DebtOptimizer {
         let avalanche_calculator = AvalancheCalculator::new(self.extra_payment_budget.clone());
 
         let strategy_comparison = avalanche_calculator.compare_with_snowball(debts)?;
-        
+
         // Analyze psychological factors
-        let psychological_factors = self.analyze_psychological_factors(debts, &strategy_comparison)?;
-        
+        let psychological_factors =
+            self.analyze_psychological_factors(debts, &strategy_comparison)?;
+
         // Determine recommended strategy
-        let (recommended_strategy, confidence_score) = self.determine_recommended_strategy(
-            &strategy_comparison,
-            &psychological_factors
-        );
+        let (recommended_strategy, confidence_score) =
+            self.determine_recommended_strategy(&strategy_comparison, &psychological_factors);
 
         // Find consolidation opportunities
         let consolidation_opportunities = self.find_consolidation_opportunities(debts)?;
-        
+
         // Find negotiation opportunities
         let negotiation_opportunities = self.find_negotiation_opportunities(debts)?;
-        
+
         // Generate custom strategy suggestions
         let custom_strategy_suggestions = self.generate_custom_strategies(debts)?;
 
@@ -138,18 +136,21 @@ impl DebtOptimizer {
     }
 
     /// Generate a complete debt optimization result
-    pub fn generate_optimization_result(&self, debts: &[DebtAccount]) -> Result<DebtOptimizationResult> {
+    pub fn generate_optimization_result(
+        &self,
+        debts: &[DebtAccount],
+    ) -> Result<DebtOptimizationResult> {
         let analysis = self.optimize(debts)?;
-        
+
         let payment_plans = match analysis.recommended_strategy {
             DebtStrategy::Snowball => {
                 let calculator = SnowballCalculator::new(self.extra_payment_budget.clone());
                 calculator.calculate_payment_plan(debts)?
-            },
+            }
             DebtStrategy::Avalanche => {
                 let calculator = AvalancheCalculator::new(self.extra_payment_budget.clone());
                 calculator.calculate_payment_plan(debts)?
-            },
+            }
             DebtStrategy::Custom => {
                 // Use the first custom strategy suggestion if available
                 if let Some(custom_strategy) = analysis.custom_strategy_suggestions.first() {
@@ -159,49 +160,56 @@ impl DebtOptimizer {
                     let calculator = AvalancheCalculator::new(self.extra_payment_budget.clone());
                     calculator.calculate_payment_plan(debts)?
                 }
-            },
+            }
             DebtStrategy::Consolidation => {
                 // For consolidation, calculate as if it were a single debt
                 self.calculate_consolidation_plan(debts)?
-            },
+            }
         };
 
-        let total_monthly_payment = payment_plans.iter()
-            .try_fold(Money::new_unchecked(Decimal::ZERO, debts[0].balance.currency()), |acc, plan| {
-                acc.add(&plan.monthly_payment)
-            })?;
+        let total_monthly_payment = payment_plans.iter().try_fold(
+            Money::new_unchecked(Decimal::ZERO, debts[0].balance.currency()),
+            |acc, plan| acc.add(&plan.monthly_payment),
+        )?;
 
-        let total_interest_paid = payment_plans.iter()
-            .try_fold(Money::new_unchecked(Decimal::ZERO, debts[0].balance.currency()), |acc, plan| {
-                acc.add(&plan.total_interest)
-            })?;
+        let total_interest_paid = payment_plans.iter().try_fold(
+            Money::new_unchecked(Decimal::ZERO, debts[0].balance.currency()),
+            |acc, plan| acc.add(&plan.total_interest),
+        )?;
 
-        let final_payoff_date = payment_plans.iter()
+        let final_payoff_date = payment_plans
+            .iter()
             .map(|p| p.payoff_date)
             .max()
             .unwrap_or(Utc::now());
 
-        let total_time_to_payoff_months = payment_plans.iter()
+        let total_time_to_payoff_months = payment_plans
+            .iter()
             .map(|p| p.payment_count())
             .max()
             .unwrap_or(0);
 
         // Calculate savings vs minimum payments
-        let minimum_calculator = AvalancheCalculator::new(Money::new_unchecked(Decimal::ZERO, debts[0].balance.currency()));
+        let minimum_calculator = AvalancheCalculator::new(Money::new_unchecked(
+            Decimal::ZERO,
+            debts[0].balance.currency(),
+        ));
         let minimum_plans = minimum_calculator.calculate_payment_plan(debts)?;
-        
-        let minimum_total_interest = minimum_plans.iter()
-            .try_fold(Money::new_unchecked(Decimal::ZERO, debts[0].balance.currency()), |acc, plan| {
-                acc.add(&plan.total_interest)
-            })?;
 
-        let minimum_total_months = minimum_plans.iter()
+        let minimum_total_interest = minimum_plans.iter().try_fold(
+            Money::new_unchecked(Decimal::ZERO, debts[0].balance.currency()),
+            |acc, plan| acc.add(&plan.total_interest),
+        )?;
+
+        let minimum_total_months = minimum_plans
+            .iter()
             .map(|p| p.payment_count())
             .max()
             .unwrap_or(0);
 
         let interest_savings_vs_minimum = minimum_total_interest.subtract(&total_interest_paid)?;
-        let time_savings_vs_minimum_months = minimum_total_months.saturating_sub(total_time_to_payoff_months);
+        let time_savings_vs_minimum_months =
+            minimum_total_months.saturating_sub(total_time_to_payoff_months);
 
         Ok(DebtOptimizationResult {
             strategy: analysis.recommended_strategy,
@@ -220,20 +228,34 @@ impl DebtOptimizer {
     pub fn create_debt_comparison(&self, debts: &[DebtAccount]) -> Result<DebtComparison> {
         let snowball_calculator = SnowballCalculator::new(self.extra_payment_budget.clone());
         let avalanche_calculator = AvalancheCalculator::new(self.extra_payment_budget.clone());
-        let minimum_calculator = AvalancheCalculator::new(Money::new_unchecked(Decimal::ZERO, debts[0].balance.currency()));
+        let minimum_calculator = AvalancheCalculator::new(Money::new_unchecked(
+            Decimal::ZERO,
+            debts[0].balance.currency(),
+        ));
 
         let snowball_plans = snowball_calculator.calculate_payment_plan(debts)?;
         let avalanche_plans = avalanche_calculator.calculate_payment_plan(debts)?;
         let minimum_plans = minimum_calculator.calculate_payment_plan(debts)?;
 
-        let snowball_result = self.plans_to_optimization_result(snowball_plans, DebtStrategy::Snowball)?;
-        let avalanche_result = self.plans_to_optimization_result(avalanche_plans, DebtStrategy::Avalanche)?;
-        let minimum_only_result = self.plans_to_optimization_result(minimum_plans, DebtStrategy::Custom)?;
+        let snowball_result =
+            self.plans_to_optimization_result(snowball_plans, DebtStrategy::Snowball)?;
+        let avalanche_result =
+            self.plans_to_optimization_result(avalanche_plans, DebtStrategy::Avalanche)?;
+        let minimum_only_result =
+            self.plans_to_optimization_result(minimum_plans, DebtStrategy::Custom)?;
 
-        let psychological_factors = self.calculate_psychological_factors(debts, &snowball_result, &avalanche_result)?;
-        
-        let recommended_strategy = if avalanche_result.total_interest_paid.amount() < snowball_result.total_interest_paid.amount() {
-            if avalanche_result.total_interest_paid.subtract(&snowball_result.total_interest_paid)?.amount() > dec!(500) {
+        let psychological_factors =
+            self.calculate_psychological_factors(debts, &snowball_result, &avalanche_result)?;
+
+        let recommended_strategy = if avalanche_result.total_interest_paid.amount()
+            < snowball_result.total_interest_paid.amount()
+        {
+            if avalanche_result
+                .total_interest_paid
+                .subtract(&snowball_result.total_interest_paid)?
+                .amount()
+                > dec!(500)
+            {
                 DebtStrategy::Avalanche
             } else {
                 match self.psychological_preference {
@@ -256,7 +278,7 @@ impl DebtOptimizer {
             &avalanche_result,
             &snowball_result,
             &psychological_factors,
-            recommended_strategy
+            recommended_strategy,
         );
 
         Ok(DebtComparison {
@@ -278,7 +300,7 @@ impl DebtOptimizer {
     ) -> Result<PsychologicalFactors> {
         let total_debt: Decimal = debts.iter().map(|d| d.balance.amount()).sum();
         let smallest_debt = debts.iter().min_by_key(|d| d.balance.amount()).unwrap();
-        
+
         // Quick wins importance based on debt size distribution
         let quick_wins_importance = if smallest_debt.balance.amount() < total_debt / dec!(10) {
             dec!(0.8) // Small debt exists, quick wins valuable
@@ -287,7 +309,8 @@ impl DebtOptimizer {
         };
 
         // Mathematical optimality based on interest savings
-        let mathematical_optimality = if comparison.interest_savings_avalanche.amount() > dec!(1000) {
+        let mathematical_optimality = if comparison.interest_savings_avalanche.amount() > dec!(1000)
+        {
             dec!(0.9)
         } else if comparison.interest_savings_avalanche.amount() > dec!(500) {
             dec!(0.7)
@@ -309,13 +332,14 @@ impl DebtOptimizer {
         };
 
         // Success probability based on complexity and user preference
-        let estimated_success_probability = if quick_wins_importance > dec!(0.6) && motivation_score_snowball > 7 {
-            Percentage::from_percentage(dec!(85))?
-        } else if mathematical_optimality > dec!(0.7) && motivation_score_avalanche > 7 {
-            Percentage::from_percentage(dec!(80))?
-        } else {
-            Percentage::from_percentage(dec!(75))?
-        };
+        let estimated_success_probability =
+            if quick_wins_importance > dec!(0.6) && motivation_score_snowball > 7 {
+                Percentage::from_percentage(dec!(85))?
+            } else if mathematical_optimality > dec!(0.7) && motivation_score_avalanche > 7 {
+                Percentage::from_percentage(dec!(80))?
+            } else {
+                Percentage::from_percentage(dec!(75))?
+            };
 
         Ok(PsychologicalFactors {
             motivation_score_snowball,
@@ -358,7 +382,7 @@ impl DebtOptimizer {
         }
 
         let confidence_score = (avalanche_score - snowball_score).abs();
-        
+
         if avalanche_score > snowball_score {
             (DebtStrategy::Avalanche, confidence_score)
         } else {
@@ -366,13 +390,19 @@ impl DebtOptimizer {
         }
     }
 
-    fn find_consolidation_opportunities(&self, _debts: &[DebtAccount]) -> Result<Vec<ConsolidationOpportunity>> {
+    fn find_consolidation_opportunities(
+        &self,
+        _debts: &[DebtAccount],
+    ) -> Result<Vec<ConsolidationOpportunity>> {
         // This would integrate with external APIs or databases to find real consolidation options
         // For now, return empty vector as this requires external data
         Ok(Vec::new())
     }
 
-    fn find_negotiation_opportunities(&self, debts: &[DebtAccount]) -> Result<Vec<NegotiationOpportunity>> {
+    fn find_negotiation_opportunities(
+        &self,
+        debts: &[DebtAccount],
+    ) -> Result<Vec<NegotiationOpportunity>> {
         let mut opportunities = Vec::new();
 
         for debt in debts {
@@ -388,24 +418,23 @@ impl DebtOptimizer {
     fn create_negotiation_opportunity(&self, debt: &DebtAccount) -> Result<NegotiationOpportunity> {
         use crate::debt::types::NegotiationType;
 
-        let (negotiation_type, potential_savings_pct, success_probability_pct) = match debt.debt_type {
-            crate::debt::types::DebtType::CreditCard => {
-                if debt.balance.amount() > dec!(5000) {
-                    (NegotiationType::InterestRateReduction, dec!(20), dec!(70))
-                } else {
-                    (NegotiationType::PaymentPlanModification, dec!(10), dec!(60))
+        let (negotiation_type, potential_savings_pct, success_probability_pct) =
+            match debt.debt_type {
+                crate::debt::types::DebtType::CreditCard => {
+                    if debt.balance.amount() > dec!(5000) {
+                        (NegotiationType::InterestRateReduction, dec!(20), dec!(70))
+                    } else {
+                        (NegotiationType::PaymentPlanModification, dec!(10), dec!(60))
+                    }
                 }
-            },
-            crate::debt::types::DebtType::MedicalDebt => {
-                (NegotiationType::BalanceSettlement, dec!(40), dec!(80))
-            },
-            crate::debt::types::DebtType::PersonalLoan => {
-                (NegotiationType::InterestRateReduction, dec!(15), dec!(50))
-            },
-            _ => {
-                (NegotiationType::PaymentPlanModification, dec!(5), dec!(30))
-            }
-        };
+                crate::debt::types::DebtType::MedicalDebt => {
+                    (NegotiationType::BalanceSettlement, dec!(40), dec!(80))
+                }
+                crate::debt::types::DebtType::PersonalLoan => {
+                    (NegotiationType::InterestRateReduction, dec!(15), dec!(50))
+                }
+                _ => (NegotiationType::PaymentPlanModification, dec!(5), dec!(30)),
+            };
 
         let potential_savings = debt.balance.multiply(potential_savings_pct / dec!(100))?;
         let success_probability = Percentage::from_percentage(success_probability_pct)?;
@@ -423,23 +452,29 @@ impl DebtOptimizer {
         })
     }
 
-    fn generate_custom_strategies(&self, debts: &[DebtAccount]) -> Result<Vec<CustomStrategySuggestion>> {
+    fn generate_custom_strategies(
+        &self,
+        debts: &[DebtAccount],
+    ) -> Result<Vec<CustomStrategySuggestion>> {
         let mut suggestions = Vec::new();
 
         // Hybrid strategy: Focus extra payment on highest-interest debt above certain threshold
         if debts.len() > 2 {
             let high_interest_threshold = dec!(15.0); // 15% APR
             let mut allocations = Vec::new();
-            
+
             for debt in debts {
-                let is_high_interest = debt.interest_rate.as_decimal() > high_interest_threshold / dec!(100);
+                let is_high_interest =
+                    debt.interest_rate.as_decimal() > high_interest_threshold / dec!(100);
                 let extra_percentage = if is_high_interest { dec!(70) } else { dec!(10) };
-                
+
                 allocations.push(DebtAllocation {
                     debt_id: debt.id,
                     debt_name: debt.name.clone(),
                     monthly_payment: debt.minimum_payment.add(
-                        &self.extra_payment_budget.multiply(extra_percentage / dec!(100))?
+                        &self
+                            .extra_payment_budget
+                            .multiply(extra_percentage / dec!(100))?,
                     )?,
                     percentage_of_extra: Percentage::from_percentage(extra_percentage)?,
                 });
@@ -447,7 +482,8 @@ impl DebtOptimizer {
 
             suggestions.push(CustomStrategySuggestion {
                 strategy_name: "High-Interest Focus".to_string(),
-                description: "Allocate most extra payments to debts above 15% interest rate".to_string(),
+                description: "Allocate most extra payments to debts above 15% interest rate"
+                    .to_string(),
                 payment_allocation: allocations,
                 projected_savings: Money::new_unchecked(dec!(0), debts[0].balance.currency()), // TODO: Calculate
                 implementation_difficulty: Difficulty::Easy,
@@ -464,7 +500,7 @@ impl DebtOptimizer {
     ) -> Result<Vec<PaymentPlan>> {
         // For custom strategies, calculate each debt individually with its allocated payment
         let mut plans = Vec::new();
-        
+
         for allocation in allocations {
             if let Some(debt) = debts.iter().find(|d| d.id == allocation.debt_id) {
                 let extra_payment = allocation.monthly_payment.subtract(&debt.minimum_payment)?;
@@ -481,7 +517,7 @@ impl DebtOptimizer {
         // Simplified consolidation calculation - combine all debts into one
         let total_balance: Decimal = debts.iter().map(|d| d.balance.amount()).sum();
         let weighted_avg_rate = self.calculate_weighted_average_rate(debts)?;
-        
+
         // Create a virtual consolidated debt
         let consolidated_debt = DebtAccount::new(
             uuid::Uuid::new_v4(),
@@ -493,21 +529,24 @@ impl DebtOptimizer {
         );
 
         let calculator = AvalancheCalculator::new(self.extra_payment_budget.clone());
-        let plan = calculator.calculate_single_debt_plan(&consolidated_debt, &self.extra_payment_budget)?;
-        
+        let plan = calculator
+            .calculate_single_debt_plan(&consolidated_debt, &self.extra_payment_budget)?;
+
         Ok(vec![plan])
     }
 
     fn calculate_weighted_average_rate(&self, debts: &[DebtAccount]) -> Result<crate::types::Rate> {
         let total_balance: Decimal = debts.iter().map(|d| d.balance.amount()).sum();
-        
+
         if total_balance.is_zero() {
             return Err(FinancialError::DivisionByZero);
         }
 
-        let weighted_rate: Decimal = debts.iter()
+        let weighted_rate: Decimal = debts
+            .iter()
             .map(|d| d.balance.amount() * d.interest_rate.as_decimal())
-            .sum::<Decimal>() / total_balance;
+            .sum::<Decimal>()
+            / total_balance;
 
         Ok(crate::types::Rate::new(
             Percentage::from_decimal(weighted_rate)?,
@@ -527,26 +566,25 @@ impl DebtOptimizer {
         }
 
         let currency = plans[0].total_payments.currency();
-        
-        let total_monthly_payment = plans.iter()
-            .try_fold(Money::new_unchecked(Decimal::ZERO, currency), |acc, plan| {
-                acc.add(&plan.monthly_payment)
-            })?;
 
-        let total_interest_paid = plans.iter()
-            .try_fold(Money::new_unchecked(Decimal::ZERO, currency), |acc, plan| {
-                acc.add(&plan.total_interest)
-            })?;
+        let total_monthly_payment = plans.iter().try_fold(
+            Money::new_unchecked(Decimal::ZERO, currency),
+            |acc, plan| acc.add(&plan.monthly_payment),
+        )?;
 
-        let final_payoff_date = plans.iter()
+        let total_interest_paid = plans.iter().try_fold(
+            Money::new_unchecked(Decimal::ZERO, currency),
+            |acc, plan| acc.add(&plan.total_interest),
+        )?;
+
+        let final_payoff_date = plans
+            .iter()
             .map(|p| p.payoff_date)
             .max()
             .unwrap_or(Utc::now());
 
-        let total_time_to_payoff_months = plans.iter()
-            .map(|p| p.payment_count())
-            .max()
-            .unwrap_or(0);
+        let total_time_to_payoff_months =
+            plans.iter().map(|p| p.payment_count()).max().unwrap_or(0);
 
         Ok(DebtOptimizationResult {
             strategy,
@@ -567,15 +605,27 @@ impl DebtOptimizer {
         snowball_result: &DebtOptimizationResult,
         avalanche_result: &DebtOptimizationResult,
     ) -> Result<PsychologicalFactors> {
-        let smallest_debt_pct = debts.iter()
+        let smallest_debt_pct = debts
+            .iter()
             .min_by_key(|d| d.balance.amount())
             .map(|d| d.balance.amount())
-            .unwrap_or(Decimal::ZERO) / debts.iter().map(|d| d.balance.amount()).sum::<Decimal>();
+            .unwrap_or(Decimal::ZERO)
+            / debts.iter().map(|d| d.balance.amount()).sum::<Decimal>();
 
-        let quick_wins_importance = if smallest_debt_pct < dec!(0.2) { dec!(0.8) } else { dec!(0.4) };
-        
-        let interest_diff = avalanche_result.total_interest_paid.subtract(&snowball_result.total_interest_paid)?;
-        let mathematical_optimality = if interest_diff.amount() > dec!(1000) { dec!(0.9) } else { dec!(0.5) };
+        let quick_wins_importance = if smallest_debt_pct < dec!(0.2) {
+            dec!(0.8)
+        } else {
+            dec!(0.4)
+        };
+
+        let interest_diff = avalanche_result
+            .total_interest_paid
+            .subtract(&snowball_result.total_interest_paid)?;
+        let mathematical_optimality = if interest_diff.amount() > dec!(1000) {
+            dec!(0.9)
+        } else {
+            dec!(0.5)
+        };
 
         Ok(PsychologicalFactors {
             motivation_score_snowball: 7,
@@ -593,8 +643,15 @@ impl DebtOptimizer {
         psychological: &PsychologicalFactors,
         recommended_strategy: DebtStrategy,
     ) -> String {
-        let interest_diff = avalanche_result.total_interest_paid.subtract(&snowball_result.total_interest_paid)
-            .unwrap_or_else(|_| Money::new_unchecked(Decimal::ZERO, avalanche_result.total_interest_paid.currency()));
+        let interest_diff = avalanche_result
+            .total_interest_paid
+            .subtract(&snowball_result.total_interest_paid)
+            .unwrap_or_else(|_| {
+                Money::new_unchecked(
+                    Decimal::ZERO,
+                    avalanche_result.total_interest_paid.currency(),
+                )
+            });
 
         match recommended_strategy {
             DebtStrategy::Avalanche => {
@@ -603,21 +660,25 @@ impl DebtOptimizer {
                 } else {
                     "Avalanche method provides modest interest savings with good mathematical foundation".to_string()
                 }
-            },
+            }
             DebtStrategy::Snowball => {
                 if psychological.quick_wins_importance > dec!(0.7) {
                     "Snowball method recommended for psychological benefits and early motivation wins".to_string()
                 } else {
-                    "Snowball method provides good balance of savings and psychological benefits".to_string()
+                    "Snowball method provides good balance of savings and psychological benefits"
+                        .to_string()
                 }
-            },
+            }
             _ => "Custom strategy recommended based on your specific situation".to_string(),
         }
     }
 
-    fn generate_negotiation_strategy(&self, negotiation_type: &crate::debt::types::NegotiationType) -> String {
+    fn generate_negotiation_strategy(
+        &self,
+        negotiation_type: &crate::debt::types::NegotiationType,
+    ) -> String {
         use crate::debt::types::NegotiationType;
-        
+
         match negotiation_type {
             NegotiationType::InterestRateReduction => {
                 "Contact creditor to request rate reduction based on payment history and current market rates".to_string()
@@ -637,9 +698,13 @@ impl DebtOptimizer {
         }
     }
 
-    fn generate_talking_points(&self, _debt: &DebtAccount, negotiation_type: &crate::debt::types::NegotiationType) -> Vec<String> {
+    fn generate_talking_points(
+        &self,
+        _debt: &DebtAccount,
+        negotiation_type: &crate::debt::types::NegotiationType,
+    ) -> Vec<String> {
         use crate::debt::types::NegotiationType;
-        
+
         let mut points = vec![
             "I am a loyal customer who wants to resolve this debt".to_string(),
             "I have been making consistent payments when possible".to_string(),
@@ -648,21 +713,25 @@ impl DebtOptimizer {
         match negotiation_type {
             NegotiationType::InterestRateReduction => {
                 points.push("I've seen lower rates offered by competitors".to_string());
-                points.push("A rate reduction would help me pay off the balance faster".to_string());
-            },
+                points
+                    .push("A rate reduction would help me pay off the balance faster".to_string());
+            }
             NegotiationType::BalanceSettlement => {
                 points.push("I can make a lump-sum payment today for a reduced amount".to_string());
                 points.push("This settlement would resolve the account completely".to_string());
-            },
-            _ => {},
+            }
+            _ => {}
         }
 
         points
     }
 
-    fn generate_preparation_steps(&self, negotiation_type: &crate::debt::types::NegotiationType) -> Vec<String> {
+    fn generate_preparation_steps(
+        &self,
+        negotiation_type: &crate::debt::types::NegotiationType,
+    ) -> Vec<String> {
         use crate::debt::types::NegotiationType;
-        
+
         let mut steps = vec![
             "Gather all account statements and payment history".to_string(),
             "Research current market rates for similar products".to_string(),
@@ -673,12 +742,12 @@ impl DebtOptimizer {
             NegotiationType::BalanceSettlement => {
                 steps.push("Have settlement funds readily available".to_string());
                 steps.push("Get any agreement in writing before paying".to_string());
-            },
+            }
             NegotiationType::HardshipProgram => {
                 steps.push("Document income reduction or unexpected expenses".to_string());
                 steps.push("Complete hardship application thoroughly".to_string());
-            },
-            _ => {},
+            }
+            _ => {}
         }
 
         steps
@@ -687,16 +756,19 @@ impl DebtOptimizer {
 
 impl Default for DebtOptimizer {
     fn default() -> Self {
-        Self::new(Money::new_unchecked(Decimal::ZERO, crate::types::Currency::USD))
+        Self::new(Money::new_unchecked(
+            Decimal::ZERO,
+            crate::types::Currency::USD,
+        ))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use uuid::Uuid;
-    use crate::types::{Currency, Percentage, Period, Rate};
     use crate::debt::types::DebtType;
+    use crate::types::{Currency, Percentage, Period, Rate};
+    use uuid::Uuid;
 
     #[test]
     fn test_debt_optimizer_creation() {
@@ -704,23 +776,29 @@ mod tests {
         let optimizer = DebtOptimizer::new(extra_payment)
             .with_risk_tolerance(RiskLevel::Low)
             .with_psychological_preference(PsychologicalPreference::QuickWins);
-        
+
         assert_eq!(optimizer.extra_payment_budget.amount(), dec!(300));
         assert_eq!(optimizer.risk_tolerance, RiskLevel::Low);
-        assert_eq!(optimizer.psychological_preference, PsychologicalPreference::QuickWins);
+        assert_eq!(
+            optimizer.psychological_preference,
+            PsychologicalPreference::QuickWins
+        );
     }
 
     #[test]
     fn test_debt_comparison() {
         let optimizer = DebtOptimizer::new(Money::new(dec!(200), Currency::USD).unwrap());
-        
+
         let debts = vec![
             DebtAccount::new(
                 Uuid::new_v4(),
                 "Credit Card".to_string(),
                 DebtType::CreditCard,
                 Money::new(dec!(5000), Currency::USD).unwrap(),
-                Rate::new(Percentage::from_percentage(dec!(18.99)).unwrap(), Period::Annual),
+                Rate::new(
+                    Percentage::from_percentage(dec!(18.99)).unwrap(),
+                    Period::Annual,
+                ),
                 Money::new(dec!(100), Currency::USD).unwrap(),
             ),
             DebtAccount::new(
@@ -728,34 +806,41 @@ mod tests {
                 "Personal Loan".to_string(),
                 DebtType::PersonalLoan,
                 Money::new(dec!(3000), Currency::USD).unwrap(),
-                Rate::new(Percentage::from_percentage(dec!(12.5)).unwrap(), Period::Annual),
+                Rate::new(
+                    Percentage::from_percentage(dec!(12.5)).unwrap(),
+                    Period::Annual,
+                ),
                 Money::new(dec!(120), Currency::USD).unwrap(),
             ),
         ];
 
         let comparison = optimizer.create_debt_comparison(&debts).unwrap();
-        
-        assert!(comparison.avalanche_result.total_interest_paid.amount() <= comparison.snowball_result.total_interest_paid.amount());
+
+        assert!(
+            comparison.avalanche_result.total_interest_paid.amount()
+                <= comparison.snowball_result.total_interest_paid.amount()
+        );
         assert!(!comparison.recommendation_reason.is_empty());
     }
 
     #[test]
     fn test_negotiation_opportunities() {
         let optimizer = DebtOptimizer::default();
-        
-        let debts = vec![
-            DebtAccount::new(
-                Uuid::new_v4(),
-                "High Balance Credit Card".to_string(),
-                DebtType::CreditCard,
-                Money::new(dec!(8000), Currency::USD).unwrap(),
-                Rate::new(Percentage::from_percentage(dec!(24.99)).unwrap(), Period::Annual),
-                Money::new(dec!(200), Currency::USD).unwrap(),
+
+        let debts = vec![DebtAccount::new(
+            Uuid::new_v4(),
+            "High Balance Credit Card".to_string(),
+            DebtType::CreditCard,
+            Money::new(dec!(8000), Currency::USD).unwrap(),
+            Rate::new(
+                Percentage::from_percentage(dec!(24.99)).unwrap(),
+                Period::Annual,
             ),
-        ];
+            Money::new(dec!(200), Currency::USD).unwrap(),
+        )];
 
         let opportunities = optimizer.find_negotiation_opportunities(&debts).unwrap();
-        
+
         assert_eq!(opportunities.len(), 1);
         assert_eq!(opportunities[0].debt_name, "High Balance Credit Card");
         assert!(opportunities[0].potential_savings.amount() > Decimal::ZERO);
@@ -769,7 +854,10 @@ mod tests {
                 "Small Debt".to_string(),
                 DebtType::CreditCard,
                 Money::new(dec!(500), Currency::USD).unwrap(),
-                Rate::new(Percentage::from_percentage(dec!(15.0)).unwrap(), Period::Annual),
+                Rate::new(
+                    Percentage::from_percentage(dec!(15.0)).unwrap(),
+                    Period::Annual,
+                ),
                 Money::new(dec!(25), Currency::USD).unwrap(),
             ),
             DebtAccount::new(
@@ -777,14 +865,18 @@ mod tests {
                 "Large Debt".to_string(),
                 DebtType::PersonalLoan,
                 Money::new(dec!(10000), Currency::USD).unwrap(),
-                Rate::new(Percentage::from_percentage(dec!(25.0)).unwrap(), Period::Annual),
+                Rate::new(
+                    Percentage::from_percentage(dec!(25.0)).unwrap(),
+                    Period::Annual,
+                ),
                 Money::new(dec!(300), Currency::USD).unwrap(),
             ),
         ];
 
-        let quick_wins_optimizer = DebtOptimizer::new(Money::new(dec!(200), Currency::USD).unwrap())
-            .with_psychological_preference(PsychologicalPreference::QuickWins);
-        
+        let quick_wins_optimizer =
+            DebtOptimizer::new(Money::new(dec!(200), Currency::USD).unwrap())
+                .with_psychological_preference(PsychologicalPreference::QuickWins);
+
         let math_optimizer = DebtOptimizer::new(Money::new(dec!(200), Currency::USD).unwrap())
             .with_psychological_preference(PsychologicalPreference::Mathematical);
 
@@ -793,6 +885,9 @@ mod tests {
 
         // Quick wins should favor snowball more often
         // Math preference should favor avalanche more often
-        assert_ne!(quick_wins_analysis.recommended_strategy, math_analysis.recommended_strategy);
+        assert_ne!(
+            quick_wins_analysis.recommended_strategy,
+            math_analysis.recommended_strategy
+        );
     }
 }

@@ -1,5 +1,5 @@
 /// Authentication and authorization module
-/// 
+///
 /// Provides JWT token validation, Atlas API integration,
 /// and middleware for protecting GraphQL endpoints.
 

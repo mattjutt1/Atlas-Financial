@@ -1,5 +1,5 @@
 /// Atlas Financial API Library
-/// 
+///
 /// High-performance GraphQL API for financial calculations with:
 /// - Exact decimal precision using rust_decimal
 /// - JWT authentication with Atlas integration
