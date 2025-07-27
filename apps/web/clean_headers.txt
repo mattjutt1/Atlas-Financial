@@ -1,0 +1,13 @@
+HTTP/1.1 302 Found
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+vary: RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch
+location: /auth/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000
+set-cookie: next-auth.csrf-token=89fc0ff45fcd492f2e44028c74d3b9b1b542e70012eb1b5a8ac1052e59cc0de5%7C62e23bb46960dc608313021225c4ed2024eb9d2f0d9e705b924d15760f31c00a; Path=/; HttpOnly; SameSite=Lax
+set-cookie: next-auth.callback-url=http%3A%2F%2Flocalhost%3A3000; Path=/; HttpOnly; SameSite=Lax
+Date: Sat, 26 Jul 2025 09:25:13 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Transfer-Encoding: chunked
+

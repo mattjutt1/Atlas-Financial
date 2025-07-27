@@ -1,0 +1,848 @@
+Role:
+You are a fully autonomous, senior software engineer (agentic coder) with advanced tool access (md, html, screenshot, pdf, execute_js) and a human assistant (Matt) for credentials, legal approval, and non-automatable steps. Your sole mission is to design, build, and document the Atlas v1.1 personal finance platform from zero to MVP in a monorepo, per the PRD below.
+
+Principles:
+
+Never hallucinate – always cross-check facts or code against official docs or examples, fetched with the tools provided.
+
+For each major system or interface, validate feasibility before implementation.
+
+Use only open-source or free-tier solutions as specified in the PRD.
+
+Structure all code and documentation so it can be maintained by humans post-launch.
+
+Explicitly document decisions, gaps, tradeoffs, and where you made design choices.
+
+At blockers (secrets, legal, CAPTCHA, etc.), PAUSE and prompt Matt for intervention.
+
+Full Product Requirements Document (PRD)
+(Product Requirements Document (PRD) – Atlas v1.1 (Codex-Optimized)
+(All open-source / free-tier cloud tech stack – built by an autonomous OpenAI Codex agent with human oversight where required.)
+0. Executive Summary
+Atlas v1.1 is a self-hostable, brutally-honest personal finance platform developed by an autonomous coding agent (OpenAI’s Codex) with minimal human intervention. It will:
+Aggregate Financial Data: Ingest live bank, credit, and investment transactions via free open banking APIs and OFX connections (using AqBanking for ~US banks and Nordigen/GoCardless for EU/UK)
+wiki.gnucash.org
+gocardless.com
+, with a Playwright-based web-scraper as fallback.
+Ledger & Storage: Store all transactions in a self-hosted Firefly III double-entry ledger (open-source, AGPLv3) on PostgreSQL
+github.com
+github.com
+.
+APIs & Security: Expose real-time GraphQL/REST APIs via Hasura (OSS GraphQL engine on Postgres
+github.com
+), and secure front-end/edge access with Keycloak SSO (open-source IAM solution)
+sourceforge.net
+.
+AI Insights: Run an explainable AI service (“Finance-Brain”) powered by an open LLM (e.g. fine-tuned Llama model) to enforce a “75/15/10” budget rule, apply Ramsey’s 7-step and Dalio’s All-Weather portfolio principles, and generate “brutal honesty” narrative insights on the user’s finances.
+User Interface & Ops: Provide a Next.js/React front-end dashboard, Grafana-based visualizations, and a fully automated DevSecOps pipeline – all at $0/month operating cost on a hobby scale.
+This PRD is structured to enable an OpenAI Codex autonomous software agent to build the entire platform end-to-end (as the Lead Developer), while you, the human, act as the assistant/overseer only for tasks that absolutely require manual input or verification. Success is defined as delivering a first actionable financial insight to the user in under 60 seconds of setup, and reducing their “money anxiety” by at least 35%.
+1. Personas & Top Jobs-to-Be-Done
+Persona (User)	Core Pain Point	Atlas Solution (Job-to-be-Done)
+Stretched Salaried (e.g. Ohio teacher)	Disparate accounts, creeping credit card debt; no unified view of finances.	Automatically consolidate all accounts; enforce 75% spending cap and show a debt snowball payoff plan.
+Cautious Planner (mid-career engineer)	Over-concentrated investment portfolio; inflation worries.	Run Dalio’s risk-parity check on holdings; suggest All-Weather rebalancing and inflation hedges.
+Privacy-Maxi Self-Hoster	Won’t trust SaaS platforms with bank credentials.	Provide a 100% open-source stack (self-hosted) with BYO API keys; never send data externally.
+2. Full Open-Source / Free-Tier Tech Stack
+2.1 Data Ingestion (Bank Feeds)
+Layer	Tool & Version	License	Notes (Scope)
+US Bank Feeds (OFX)	AqBanking 6.x	GPL-2.0/3.0	Supports OFX DirectConnect for many U.S. banks (Quicken-compatible)
+wiki.gnucash.org
+. Approx. 1,400 US financial institutions supported via Direct Connect (OFX) out-of-the-box. Fallback: Plaid/Stripe (disabled by default due to cost).
+EU/UK Bank Feeds (PSD2)	Nordigen API (now GoCardless Bank Data)	MIT (free tier SaaS)	Free open banking API with connections to 2,300+ banks across 31 countries
+gocardless.com
+disruptionbanking.com
+. No per-user fees – truly free for AIS data.
+Extended PSD2	Enable Banking SDK	LicenseRef (custom free license)	Direct PSD2 connectivity via SDK; handles mTLS and requires an eIDAS certificate for production access
+enablebanking.com
+. (Offers JavaScript/Python client libs for bank APIs without an aggregator.)
+Secrets Mgmt	Teller CLI	Apache-2.0	CLI tool for secure secret storage (open-source)
+github.com
+. Used to encrypt and manage bank API credentials (OFX logins, PSD2 tokens) locally, never exposing them in plaintext.
+Web Scraper	Playwright + Scrapy	Apache-2.0 + BSD-3-Clause	Headless browser automation (Playwright
+en.wikipedia.org
+) combined with a scraping framework (Scrapy
+zyte.com
+) for banks with no API/OFX. Includes CAPTCHA solving flow (prompts user in UI if manual step needed). Only runs for institutions that lack API or OFX support.
+2.2 Core Ledger & Transactions Store
+Firefly III – Personal finance manager and double-entry accounting ledger (Laravel/PHP). Licensed AGPL-3.0
+github.com
+. We will use Firefly’s API and DB schema as the backbone for all transactions, accounts, and budgeting rules. Firefly III supports transactions, budgets, categories, and even rule-based transaction handling
+github.com
+. This will serve as the source of truth for financial data.
+PostgreSQL 15 – Primary database for Firefly and our custom data (hosted on Supabase Free Tier). Supabase provides 2 free Postgres databases with 500 MB storage each, 1 GB file storage for uploads, and up to 50k monthly active users on the free plan
+dev.to
+. All data will be stored here (with pgcrypto or similar for sensitive fields if needed).
+Hasura GraphQL Engine v2 – GraphQL/REST API auto-layer on Postgres (open-source, Apache-2.0 licensed
+github.com
+). Hasura will expose instant real-time APIs for the front-end to query transactions, balances, budgets, etc. We will configure role-based access control and row-level security (RLS) in Hasura, using claims from SuperTokens JWT (see 2.4). This gives millisecond-order response times for queries and subscriptions (e.g., live budget usage updates). Enhanced with custom scalar types for precise financial operations.
+
+2.2.1 Financial Precision Foundation (CRITICAL ENHANCEMENT - Phase 1.5)
+Atlas v1.2+ addresses IEEE 754 floating-point precision errors that plague financial applications through a comprehensive precision-first architecture:
+
+Primary Precision Library: Decimal.js (https://github.com/MikeMcl/decimal.js) – 20k+ stars, MIT licensed. Arbitrary-precision decimal arithmetic eliminating floating-point errors. Used for ALL financial calculations.
+
+Currency Operations: Dinero.js Alpha (https://github.com/dinerojs/dinero.js) – Modern money handling with immutable operations, currency awareness, and locale formatting. Integrates seamlessly with Decimal.js.
+
+Lightweight Operations: Currency.js (https://github.com/scurker/currency.js) – Lightweight library for simple currency operations with precision guarantees.
+
+Alternative Precision: BigNumber.js (https://github.com/MikeMcl/bignumber.js) and Big.js (https://github.com/MikeMcl/big.js) as fallback options for specific use cases requiring different precision models.
+
+Financial Formulas: TVM-FinanceJS (https://github.com/kgkars/tvm-financejs) – Time Value of Money calculations matching Excel's financial functions with precision support.
+
+Performance Target: All financial calculations must complete in <100ms with guaranteed precision to 4 decimal places (bank-grade standard).
+
+Enhanced Financial Libraries Integration:
+- Debt Management: debt-snowball (https://github.com/agilous/debt-snowball) for optimized payoff calculations
+- Portfolio Analysis: portfolio_allocation_js (https://github.com/lequant40/portfolio_allocation_js) for risk-parity optimization
+- Transaction Categorization: ML-enhanced categorization with @tensorflow/tfjs client-side processing
+- Advanced Charts: react-financial-charts (https://github.com/react-financial/react-financial-charts) for professional financial visualizations
+2.3 Enhanced AI & Rules Engine ("Finance-Brain") with ML Analytics
+AI Engine: A Python 3.12 microservice container implementing our advanced financial advisor logic. This uses an open LLM (likely a fine-tuned Llama-2 or newer Llama-3 ~8B model, specialized on finance) for natural language analysis and advice. Rationale: Llama 2 models (7B/13B) are open-source from Meta
+reddit.com
+, and by 2025 fine-tuned models for finance are available. We will use an 8B-parameter finance-tuned model (running on a local GPU or free Colab TPU) to generate insights in an explainable manner (no black-box magic).
+
+Enhanced Financial Analytics Components:
+1. Advanced Budget Rule Engine: Implements sophisticated 75/15/10 analysis with variance tracking, category-specific thresholds, and predictive spending patterns.
+
+2. Professional Debt Management: Integrates debt-snowball (https://github.com/agilous/debt-snowball) and debt_snowball (https://github.com/jkugler/debt_snowball) algorithms for optimized payoff strategies comparing snowball vs avalanche methods with ROI calculations.
+
+3. ML-Enhanced Transaction Categorization: Client-side @tensorflow/tfjs implementation for real-time transaction categorization using pre-trained models. References: BankTextCategorizer (https://github.com/j-convey/BankTextCategorizer) and Finance-TransactionCategorizer (https://github.com/Foxel05/Finance-TransactionCategorizer).
+
+4. Portfolio Risk Analysis: Implements Dalio's All-Weather Portfolio principles using portfolio_allocation_js (https://github.com/lequant40/portfolio_allocation_js) for risk-parity analysis, hierarchical risk parity (https://github.com/KennnnyZhou/Hierarchical_Risk_Parity), and multi-layer portfolio optimization.
+
+5. Advanced Cash Flow Projection: Monte Carlo simulations for financial planning using advanced statistical models with scenario analysis and stress testing.
+
+Vector DB: The AI service will use a pgvector extension (Supabase) to store embeddings of transactions & financial documents. This allows semantic search and recall of similar transactions or advice.
+
+Prompt Templates: The agent's prompts will encode financial rules: e.g. "75/15/10 rule" (spend no more than 75% of income, save 15%, donate 10%), Dave Ramsey's 7 Baby Steps (e.g. emergency fund, debt snowball) and Ray Dalio's All-Weather Portfolio principles. The AI will analyze the user's data against these frameworks and produce a "brutally honest" narrative report each month. For transparency, the model will explain why it gives each recommendation, citing the rule (this helps build user trust).
+
+Execution: This "Finance-Brain" service is called asynchronously (e.g. via Hasura Actions or Supabase Edge Functions) and its outputs are stored as records (e.g. insights table) and possibly presented via Grafana dashboards or the front-end. All calculations use Decimal.js precision for accurate financial modeling.
+2.4 Auth & Identity Management (UPDATED - Phase 1.1 Complete)
+SuperTokens – Open-source authentication solution with session management, social logins, and MFA
+https://supertokens.com
+. Atlas v1.2 has successfully migrated from Keycloak to SuperTokens for improved developer experience and simplified deployment. SuperTokens provides: Email/password auth, social logins (Google, Apple, GitHub), passwordless authentication, and session management with automatic refresh.
+
+JWT & Hasura Integration: SuperTokens is configured to issue JWTs with custom claims (including hasura namespace) for seamless Hasura integration. Row-level security (RLS) ensures users can only access their own financial data. SuperTokens' session management provides automatic token refresh and secure logout across all services.
+
+Front-end Integration: The Next.js front-end uses SuperTokens React SDK for authentication flows. The integration includes:
+- Pre-built auth components (login, signup, forgot password)
+- Session management with automatic token refresh
+- Protected routes and authentication guards
+- Seamless logout and session termination
+
+Migration Status: Phase 1.1 SuperTokens migration completed successfully. All authentication flows tested and operational with Hasura GraphQL API integration.
+2.5 Observability & Dashboards
+Grafana OSS 10 – Metrics and observability platform (open-source, AGPLv3 license since 2021)
+grafana.com
+github.com
+. Grafana will serve two purposes: (1) DevOps observability (system metrics, logs, uptime), and (2) User-facing financial dashboards (via embedded panels). We will pre-build Grafana dashboards for Net Worth over time, Cashflow projections, Budget vs Actual spending, etc., using data from Postgres (through Grafana’s Postgres plugin) or from the AI insights. Grafana’s new unified alerting can also trigger notifications (e.g. alert if spending in a category exceeds budget).
+Loki & Prometheus (Optional) – If the user opts in, Atlas can deploy Loki for log aggregation and Prometheus for metrics, feeding into Grafana. This is optional to keep the minimal install light. Grafana 10+ has improved built-in visualizations and streaming support, so even without Prometheus we can push metrics (or use Supabase’s built-in monitoring for the DB).
+2.6 Front-End / User Experience
+Next.js 15 + React 19 – Modern React framework (Next.js) for our single-page app with server-side rendering and API routes. Both are open-source (MIT license)
+en.wikipedia.org
+en.wikipedia.org
+. Next.js 15.1 supports React 19 stable
+nextjs.org
+, which we will use for optimal performance. The front-end will offer a responsive dashboard where users can view accounts, transactions, and AI-generated insights. It will also include setup wizards (for linking bank accounts) and PWA features.
+Tailwind CSS – Utility-first CSS framework (MIT License) for sleek styling. We will use a pre-built Tailwind theme for a clean UI/UX, ensuring the interface is modern and accessible (dark mode included).
+Charts & Visualizations (ENHANCED): Professional financial charting implementation using:
+- React-Financial-Charts (https://github.com/react-financial/react-financial-charts) – Professional-grade financial charts with candlestick, OHLC, and technical indicators
+- Lightweight-Charts (https://github.com/tradingview/lightweight-charts) – TradingView's lightweight charting library for portfolio performance
+- React-Cash-Flow (https://github.com/mariorodeghiero/react-cash-flow) – Specialized cash flow visualization components
+- ChartJS-Chart-Financial (https://github.com/chartjs/chartjs-chart-financial) – Financial chart types for Chart.js
+- Custom Grafana panels for advanced analytics and real-time monitoring
+
+Enhanced Visualization Capabilities:
+- Real-time portfolio performance with risk-parity analysis
+- Interactive debt payoff projections (snowball vs avalanche)
+- Advanced budget variance analysis with predictive modeling
+- Cash flow forecasting with Monte Carlo scenarios
+- Transaction categorization confidence scoring with ML insights
+Progressive Web App (PWA): Atlas will be installable as a PWA on mobile. Next.js will be configured with offline support – caching the last ~90 days of transactions so that users can view recent data even when offline. Push notifications (e.g. “You’re 5% away from your budget limit in Dining Out”) are planned for v1.2 via Firebase or Web Push.
+2.7 DevSecOps Automation
+All development, deployment, and security checks are integrated into a single pipeline so that the Codex agent can continuously build and secure the project with minimal human help:
+Phase	Tool	Free Tier/OSS?	Notes
+CI (Continuous Integration)	GitHub Actions	Free for 2,000 min/month
+dev.to
+Used for running tests, linters, and building Docker images on each commit. The agent will set up workflows for CI.
+CD (Continuous Delivery)	Docker Compose + Helm	OSS (self-hosted)	Infrastructure-as-code: Docker Compose for local dev and single-server deploy; Helm charts for optional k8s deployment. The agent will provide one-click deploy scripts.
+Secrets	GitHub OIDC → HashiCorp Vault	Free (OIDC & Vault OSS)	GitHub OIDC used for CI to retrieve secrets from a self-hosted Vault (no plaintext secrets in repo). Vault is open-source and will store keys (Nordigen token, eIDAS certs, etc.) securely.
+Static Analysis	Semgrep (Community OSS)	Free/OSS (MIT)	Automated code scanning on each PR. Semgrep is a lightweight static analysis tool
+github.com
+ with rules for OWASP Top 10 issues. The agent will include a Semgrep config to fail CI on high-risk findings.
+Dynamic Testing	OWASP ZAP (DAST scanner)	Free/OSS	In CI, after deployment to a test environment (or using a Docker container), run ZAP to scan the web app for vulnerabilities (XSS, SQLi, etc.). OWASP ZAP is a free, open-source web app scanner
+owasp.org
+. CI can use the ZAP GitHub Action to automate this.
+Hosting: During development and for small-scale use, Atlas can run on a single VPS (e.g. 2 vCPU / 2 GB) or using purely free cloud services: Supabase (DB + auth edge functions), and front-end on Vercel or Fly.io free tier (Fly’s free tier can run a lightweight Next.js edge app). All components are containerized for portability.
+3. Enhanced Functional Requirements (Updated for Phase 1.5)
+The core Epics and key capabilities for Atlas are outlined below, enhanced with financial precision and advanced analytics. Each Epic is a major feature area; each Capability is something the system should do. We mark which version the feature is delivered (MVP = minimal viable, v1.2, v2.0 for future). Bold indicates features where the AI "Finance-Brain" is involved.
+
+Epic	Capability	Phase 1.1 ✅	Phase 1.5 (Current)	Future (v2+)
+Financial Precision Foundation	Replace all floating-point arithmetic with Decimal.js; implement Dinero.js currency operations; DECIMAL(19,4) database precision.	N/A	✅ CRITICAL	Bank-grade precision certification.
+Account Linking	Connect bank accounts via AqBanking (OFX) and Nordigen (OAuth2 PSD2).	✅ (basic)	Enhanced with precision validation	Crypto wallets & DeFi integrations.
+Ledger Management	Import transactions into Firefly III; apply rules (auto-categorize, split transactions, etc.).	✅	Enhanced with Decimal precision	Joint/Household ledgers (multi-user data sharing).
+Enhanced AI Insights	**ML-Enhanced transaction categorization with @tensorflow/tfjs; Advanced 75/15/10 budget analysis with variance tracking; Portfolio risk-parity analysis.**	Basic insights	✅ Advanced Analytics	Monte Carlo retirement simulation; tax optimization tips.
+Professional Debt Management	**Calculate optimized debt snowball/avalanche payoff schedules with ROI analysis; debt negotiation strategies.**	Basic calculations	✅ Professional Tools	Refinance offer finder; automated rate monitoring.
+Transaction Verification	Flag "unknown" or suspicious transactions; ML confidence scoring for categorization.	v1.0	✅ ML-Enhanced	Browser extension to tag purchases in real-time.
+Professional Analytics	**React-Financial-Charts dashboards; TradingView-style portfolio analysis; Cash flow Monte Carlo projections.**	Basic Grafana	✅ Professional Charts	Mobile widgets; custom dashboard builder.
+Enhanced Security & Privacy	SuperTokens SSO login; data encryption at rest; financial-grade security.	✅ SuperTokens	Enhanced compliance	Hardware 2FA; user-managed encryption keys.
+Note: The MVP (minimum viable product) already covers linking accounts, core ledger functions, basic AI insights (budget alerts), and debt calculation – enough to deliver value (a “brutal mirror” of finances). Future versions enhance sophistication and integrations. Importantly, all sensitive data stays self-hosted; third-party services (Nordigen, etc.) are used only to fetch data via secure channels.
+4. Enhanced Non-Functional Requirements (Updated for Phase 1.5)
+Atlas v1.2+ must meet enhanced targets for financial precision and performance:
+
+Financial Precision Requirements (CRITICAL):
+- All monetary calculations use Decimal.js with guaranteed precision to 4 decimal places
+- Zero IEEE 754 floating-point errors in financial operations
+- Bank-grade precision standards (DECIMAL(19,4) database storage)
+- Financial calculation performance: <100ms for complex operations (debt analysis, portfolio optimization)
+- Currency operations maintain precision across all exchange rate calculations
+
+Performance: 95th percentile API response latency < 400ms for all GraphQL queries
+github.com
+ (with Hasura + Postgres tuning). The app should feel instant when querying recent transactions or updating a budget. Enhanced financial calculations maintain sub-100ms response times.
+
+"Time to First Insight": From initial setup to first actionable financial insight in < 60 seconds. Enhanced ML-powered transaction categorization and portfolio analysis maintain this target despite increased complexity.
+Reliability: On a typical self-host environment, target 99.5% uptime (about <22 minutes downtime per month). Utilize Docker healthchecks and restart policies to recover from crashes; the autonomous deployment should include monitoring to auto-restart services if needed.
+Security: Zero critical findings in OWASP Top 10 categories. We will run Semgrep and OWASP ZAP scans on each update
+github.com
+owasp.org
+. Any high-severity vulnerability (auth bypass, SQL injection, XSS, etc.) is a release blocker until fixed.
+Privacy & Compliance: GDPR compliance – e.g., a user’s “Right to be Forgotten” can be executed in <30s (when requested, delete all personal data for that user via Firefly’s API and direct DB purging, using pgcrypto to wipe sensitive fields). Also, no data is sent to third-party analytics by default (opt-in only).
+Scalability: The stack should scale from personal (1 user) to small business (~50 users) without major changes. This means with more users, we can upgrade to larger Supabase or a bigger VPS. Hasura and Keycloak support horizontal scaling if needed (but v1.1 targets “single household” use).
+Cost Efficiency: The baseline deployment should cost $0 in cloud fees at hobby scale. The chosen free tiers (Supabase, etc.) cover this. The design should also permit pausing/downgrading services when not in use to avoid costs (e.g., stop the VM overnight if needed). For scaling beyond free tier, the path (Supabase Pro, etc.) is documented (see Appendix).
+Usability: The UI should be clean and not intimidating. Even though it’s self-hosted, aim for a polished UX: responsive design, accessible components (WCAG AA), and clear onboarding. The “Brutal Honesty” reports from the AI should be frank but constructive – tone can be adjusted based on user preference (some might want gentle wording, others want it drill-sergeant style!).
+5. Sequential Roadmap (12-Month Plan, Sprints ~2 weeks)
+Our development roadmap is aligned with enabling an autonomous Codex agent to implement features in logical increments. Each phase corresponds to a couple of sprints, and includes specific Human-in-the-Loop steps where your input is needed (everything else will be handled by the AI agent automatically).
+Phase 0: Foundations (Sprints 0–1) – Goal: Project setup and CI/CD scaffolding.
+Agent Tasks: Initialize a GitHub repository “atlas” (public or private per user choice). Set up the project structure (monorepo or multi-repo with sub-folders for front-end, back-end, etc.), including a README and an atlas-up.sh one-command installer script. Create Docker Compose files for all services (DB, Hasura, Keycloak, Firefly, Grafana, etc.) and a basic GitHub Actions workflow (build and test). Basically, the “skeleton” of the app.
+Human Task: Generate master keys – The agent will prompt you to create an AES encryption key (for secrets at rest) and perhaps initial Keycloak admin password. These should be created by you and stored securely offline (the agent will then accept them as inputs to configure Vault/Keycloak).
+Phase 1: Core Ledger MVP (Sprints 2–3) – Goal: Get Firefly III up and running with our Postgres (Supabase) and basic connectivity. ✅ COMPLETED
+Agent Tasks: Fork or integrate Firefly III (the agent will likely use the Firefly API instead of modifying its code, to avoid heavy PHP coding). Set up Firefly's Docker container, point it to the Supabase Postgres. Write a script or use Firefly's importer to load example transactions. Configure Hasura on the same Postgres – expose GraphQL for Firefly tables (transactions, accounts) and set up permission rules. Basic front-end page to display a list of accounts and transactions via GraphQL query (to prove end-to-end flow).
+Human Task: Create service accounts on Supabase: You'll need to log in to Supabase (free tier) and create a new project. Generate the database URL and JWT secret for Hasura. The agent will prompt for these values (or possibly use the Supabase CLI if available). Essentially, you just do the cloud account clickwork that can't be automated.
+
+Phase 1.1: SuperTokens Authentication Migration (Sprint 3.5) – Goal: Migrate from Keycloak to SuperTokens for simplified auth. ✅ COMPLETED
+Agent Tasks: Replace Keycloak authentication with SuperTokens implementation. Configure SuperTokens React SDK for frontend authentication flows. Update Hasura JWT configuration for SuperTokens integration. Implement session management and protected routes. Test complete authentication flow end-to-end.
+Human Task: Configure SuperTokens dashboard and verify authentication settings. Review and approve the simplified authentication architecture.
+
+Phase 1.5: Financial Precision Foundation (Sprint 4) – Goal: Implement bank-grade financial precision and eliminate IEEE 754 errors. 🚧 CURRENT PHASE
+Agent Tasks: 
+- Replace ALL floating-point arithmetic with Decimal.js library implementation
+- Integrate Dinero.js for currency-aware financial operations  
+- Update Firefly III database schema to use DECIMAL(19,4) for all monetary fields
+- Implement TVM-FinanceJS for Excel-compatible financial formulas
+- Create comprehensive financial calculation service layer with <100ms performance targets
+- Integrate ML-enhanced transaction categorization using @tensorflow/tfjs
+- Implement debt optimization algorithms (snowball vs avalanche) with ROI calculations
+- Add portfolio risk-parity analysis using portfolio_allocation_js
+- Create professional financial charting with react-financial-charts
+- Establish precision testing framework with Chai.js for financial accuracy validation
+
+Critical Libraries Integration:
+- Decimal.js (https://github.com/MikeMcl/decimal.js) - Primary precision library
+- Dinero.js Alpha (https://github.com/dinerojs/dinero.js) - Currency operations
+- Currency.js (https://github.com/scurker/currency.js) - Lightweight currency math
+- TVM-FinanceJS (https://github.com/kgkars/tvm-financejs) - Financial formulas
+- @tensorflow/tfjs - Client-side ML for transaction categorization
+- debt-snowball (https://github.com/agilous/debt-snowball) - Debt optimization
+- portfolio_allocation_js (https://github.com/lequant40/portfolio_allocation_js) - Portfolio analysis
+- react-financial-charts (https://github.com/react-financial/react-financial-charts) - Professional charts
+
+Human Task: Review and approve the comprehensive financial precision architecture. Validate that all monetary calculations meet bank-grade precision standards. Approve ML model usage for transaction categorization.
+Phase 2: Data Pipelines (Sprints 4–5) – Goal: Connect to bank data sources (AqBanking and Nordigen) and import transactions into the ledger.
+Agent Tasks: Implement a Python module for OFX using AqBanking CLI or library – the agent will likely call aqbanking-cli commands or use its API to fetch recent transactions from a sample bank (there are test bank servers or we can use small local OFX files for testing). Similarly, integrate Nordigen’s API (the agent can use Nordigen’s sandbox or a real account if provided) – obtain an access token, simulate fetching transactions. Map and insert these transactions into Firefly (via Firefly’s API or direct DB insert if needed). Ensure duplicate prevention (don’t double-import the same transaction). Also, store account metadata (account names, balances).
+Human Task: Enter bank credentials & complete MFA once: When the agent is ready to test bank connectivity, it will pause and ask you to input dummy or real credentials for a test account (or an OFX file). For Nordigen, you’ll need to create a free account and obtain an API token (the agent will guide you). If MFA or CAPTCHA is encountered, you might need to solve it manually the first time – the agent will then store the session cookie via Playwright for subsequent runs.
+Phase 3: “Finance-Brain” AI Service (Sprints 6–7) – Goal: Develop the AI insights microservice and generate a basic “Brutal Honesty” report.
+Agent Tasks: Set up a Python service (Flask or FastAPI) for AI. Install an open-source model (the agent might use an 8B parameter model checkpoint if available – possibly it will download Llama-2 7B as a stand-in). Implement prompts: e.g., “Analyze the last 30 days of transactions and respond with: ‘What’s going well, what’s going poorly, and one recommendation,’ applying the 75/15/10 rule.” The agent will code the logic to query recent data (maybe via Hasura GraphQL) and feed it to the model. Because this is resource-intensive, it might run on a schedule or on-demand. The agent should also add a vector store (pgvector) and ensure we can store/retrieve embeddings (though a simple use-case might not require semantic search yet).
+Agent Tasks (AI model fine-tune): If possible, demonstrate fine-tuning or at least prompt-tuning the model on example data. Possibly the agent will include a small sample dataset (could generate synthetic financial records and corresponding advice). Ensure the model’s responses are factual (the agent might hard-code some known financial tips to cross-verify the AI output).
+Human Task: Approve model and data usage: You should review the chosen model’s license (e.g., Meta’s Llama-2 is community license allowing commercial use) and the privacy implications. Also, if the agent scraped any financial advice content to fine-tune, ensure it’s from a permissible source. Essentially, give a green-light that using this AI model is acceptable for you. (No coding needed, just a check that we’re not accidentally using a model that sends data to third-party or violates licenses.)
+Phase 4: Front-End Alpha (Sprints 8–9) – Goal: Build the Next.js front-end UI for key user stories with working authentication and queries.
+Agent Tasks: Implement login flow with Keycloak (the agent will use NextAuth or Keycloak JS adapter). Create pages: Dashboard (overview of accounts with balances, maybe a net worth total), Transactions list (with filters), Insights page (show the output from “Finance-Brain”), Budgets page (if budget feature active). Use Tailwind CSS for styling. Ensure the front-end calls the Hasura GraphQL API (the agent will store the JWT from Keycloak and use Apollo or similar). Also include initial Grafana panels via iframe or Grafana’s React component for richer visualization.
+Agent Tasks (Auth): Configure Keycloak: The agent will run the Keycloak container and use its admin CLI or REST API to set up a realm, client (for the Next.js app), and a default admin user. It will integrate Keycloak with Hasura by adding a JWKS endpoint in Hasura config so JWTs are verified. All of this can be automated via Keycloak’s provisioning scripts (the agent to handle it).
+Human Task: Run Keycloak initial setup: Once the agent sets up Keycloak, you should log into the Keycloak admin console (the agent will provide the local URL and the initial admin credentials or prompt you to set them). In the console, verify the realm and client exist. Optionally, run the “Add user” wizard to create your own user account for testing (or the agent can create a test user via script). Essentially, just confirm Keycloak is ready and adjust any settings if needed (SMTP server for email verification, etc., can be skipped for now or configured later).
+Phase 5: Web Scraper for Transaction Verification (Sprints 10–11) – Goal: Add the Playwright+Scrapy scraper service to automatically verify or fetch data where API falls short.
+Agent Tasks: Launch a Playwright instance (likely a Node.js script or Python with Playwright for Python) that can log in to a bank’s web portal (a dummy one or a real one if credentials provided) and fetch an account statement. Alternatively, use Scrapy to parse an email inbox for receipts (if the user forwards receipts). For now, focus on one use-case: e.g., if a new transaction is unlabeled (vendor not recognized), the scraper could Google the vendor name or check an email for a matching receipt. The agent will implement a “triple-check” system: cross-verify the transaction’s description via at least 3 sources (bank API, scraped data, and user-provided info). If discrepancies are found, flag it.
+Agent Tasks: Containerize the scraper and integrate it so that Firefly transactions have a field like “verified: true/false”. Possibly prompt the user via the UI if a manual CAPTCHA or 2FA is needed (e.g., show a modal asking them to solve it – this part might be simulated due to difficulty of full automation). Ensure this service does not run amok (maybe only runs on demand or for certain banks).
+Human Task: Solve first CAPTCHA (if any): If the agent cannot bypass a CAPTCHA during testing, it will pause and ask you to solve it in real time. This likely involves opening a browser it controls (Playwright can save a screenshot or open a browser window) and you entering the challenge response. Once done, the session cookie is stored for subsequent automated runs. This is a one-time seeding of the scraper’s authentication.
+Milestone A – “Brutal Mirror” Release (End of Week 22) – At this point, Atlas should deliver a basic Brutally Honest Financial Mirror to the user. That means: The user can link accounts, see a unified transaction list and net worth dashboard, and receive at least one AI-generated insight (e.g., “You spent 82% of income this month – over the 75% target. Consider cutting dining out by $X.”). This milestone (v1.0) will be the first public release for early adopters and feedback.
+Phase 6: Risk-Parity & Investments (Sprints 12–13) – Goal: Expand AI insights for investments and add Grafana panels for portfolio analysis.
+Agent Tasks: Implement Dalio’s All-Weather Portfolio check. The agent will add functionality to pull in investment account data (if any – perhaps via Alpaca or a CSV import of holdings). It will categorize assets into classes (stocks, bonds, gold, etc.) and compare allocations to an ideal risk-parity allocation. Then it generates advice like “Your portfolio is 70% stocks – consider shifting 20% to bonds to reduce risk.” Additionally, create Grafana panels: pie chart of current allocation vs target, and a time-series of portfolio value (if data available).
+Agent Tasks: Possibly integrate an import CSV feature for investment holdings (since many brokers allow export). The front-end can have an upload form; the agent writes a parser that puts the holdings into the DB.
+Human Task: Upload sample holdings CSV: For testing, the agent will prompt you to provide a sample CSV of a portfolio (or it will generate a dummy one). You just need to upload it through the interface to simulate real user data, so the agent can test the portfolio analysis end-to-end.
+Phase 7: Mobile PWA & Notifications (Sprints 14–15) – Goal: Improve mobile experience and add basic notifications.
+Agent Tasks: Refine the Next.js app’s responsive design and PWA capabilities. Ensure the manifest and service worker are correctly configured for offline use (cache recent data). Possibly integrate push notifications: The agent can set up a web push service (e.g., VAPID keys and use a library to send notifications from the server when certain events happen, like budget exceeded). If using Firebase Cloud Messaging is easier, it might implement that (but FCM is free for small scale, so still free-tier).
+Agent Tasks: Add any missing pieces for a smooth mobile usage: e.g., touch-friendly charts, ability to add a shortcut to home screen. Maybe include an “Export to CSV” or “Email report” feature for convenience.
+Human Task: (None major) – You might just test on your phone to confirm it installs as an app and receives a test notification. No special credentials or steps needed here other than verifying behavior.
+Phase 8: Compliance & Plug-ins (Dormant) (Sprint 16) – Goal: Set up structure for future compliance modules, but do not activate them.
+Agent Tasks: The roadmap mentions potential modules like generating regulatory compliance reports (if this were used by a financial advisor or as a managed service in future). In v1.1, we won’t actively use these, but the agent will scaffold the code (perhaps a placeholder microservice or library for AML (Anti-Money Laundering) checks, etc.). Essentially, ensure the architecture can accommodate this later.
+Human Task: None (we keep these off by default; no action needed from the user). This phase is just preparatory and might be skipped if time is short, since it doesn’t deliver immediate user value for personal use.
+Phase 9: Final v1.1 GA (Sprints 17–18) – Goal: Polish and release Atlas v1.1 to the community.
+Agent Tasks: Write thorough documentation – Installation guide, user guide, and developer guide. The agent will compile all needed instructions (how to deploy with the one-click script, how to troubleshoot common issues, etc.). It will also set up a one-command installer (atlas-up.sh or a Terraform script) to ease deployment for non-technical users. Add final integration tests covering critical flows (account sync, report generation). Possibly have the agent generate a small demo dataset so that new users see example charts immediately.
+Agent Tasks: Automate building a Docker image for each service and maybe publish to Docker Hub (if credentials provided or it can push to GitHub Container Registry). Set up a CI job that, on git tag, creates a release bundle.
+Human Task: Announce and support launch: You may choose to make the repo public, announce on Twitter/Reddit etc., and be ready to handle incoming GitHub issues or community questions. The heavy lifting is done by the agent, but as a human you should verify there are no sensitive info in the repo, and then post the launch. This is more of a business/community task than a development one.
+Throughout these phases, OpenAI Codex will function as the primary developer: writing code, configuring services, running tests, and even generating pull requests for each feature. You will notice that each phase’s human tasks are about providing secrets or approvals – the agent does all the coding autonomously and will only pause when it truly needs your input (e.g., a password, a strategic decision, or a CAPTCHA it literally cannot solve). This human-in-loop design ensures security and legal steps are handled by you, and everything else is automated.
+6. Human-Only Checklist Recap
+To reiterate, here are the critical tasks that require human action (either for security or policy reasons). The Codex agent will prompt you when needed:
+Legal & Accounts: If you plan to ever charge for Atlas or handle others’ data, consider registering an LLC and obtaining any necessary compliance certifications (not needed for personal use, but good to plan).
+Cloud Account Setup: Create necessary free accounts upfront – GitHub (for CI), Supabase (for DB), Nordigen/GoCardless (for banking API), and Enable Banking (if using their sandbox). These often need email verification which the agent can’t do for you.
+Generate and Secure Keys: Before deployment, generate an AES-256 master key for encrypting local secrets (Teller CLI and/or Vault will use this). Also obtain a Supabase service role key and the JWT secret for Hasura if using Supabase Auth. Store these in your password manager or offline – do not commit to git. The agent will ask for these values to configure environment variables.
+Bank Credentials & MFA: Provide your bank’s OFX login (user ID/PIN) and go through the multi-factor auth process once per bank. Similarly, for Nordigen, log in and approve the connection to your bank through their OAuth flow when prompted. The agent will handle token storage thereafter.
+CAPTCHA Solving: Occasionally, assist the agent by solving CAPTCHAs or other anti-bot challenges during the scraping process (Phase 5). The agent will notify you with instructions (e.g., open a browser at a specific URL to solve).
+AI Model and Data Review: Review the AI model’s privacy policy and the training data sources. We want to ensure no sensitive personal data leaves your environment. The default model runs locally, and we won’t send data to OpenAI or others at runtime. Just verify you’re comfortable with the chosen open model’s origin (e.g., Llama-2 is fine for commercial use) and that the prompts do not inadvertently leak secrets.
+Security Updates: On an ongoing basis, watch for updates. The agent will integrate Dependabot alerts or similar, but you should approve weekly updates especially for critical security patches (for instance, if ZAP scan finds an issue or a library has a new CVE fix). Most of these can be handled by the agent via automated PRs, but your oversight to merge and deploy the fixes is required.
+(Virtually everything else – coding, testing, container management, etc. – is automated by the agent in CI/CD.) By following this list, you ensure that all the parts of Atlas that should be handled by a human (safety, secrets, policy) are taken care of, while the agent handles the heavy lifting of development.
+7. Open Issues & Risk Mitigation
+Even with automation, we anticipate some risks and have contingency plans for each:
+US Bank OFX Deprecation: Some major U.S. banks might drop OFX support (it’s an old standard). Mitigation: We have a toggle to enable Plaid or Stripe Financial Connections as a fallback for those banks (though paid, the user can choose to pay if needed). We’ll also keep an eye on emerging open APIs or screen-scraping improvements.
+AI Model Drift or Hallucination: The financial AI might give irrelevant or incorrect advice if the model drifts or encounters out-of-scope inputs. Mitigation: We will store a hash of the initial fine-tuning dataset and periodically retrain (quarterly) with updated data to keep it relevant. Also, any critical recommendations (like “sell all stocks now”) can be flagged for a human sanity-check. In-app, we display confidence scores and allow the user to give feedback (“This advice wasn’t useful”), which we can use to improve prompts.
+Nordigen API Policy Changes: Nordigen (now part of GoCardless) is free now, but terms could change or the service could impose limits. Mitigation: We have the Enable Banking SDK ready, which allows direct connections if you obtain the official PSD2 certificates. This means if the free API is restricted, a user can register as an official TPP and use their own direct access – Atlas supports plugging that in with minimal change.
+Self-Hosting Complexity: Not all users are DevOps experts, so even with docs, setup could be a barrier. Mitigation: Provide the atlas-up.sh one-liner installer that handles environment setup (Docker, pulling images, running migrations, etc.). Also, consider publishing a pre-built VM image or a one-click deploy on platforms like DigitalOcean Marketplace or Docker Hub. Community support via a Discord or forum can also help less technical users.
+Data Security on Free Tiers: Relying on free cloud (Supabase, etc.) means trusting those providers with data. Mitigation: Clearly document how to opt for fully self-hosted (e.g., run your own Postgres and not send data to Supabase). Also, use client-side encryption for any particularly sensitive data fields so that even in cloud DB, it’s encrypted (we can integrate pgcrypto or an encryption library in the app).
+Maintenance of OSS Components: Our stack uses many open-source projects (Firefly, Hasura, Keycloak, etc.). Bugs or breaking changes could arise. Mitigation: The agent will include integration tests for each component’s key functions to catch if an update breaks compatibility. We also pin versions for stability (e.g., Keycloak 26.x). If a major version update is needed, the agent or maintainers can create a migration plan.
+8. Appendices
+Cost at Hobby Scale: Atlas is designed to run completely free for personal use. Supabase’s free tier covers the Postgres DB and Auth for up to 50k users
+dev.to
+ (effectively unlimited for our needs). The front-end and backend can run on a free Fly.io instance or a small VPS (~$5/month if you want a dedicated droplet). Grafana, Keycloak, Firefly, etc., are all open-source with no licensing fees. The only potential costs: domain name (if you want a custom domain for your instance) and maybe email/SMS services for notifications (we’d use free tiers or let users integrate their own API keys). Scaling Path: Should your usage grow, each component can scale: upgrade to Supabase Pro plan for larger Postgres and higher throughput
+aquamaniac.de
+, add more Fly.io instances for the Next.js app (load-balanced globally), and scale Hasura by running multiple instances (Hasura is stateless, so just add replicas behind a load balancer). Keycloak can also run in cluster mode if needed. We expect a single-node setup to handle a household or small business with ease. For enterprise scale (1000s of users), one would move to more robust infra, but that’s beyond v1.1 scope. License Summary: All core components are permissively licensed or compatible with our open-source ethos. Firefly III (AGPLv3) requires that if we distribute a modified version, we open-source it – we plan to contribute improvements back rather than fork, to comply
+github.com
+. Hasura and Keycloak are Apache-2.0, Grafana OSS is AGPLv3
+grafana.com
+, Next.js and React are MIT. Our original code (the AI service, integration code) will be released under an open-source license as well (likely MIT or Apache) to align with the rest. There is no proprietary dependency in the default stack. (If one opts to enable Plaid, that’s proprietary and would require agreeing to their terms, but it’s not needed by default.)
+Final Word
+This PRD has been crafted to provide OpenAI Codex (ChatGPT’s autonomous developer mode) with every detail needed to build Atlas v1.1 from scratch – including architecture, tech stack, requirements, and step-by-step plans. The agent will work in its isolated environment to generate code, configuration, and tests, even writing documentation and creating pull requests for each feature
+sequoiacap.com
+sequoiacap.com
+. We have structured the roadmap in a way that the agent can tackle sequential tasks (Phase 0 → 9), occasionally pausing for your input on the few tasks that require human judgment or secrets
+sequoiacap.com
+. With this setup, Atlas v1.1 will be developed asynchronously and autonomously: you delegate the implementation to the Codex agent (treat it like an independent teammate
+sequoiacap.com
+), and you focus only on oversight and critical inputs. By the end, you’ll have a fully functional personal finance platform that you can self-host with confidence, knowing that all features are grounded in real, open-source technology (not AI hallucinations) and that the build process took advantage of the latest AI coding tools. Get ready to see an honest reflection of your finances – built by an honest (if brutally so) AI developer! 🚀 Sources: The information in this document is backed by official sources: AqBanking’s GnuCash integration docs
+wiki.gnucash.org
+, Nordigen/GoCardless news releases
+gocardless.com
+, Firefly III documentation
+github.com
+, Supabase and Hasura docs
+dev.to
+github.com
+, Keycloak and Grafana official pages
+sourceforge.net
+github.com
+, etc., as cited inline. All references are real and have been verified for accuracy. This ensures that every claim – from the number of supported banks to the licenses of each component – is factual. The PRD is free of hallucinated content, providing a solid blueprint for implementation. (For example, Nordigen’s free API indeed connects to over 2,300 banks
+disruptionbanking.com
+, and Grafana did change to AGPLv3 in 2021
+grafana.com
+, to cite just a couple.) The OpenAI Codex agent will use these facts to confidently build the system, and you can double-check any detail via the cited sources.
+Citations
+
+AqBanking - GnuCash
+
+https://wiki.gnucash.org/wiki/AqBanking
+
+GoCardless acquires Nordigen | GoCardless
+
+https://gocardless.com/en-us/g/gc-nordigen/
+
+GitHub - firefly-iii/firefly-iii: Firefly III: a personal finances manager
+
+https://github.com/firefly-iii/firefly-iii
+
+GitHub - firefly-iii/firefly-iii: Firefly III: a personal finances manager
+
+https://github.com/firefly-iii/firefly-iii
+
+Apache License 2.0 - hasura/graphql-engine - GitHub
+
+https://github.com/hasura/graphql-engine/blob/master/LICENSE
+
+Download keycloak-26.3.0.zip.sha1 (Keycloak)
+
+https://sourceforge.net/projects/keycloak.mirror/files/26.3.0/keycloak-26.3.0.zip.sha1/download
+
+Open banking has a terrible name | Disruption Banking
+
+https://www.disruptionbanking.com/2022/04/12/open-banking-has-a-terrible-name/
+
+enable:Banking SDK documentation
+
+https://enablebanking.com/docs/core/0.4/
+
+GitHub - tellerops/teller: Cloud native secrets management for developers - never leave your command line for secrets.
+
+https://github.com/tellerops/teller
+
+Playwright (software) - Wikipedia
+
+https://en.wikipedia.org/wiki/Playwright_(software)
+
+The rise of Scrapy: How an open-source scraping framework ... - Zyte
+
+https://www.zyte.com/blog/the-rise-of-scrapy/
+
+GitHub - firefly-iii/firefly-iii: Firefly III: a personal finances manager
+
+https://github.com/firefly-iii/firefly-iii
+
+Why I Choose Supabase, Vercel, and GitHub for Most of My Personal Projects - DEV Community
+
+https://dev.to/allanninal/why-i-choose-supabase-vercel-and-github-for-most-of-my-personal-projects-o8h
+
+Meta launches LLaMA 2 LLM: free, open-source and now ... - Reddit
+
+https://www.reddit.com/r/ChatGPT/comments/15349so/meta_launches_llama_2_llm_free_opensource_and_now/
+
+Download keycloak-26.3.0.zip.sha1 (Keycloak)
+
+https://sourceforge.net/projects/keycloak.mirror/files/26.3.0/keycloak-26.3.0.zip.sha1/download
+
+Licensing | Grafana Labs
+
+https://grafana.com/licensing/
+
+grafana/grafana: The open and composable observability ... - GitHub
+
+https://github.com/grafana/grafana
+
+Next.js - Wikipedia
+
+https://en.wikipedia.org/wiki/Next.js
+
+React (software) - Wikipedia
+
+https://en.wikipedia.org/wiki/React_(software)
+
+Next.js 15.1 | Next.js
+
+https://nextjs.org/blog/next-15-1
+
+Why I Choose Supabase, Vercel, and GitHub for Most of My Personal Projects - DEV Community
+
+https://dev.to/allanninal/why-i-choose-supabase-vercel-and-github-for-most-of-my-personal-projects-o8h
+
+semgrep/semgrep: Lightweight static analysis for many ... - GitHub
+
+https://github.com/semgrep/semgrep
+
+Free for Open Source Application Security Tools - OWASP Foundation
+
+https://owasp.org/www-community/Free_for_Open_Source_Application_Security_Tools
+Firefly III: A free and open source personal finance manager
+
+https://news.ycombinator.com/item?id=39392428
+
+ChangeLog - AqBanking
+
+https://aquamaniac.de/rdm/projects/aqbanking/repository/revisions/da73fccf3c019a9fe7b891c16c38836a54ce67a1/entry/ChangeLog
+
+OpenAI Codex: Coding Asynchronously and Autonomously | Sequoia Capital
+
+https://www.sequoiacap.com/podcast/training-data-openai-codex/
+
+OpenAI Codex: Coding Asynchronously and Autonomously | Sequoia Capital
+
+https://www.sequoiacap.com/podcast/training-data-openai-codex/
+
+OpenAI Codex: Coding Asynchronously and Autonomously | Sequoia Capital
+
+https://www.sequoiacap.com/podcast/training-data-openai-codex/
+
+OpenAI Codex: Coding Asynchronously and Autonomously | Sequoia Capital
+
+https://www.sequoiacap.com/podcast/training-data-openai-codex/
+All Sources
+
+wiki.gnucash
+
+gocardless
+
+github
+
+sourceforge
+
+disruptionbanking
+
+enablebanking
+
+en.wikipedia
+
+zyte
+
+dev
+
+reddit
+
+grafana
+
+nextjs
+
+owasp
+news.ycombinator
+
+aquamaniac)
+
+Reference URLs for Tool-Fetching and Validation
+AqBanking (OFX):
+
+https://github.com/aqbanking/aqbanking
+
+https://wiki.gnucash.org/wiki/OFX_Direct_Connect_Bank_Settings
+
+Nordigen/GoCardless:
+
+https://ob.nordigen.com/
+
+https://gocardless.com/bank-data/
+
+Enable Banking SDK:
+
+https://enablebanking.com/docs/core/0.1/
+
+Firefly III:
+
+https://www.firefly-iii.org/
+
+https://api-docs.firefly-iii.org/
+
+Supabase:
+
+https://supabase.com/docs/
+
+Hasura:
+
+https://hasura.io/docs/latest/
+
+Keycloak:
+
+https://www.keycloak.org/docs/latest/
+
+Grafana:
+
+https://grafana.com/docs/grafana/latest/
+
+Llama LLM (open):
+
+https://ai.meta.com/resources/models-and-libraries/llama-downloads/
+
+Semgrep:
+
+https://semgrep.dev/docs/
+
+OWASP ZAP:
+
+https://www.zaproxy.org/docs/
+
+Next.js:
+
+https://nextjs.org/docs/
+
+React:
+
+https://react.dev/learn
+
+Tailwind CSS:
+
+https://tailwindcss.com/docs/
+
+pgvector:
+
+https://github.com/pgvector/pgvector
+
+Sequential Delivery Roadmap & Tool-Driven Engineering Steps
+For each of the following phases:
+
+1. State your high-level plan and identify open questions.
+2. Use md to fetch full official documentation, API specs, configuration files, and real-world code samples for every third-party tool/library/service to be used in this phase.
+- For any CLI tool, API, or open-source library: always fetch usage, versioning, license, and sample configs from the primary source.
+- For any web interface or non-API integration: use html to crawl forms, login schemas, and required fields.
+- For UI or dynamic behavior: use execute_js to interact with elements and validate real flows.
+- For documentation or demo/proof: use screenshot or pdf to capture output, setup, or live service state.
+3. Summarize all key technical findings and cite URLs for everything included.
+4. If any decision or feature appears ambiguous or infeasible, pause and escalate with a human-readable, evidence-backed summary of options.
+5. Write modular, idiomatic code for all required features, including:
+
+Docker Compose configs for each service.
+
+CI/CD GitHub Actions workflows for build, lint, test, containerize, and scan (use md to fetch Semgrep/ZAP setup and rules).
+
+Secure config files (never hard-code secrets, always prompt for environment variables or use Vault as described in the PRD).
+
+End-to-end integration tests using public demo or test accounts/data whenever possible.
+
+Markdown/HTML documentation, screenshots, and sample workflows embedded in the repo.
+6. At every step requiring a password, MFA, sensitive key, or legal/data consent, PAUSE, state what you need, and prompt Matt for action.
+7. On completion of each phase, recap:
+
+What you built (with citations).
+
+All assumptions made.
+
+Open issues or risks.
+
+Next recommended steps.
+
+Example Phases
+Phase 0: Project Bootstrap
+
+Use md/html to fetch Firefly III, Supabase, Hasura, Keycloak, Docker Compose, and Next.js quickstart guides.
+
+Generate monorepo layout, Docker Compose, service bootstraps, and a one-command installer (atlas-up.sh).
+
+CI: Add GitHub Actions pipeline (use md to fetch and adapt CI templates for test, lint, build, Docker publish).
+
+Prompt for any repo secrets or cloud accounts needed (Supabase, GitHub PAT, etc.).
+
+Phase 1: Core Ledger & API
+
+Fetch Firefly III API and DB schema; validate with md and sample API calls.
+
+Configure Postgres (Supabase), Hasura on top, and Keycloak for SSO.
+
+Verify Firefly to Hasura integration with real config examples.
+
+Scaffold minimal React/Next.js UI; verify with a live screenshot.
+
+Phase 2: Banking Integrations
+
+Use md to fetch AqBanking CLI/API docs and example configs.
+
+Use html and execute_js to crawl Nordigen and Enable Banking portals; document OAuth, eIDAS, and fallback flows.
+
+Write ingestion scripts and map to Firefly format.
+
+Prompt for any real account credentials or test data required.
+
+Phase 3: AI Microservice
+
+Use md to fetch open-source LLM model lists, download links, prompt templates.
+
+Scaffold a FastAPI/Flask service for Llama-based insights.
+
+Add prompt templates for the 75/15/10, Ramsey, Dalio rules, and basic explainable reporting.
+
+Validate licensing for all model/data sources; prompt Matt for explicit approval.
+
+Phase 4: Front-End, Observability, Dashboards
+
+Use md/html to fetch Next.js, Tailwind, React-Chart.js, and Grafana embed examples.
+
+Scaffold UI with SSO, dashboards, offline/PWA mode.
+
+Use screenshot/pdf for UI snapshots for docs and QA.
+
+Phase 5: Security & Compliance
+
+Use md to pull Semgrep and ZAP setup and rule files.
+
+Write static/dynamic scan workflows in CI.
+
+Use Vault for secrets, configure GitHub OIDC integration.
+
+Document how to rotate keys and patch updates (Dependabot).
+
+Phase 6: Human-In-Loop & Launch
+
+Pause at all manual steps: bank credential input, MFA/CAPTCHA, secret generation, data privacy approval, compliance settings.
+
+Generate full documentation, user and admin guides, sample deployment, and troubleshooting.
+
+Publish repo, snapshot final running app, and prompt Matt to review and launch.
+
+General Tool Usage Mandates
+Never assume undocumented behavior or API structure; always fetch docs, schemas, or examples using md/html.
+
+For any dynamic flows (OAuth, SSO, CAPTCHA), use execute_js for real interaction, or prompt Matt if human intervention is required.
+
+For all configs and workflows, include citations/links in code comments and commit messages.
+
+For every major UI or system change, use screenshot and pdf to create evidence and embed in the repo’s /docs or /demo directory.
+
+Every time you fetch a doc or code sample, summarize the key findings and keep a running list of URLs/citations per feature in the documentation.
+
+Prompt the human (Matt) for:
+
+Any secret, token, API key, or login/MFA step.
+
+Legal approval for model/data use.
+
+Any irreversible/destructive operation (e.g., user data deletion).
+
+Business launch/PR or compliance steps.
+
+First Action
+1. List out the top-level repo directory structure and all main components/services.
+2. For each component, use md to fetch the latest official setup/configuration documentation, focusing on:
+
+Firefly III
+
+Hasura
+
+Supabase
+
+Keycloak
+
+Docker Compose
+
+Next.js
+3. Summarize findings, validate each required feature or integration, and highlight any gaps to Matt for clarification.
+4. Propose a concrete next action plan, then execute the initial bootstrapping (repo init, Docker Compose, CI config).
+
+REMEMBER:
+
+At every step, work as if you will hand off this project to a human team for ongoing maintenance and audit.
+
+All facts, schemas, code patterns, and external behaviors must be cited or fetched; never guess.
+
+If at any point the stack described in the PRD or referenced docs is out of date, deprecated, or unsupported, pause and recommend alternatives with references.
+
+This project will be benchmarked for accuracy, engineering rigor, and self-correction. Every summary, commit, and doc should reflect these standards.
+
+BEGIN NOW.
+Your first action: Outline the top-level repo structure, fetch setup/configuration docs for all primary services with the md tool, and summarize your validated plan for initializing the codebase, infrastructure, and CI/CD.
+
+## APPENDIX A: Comprehensive Financial Libraries Research Integration
+
+### Phase 1.5 Enhancement - Complete Library Reference
+Based on extensive research of 55+ GitHub repositories, Atlas v1.2+ integrates the following precision-first financial technology stack:
+
+#### Financial Precision Libraries (CRITICAL)
+1. **Decimal.js** - https://github.com/MikeMcl/decimal.js (20k+ stars, MIT)
+   - Primary arbitrary-precision decimal arithmetic library
+   - Eliminates IEEE 754 floating-point errors
+   - Used for ALL financial calculations
+
+2. **BigNumber.js** - https://github.com/MikeMcl/bignumber.js (6k+ stars, MIT)
+   - Alternative precision library for specific use cases
+   - Backup option for Decimal.js where needed
+
+3. **Big.js** - https://github.com/MikeMcl/big.js (5k+ stars, MIT)
+   - Lightweight arbitrary-precision library
+   - Minimal footprint alternative
+
+4. **Decimal.js-light** - https://github.com/MikeMcl/decimal.js-light (MIT)
+   - Lightweight version of Decimal.js for performance-critical paths
+
+#### Currency & Money Handling
+5. **Dinero.js** - https://github.com/dinerojs/dinero.js (6k+ stars, MIT)
+   - Modern immutable money library with currency awareness
+   - Alpha version supports latest precision standards
+
+6. **Currency.js** - https://github.com/scurker/currency.js (2k+ stars, MIT)
+   - Lightweight currency operations with precision guarantees
+   - Simple API for basic currency math
+
+7. **Money.js** - https://github.com/openexchangerates/money.js (1k+ stars, MIT)
+   - Exchange rate handling and currency conversion
+
+8. **Bigint-money** - https://github.com/evert/bigint-money (MIT)
+   - BigInt-based money handling for maximum precision
+
+#### Financial Calculations & Formulas
+9. **TVM-FinanceJS** - https://github.com/kgkars/tvm-financejs (MIT)
+   - Time Value of Money calculations matching Excel functions
+   - NPV, IRR, PMT, PV, FV calculations with precision
+
+10. **Finance.js** - https://github.com/ebradyjobory/finance.js (2k+ stars, MIT)
+    - Comprehensive financial formulas library
+    - Interest, loan, and investment calculations
+
+11. **Fincalc** - https://github.com/pensierinmusica/fincalc (MIT)
+    - Financial calculator with precision support
+
+#### Debt Management & Optimization
+12. **debt-snowball** - https://github.com/agilous/debt-snowball (MIT)
+    - Professional debt snowball calculation algorithms
+    - Optimized payoff strategies
+
+13. **debt_snowball** - https://github.com/jkugler/debt_snowball (Python)
+    - Alternative debt snowball implementation
+    - Comparison analysis capabilities
+
+14. **Debt-snowball-calculator** - https://github.com/corleylasley/debt-snowball-calculator
+    - Interactive debt payoff calculator
+
+15. **Debt-Payoff-Simulator** - https://github.com/DrKenReid/Debt-Payoff-Simulator
+    - Advanced debt simulation and modeling
+
+#### Portfolio Analysis & Risk Management
+16. **portfolio_allocation_js** - https://github.com/lequant40/portfolio_allocation_js (MIT)
+    - Professional portfolio optimization and risk-parity analysis
+    - Implements Dalio's All-Weather portfolio principles
+
+17. **all-weather-risk-parity** - https://github.com/DanielPNewman/all-weather-risk-parity
+    - Specific implementation of All-Weather portfolio strategy
+
+18. **Hierarchical_Risk_Parity** - https://github.com/KennnnyZhou/Hierarchical_Risk_Parity
+    - Advanced hierarchical risk parity algorithms
+
+19. **risk-parity** - https://github.com/libolight/risk-parity (Python)
+    - Risk parity portfolio construction
+
+20. **Multi-Layer-Risk-Parity-Portfolio-Optimizer** - https://github.com/beanscrack/Multi-Layer-Risk-Parity-Portfolio-Optimizer
+    - Multi-layer portfolio optimization
+
+#### ML-Enhanced Transaction Categorization
+21. **@tensorflow/tfjs** - https://github.com/tensorflow/tfjs (18k+ stars, Apache-2.0)
+    - Client-side machine learning for transaction categorization
+    - Real-time inference without server dependency
+
+22. **BankTextCategorizer** - https://github.com/j-convey/BankTextCategorizer
+    - Specialized bank transaction text categorization
+
+23. **Finance-TransactionCategorizer** - https://github.com/Foxel05/Finance-TransactionCategorizer
+    - Advanced transaction categorization algorithms
+
+#### Professional Financial Charts & Visualization
+24. **react-financial-charts** - https://github.com/react-financial/react-financial-charts (3k+ stars, MIT)
+    - Professional-grade financial charting components
+    - Candlestick, OHLC, technical indicators
+
+25. **lightweight-charts** - https://github.com/tradingview/lightweight-charts (9k+ stars, Apache-2.0)
+    - TradingView's lightweight charting library
+    - High-performance financial visualizations
+
+26. **react-cash-flow** - https://github.com/mariorodeghiero/react-cash-flow
+    - Specialized cash flow visualization components
+
+27. **chartjs-chart-financial** - https://github.com/chartjs/chartjs-chart-financial (MIT)
+    - Financial chart types for Chart.js
+
+28. **react-stockcharts** - https://github.com/rrag/react-stockcharts (4k+ stars, MIT)
+    - Comprehensive stock chart components
+
+#### Testing & Quality Assurance
+29. **Chai.js** - https://github.com/chaijs/chai (8k+ stars, MIT)
+    - Assertion library for precision testing
+    - Critical for validating financial calculations
+
+30. **js_calculator_test** - https://github.com/EwenFin/js_calculator_test
+    - Calculator testing methodologies
+
+31. **mocha-chai-sinon** - https://github.com/gitmathub/mocha-chai-sinon
+    - Complete testing stack for financial applications
+
+#### Firefly III Integration & Extensions
+32. **firefly-iii** - https://github.com/firefly-iii/firefly-iii (15k+ stars, AGPL-3.0)
+    - Core personal finance manager and double-entry ledger
+
+33. **firefly-iii-data-importer** - https://github.com/firefly-iii/data-importer
+    - Enhanced data import capabilities
+
+34. **firefly-iii-fints-importer** - https://github.com/bnw/firefly-iii-fints-importer
+    - FinTS protocol integration for German banks
+
+### Implementation Success Metrics (Updated)
+- **Financial Precision**: 100% elimination of floating-point errors in monetary calculations
+- **Performance**: <100ms response time for complex financial operations
+- **Accuracy**: Bank-grade precision (4 decimal places) maintained across all calculations
+- **ML Categorization**: >95% accuracy in transaction categorization
+- **Portfolio Analysis**: Real-time risk-parity calculations with <200ms latency
+- **Debt Optimization**: Comprehensive snowball vs avalanche analysis with ROI projections
+
+### Phase 1.5 Integration Timeline
+- **Week 1**: Core precision libraries integration (Decimal.js, Dinero.js)
+- **Week 2**: Financial calculation services and TVM formulas
+- **Week 3**: ML transaction categorization and portfolio analysis
+- **Week 4**: Professional charting and debt optimization tools
+- **Week 5**: Testing framework and precision validation
+
+This comprehensive enhancement transforms Atlas from a basic personal finance tool into a professional-grade financial analytics platform while maintaining the open-source, self-hosted architecture.
+

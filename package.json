@@ -1,0 +1,51 @@
+{
+  "name": "atlas-financial",
+  "version": "1.1.0",
+  "description": "Atlas Financial v1.1 - Open-source personal finance platform with brutal honesty AI insights",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev:services && npm run dev:web",
+    "dev:services": "docker-compose -f infrastructure/docker/docker-compose.dev.yml up -d",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "clean": "npm run clean --workspaces && docker-compose -f infrastructure/docker/docker-compose.dev.yml down",
+    "atlas:up": "./scripts/atlas-up.sh",
+    "atlas:down": "./scripts/atlas-down.sh",
+    "atlas:reset": "./scripts/atlas-reset.sh"
+  },
+  "keywords": [
+    "personal-finance",
+    "fintech",
+    "open-source",
+    "self-hosted",
+    "firefly-iii",
+    "ai-insights",
+    "brutal-honesty"
+  ],
+  "author": "Matt Jutt",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mattjutt1/Atlas-Financial.git"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "eslint-config-prettier": "^9.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0",
+    "turbo": "^1.10.0"
+  }
+}

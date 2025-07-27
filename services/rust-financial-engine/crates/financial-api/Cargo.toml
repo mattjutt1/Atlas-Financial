@@ -1,0 +1,72 @@
+[package]
+name = "financial-api"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Core financial library
+financial-core = { path = "../financial-core" }
+
+# Async runtime and web framework
+tokio = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+hyper = { workspace = true }
+
+# GraphQL
+async-graphql = { workspace = true }
+async-graphql-axum = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Authentication and security
+jsonwebtoken = { workspace = true }
+sha2 = { workspace = true }
+
+# Configuration
+config = { workspace = true }
+dotenvy = { workspace = true }
+
+# Logging and monitoring
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+prometheus = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Redis caching
+redis = { workspace = true }
+
+# Utilities
+uuid = { workspace = true }
+chrono = { workspace = true }
+url = { workspace = true }
+validator = { workspace = true }
+rust_decimal = { workspace = true }
+
+# Database (if needed for user management/session storage)
+diesel = { workspace = true, optional = true }
+r2d2 = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+criterion = { workspace = true }
+
+[features]
+default = []
+database = ["diesel", "r2d2"]
+
+[[bin]]
+name = "financial-api"
+path = "src/main.rs"
+
+[lib]
+name = "financial_api"
+path = "src/lib.rs"

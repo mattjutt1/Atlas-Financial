@@ -1,0 +1,226 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database - Core data store
+  postgres:
+    image: postgres:15-alpine
+    container_name: atlas-postgres
+    environment:
+      POSTGRES_DB: atlas_financial
+      POSTGRES_USER: atlas
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-atlas_dev_password}
+      POSTGRES_MULTIPLE_DATABASES: firefly,hasura,grafana,supertokens
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/create-multiple-databases.sh:/docker-entrypoint-initdb.d/create-multiple-databases.sh:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - atlas-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atlas -d atlas_financial"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # SuperTokens Core Service - Authentication Backend
+  supertokens:
+    image: registry.supertokens.io/supertokens/supertokens-postgresql:9.2
+    container_name: atlas-supertokens
+    environment:
+      POSTGRESQL_CONNECTION_URI: "postgresql://atlas:${POSTGRES_PASSWORD:-atlas_dev_password}@postgres:5432/supertokens"
+      API_KEYS: ${SUPERTOKENS_API_KEY:-atlassupertokensapikey123}
+      SUPERTOKENS_HOST: "0.0.0.0"
+      SUPERTOKENS_PORT: 3567
+    ports:
+      - "3567:3567"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - atlas-network
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /lib/supertokens/config.yaml"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Firefly III - Personal Finance Manager
+  firefly:
+    image: fireflyiii/core:latest
+    container_name: atlas-firefly
+    environment:
+      APP_KEY: ${FIREFLY_APP_KEY:-base64:your-32-character-app-key-here-change-this}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: firefly
+      DB_USERNAME: atlas
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-atlas_dev_password}
+      APP_URL: http://localhost:8082
+      TRUSTED_PROXIES: '**'
+      LOG_CHANNEL: stdout
+      APP_LOG_LEVEL: info
+      AUTHENTICATION_GUARD: web
+      AUTHENTICATION_GUARD_HEADER: REMOTE_USER
+    ports:
+      - "8082:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - atlas-network
+    volumes:
+      - firefly_upload:/var/www/html/storage/upload
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Hasura GraphQL Engine - API Gateway
+  hasura:
+    image: hasura/graphql-engine:v2.42.0
+    container_name: atlas-hasura
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: postgres://atlas:${POSTGRES_PASSWORD:-atlas_dev_password}@postgres:5432/firefly
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
+      HASURA_GRAPHQL_DEV_MODE: "true"
+      HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
+      HASURA_GRAPHQL_METADATA_DATABASE_URL: postgres://atlas:${POSTGRES_PASSWORD:-atlas_dev_password}@postgres:5432/hasura
+      HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_ADMIN_SECRET:-atlas_hasura_admin_secret}
+      # JWT Configuration for SuperTokens - Disabled for initial testing
+      # HASURA_GRAPHQL_JWT_SECRET: |
+      #   {
+      #     "jwk_url": "http://supertokens:3567/recipe/jwt/jwks",
+      #     "issuer": "https://api.supertokens.io/auth",
+      #     "audience": "atlas-financial"
+      #   }
+      HASURA_GRAPHQL_UNAUTHORIZED_ROLE: anonymous
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      supertokens:
+        condition: service_healthy
+    networks:
+      - atlas-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # AI Engine - Finance Brain (will be built from source)
+  ai-engine:
+    build:
+      context: ../../services/ai-engine
+      dockerfile: Dockerfile
+    container_name: atlas-ai-engine
+    environment:
+      HASURA_ENDPOINT: http://hasura:8080/v1/graphql
+      HASURA_ADMIN_SECRET: ${HASURA_ADMIN_SECRET:-atlas_hasura_admin_secret}
+      POSTGRES_URL: postgres://atlas:${POSTGRES_PASSWORD:-atlas_dev_password}@postgres:5432/firefly
+      AI_MODEL_PATH: /app/models
+      LOG_LEVEL: info
+    ports:
+      - "8083:8000"
+    depends_on:
+      hasura:
+        condition: service_healthy
+    networks:
+      - atlas-network
+    volumes:
+      - ai_models:/app/models
+      - ai_cache:/app/cache
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Grafana - Observability and Financial Dashboards
+  grafana:
+    image: grafana/grafana-oss:10.4.1
+    container_name: atlas-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin_dev_password}
+      GF_DATABASE_TYPE: postgres
+      GF_DATABASE_HOST: postgres:5432
+      GF_DATABASE_NAME: grafana
+      GF_DATABASE_USER: atlas
+      GF_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-atlas_dev_password}
+      # OAuth will be configured with SuperTokens
+    ports:
+      - "3001:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - atlas-network
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis - Caching and Session Storage
+  redis:
+    image: redis:7-alpine
+    container_name: atlas-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-atlas_redis_password}
+    ports:
+      - "6379:6379"
+    networks:
+      - atlas-network
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a ${REDIS_PASSWORD:-atlas_redis_password} ping | grep PONG"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Service (Next.js App) - Development Only
+  web:
+    build:
+      context: ../../apps/web
+      dockerfile: Dockerfile.dev
+    container_name: atlas-web
+    environment:
+      SUPERTOKENS_CONNECTION_URI: http://supertokens:3567
+      SUPERTOKENS_API_KEY: ${SUPERTOKENS_API_KEY:-atlas_supertokens_api_key}
+      HASURA_GRAPHQL_ENDPOINT: http://hasura:8080/v1/graphql
+      HASURA_ADMIN_SECRET: ${HASURA_ADMIN_SECRET:-atlas_hasura_admin_secret}
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-atlas_nextauth_secret}
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    depends_on:
+      supertokens:
+        condition: service_healthy
+      hasura:
+        condition: service_healthy
+    networks:
+      - atlas-network
+    volumes:
+      - ../../apps/web:/app
+      - /app/node_modules
+      - /app/.next
+
+networks:
+  atlas-network:
+
+volumes:
+  postgres_data:
+  firefly_upload:
+  ai_models:
+  ai_cache:
+  grafana_data:
+  redis_data:
