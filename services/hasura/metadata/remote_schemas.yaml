@@ -1,0 +1,53 @@
+- name: rust-financial-engine
+  definition:
+    url: http://rust-financial-engine:8080/graphql
+    timeout_seconds: 30
+    retry_conf:
+      max_retries: 3
+      retry_interval_seconds: 2
+      timeout_seconds: 30
+    forward_client_headers: true
+    headers:
+      - name: Content-Type
+        value: application/json
+      - name: X-Hasura-Role
+        value_from_env: HASURA_GRAPHQL_UNAUTHORIZED_ROLE
+      - name: Cache-Control
+        value: "no-cache, no-store, must-revalidate"
+      - name: Pragma
+        value: "no-cache"
+      - name: Expires
+        value: "0"
+    customization:
+      root_fields_namespace: finance
+      type_names:
+        prefix: Finance_
+        suffix: _Type
+      field_names:
+        - parent_type: Query
+          prefix: get_
+        - parent_type: Mutation
+          prefix: execute_
+  permissions:
+    - role: user
+      definition:
+        schema: |
+          type Query {
+            optimizeDebts(input: OptimizeDebtsInput!): DebtOptimizationResult
+            analyzePortfolioRisk(portfolioId: String!): PortfolioRiskAnalysis
+            calculateTimeValue(input: TimeValueInput!): TimeValueResult
+          }
+          
+          type Mutation {
+            createPortfolio(input: CreatePortfolioInput!): Portfolio
+            updatePortfolio(portfolioId: String!, input: UpdatePortfolioInput!): Portfolio
+            deletePortfolio(portfolioId: String!): Boolean
+          }
+    - role: anonymous
+      definition:
+        schema: |
+          type Query {
+            # Public health check only
+            healthCheck: HealthStatus
+          }
+  remote_relationships: []

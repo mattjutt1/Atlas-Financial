@@ -1,0 +1,96 @@
+# Atlas Financial - Pre-commit Configuration
+# Ensures code quality, security, and consistency across all commits
+
+repos:
+  # General hooks for all files
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: detect-private-key
+      - id: check-case-conflict
+
+  # TypeScript/JavaScript Quality
+  - repo: local
+    hooks:
+      - id: eslint
+        name: ESLint
+        entry: npx eslint --fix
+        language: node
+        types: [ts, javascript]
+        require_serial: false
+
+      - id: prettier
+        name: Prettier
+        entry: npx prettier --write
+        language: node
+        types: [ts, javascript, json, yaml, markdown]
+        require_serial: false
+
+  # Rust Quality
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: Cargo Format
+        entry: cargo fmt
+        language: system
+        files: \.rs$
+        pass_filenames: false
+
+      - id: cargo-clippy
+        name: Cargo Clippy
+        entry: cargo clippy
+        language: system
+        files: \.rs$
+        args: [--all-targets, --all-features, --, -D, warnings]
+        pass_filenames: false
+
+      - id: cargo-test
+        name: Cargo Test
+        entry: cargo test
+        language: system
+        files: \.rs$
+        pass_filenames: false
+
+  # Security Scanning
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+
+  # Dockerfile Quality
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        args: [--ignore, DL3008, --ignore, DL3009]
+
+  # SQL Quality
+  - repo: https://github.com/sqlfluff/sqlfluff
+    rev: 2.3.5
+    hooks:
+      - id: sqlfluff-lint
+        additional_dependencies: [sqlfluff-templater-dbt]
+      - id: sqlfluff-fix
+        additional_dependencies: [sqlfluff-templater-dbt]
+
+  # Commit Message Standards
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v2.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [--strict]
+
+# Configuration for specific hooks
+default_language_version:
+  node: system
+  python: python3

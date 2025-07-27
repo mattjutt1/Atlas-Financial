@@ -1,0 +1,125 @@
+# Hasura Configuration for Atlas Financial
+# This file contains configuration for the Hasura GraphQL Engine
+
+version: 3
+endpoint: http://localhost:8081
+metadata_directory: metadata
+migrations_directory: migrations
+seeds_directory: seeds
+
+# Admin secret configuration
+admin_secret: atlas_hasura_admin_secret
+
+# API configuration
+api_limits:
+  depth_limit:
+    global: 20
+    per_role:
+      user: 15
+      anonymous: 5
+  rate_limit:
+    global:
+      max_reqs_per_min: 1000
+      unique_params: IP
+    per_role:
+      user:
+        max_reqs_per_min: 500
+        unique_params: session_vars
+      anonymous:
+        max_reqs_per_min: 100
+        unique_params: IP
+  node_limit:
+    global: 10000
+    per_role:
+      user: 5000
+      anonymous: 1000
+  time_limit:
+    global: 30
+    per_role:
+      user: 30
+      anonymous: 10
+
+# Remote schema configuration
+remote_schema_permissions: true
+
+# Server configuration
+server_port: 8080
+server_host: "0.0.0.0"
+
+# CORS configuration
+cors_config:
+  allowed_origins:
+    - "http://localhost:3000"
+    - "http://localhost:8081"
+    - "http://localhost:8080"
+  allowed_headers:
+    - "Content-Type"
+    - "Authorization"
+    - "X-Hasura-Admin-Secret"
+    - "X-Hasura-Role"
+    - "X-Hasura-User-Id"
+  allowed_methods:
+    - GET
+    - POST
+    - OPTIONS
+
+# Logging configuration
+log_level: INFO
+enabled_log_types:
+  - startup
+  - http-log
+  - webhook-log
+  - websocket-log
+  - query-log
+
+# Development configuration
+dev_mode: true
+enable_console: true
+console_assets_dir: /srv/console-assets
+
+# Database configuration
+database_url: postgres://atlas:atlas_dev_password@postgres:5432/firefly
+metadata_database_url: postgres://atlas:atlas_dev_password@postgres:5432/hasura
+
+# JWT configuration
+jwt_secrets:
+  - type: HS256
+    key: atlas_jwt_secret_key
+  - type: RS256
+    jwk_url: http://supertokens:3567/auth/jwt/jwks.json
+    issuer: http://supertokens:3567
+    audience: atlas-financial
+    claims_format: json
+    claims_map:
+      x-hasura-default-role:
+        path: "$.role"
+        default: "user"
+      x-hasura-allowed-roles:
+        path: "$.roles"
+        default: ["user"]
+      x-hasura-user-id:
+        path: "$.userId"
+
+# Webhook configuration for authentication
+auth_hook:
+  type: GET
+  url: http://web:3000/api/auth/hasura-webhook
+
+# Action configuration
+actions:
+  base_url: http://web:3000/api/actions
+  timeout: 30
+
+# Event trigger configuration
+events:
+  http_pool_size: 100
+  fetch_interval: 1000
+
+# Feature flags
+experimental_features:
+  - naming_convention
+
+# Security settings
+security:
+  enable_allowlist: false
+  enable_introspection: true

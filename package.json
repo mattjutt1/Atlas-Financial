@@ -14,11 +14,31 @@
     "dev:web": "npm run dev --workspace=apps/web",
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces",
+    "test:coverage": "jest --coverage --config jest.config.js",
+    "test:ci": "jest --ci --coverage --watchAll=false --config jest.config.js",
+    "test:integration": "jest --testPathPattern=tests/integration --config jest.config.js",
+    "test:unit": "jest --testPathPattern=src/ --config jest.config.js",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:rust",
+    "test:rust": "cd services/rust-financial-engine && cargo test --all",
     "lint": "npm run lint --workspaces",
+    "lint:fix": "npm run lint --workspaces -- --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "type-check": "tsc --noEmit",
+    "pre-commit": "pre-commit run --all-files",
+    "prepare": "pre-commit install",
     "clean": "npm run clean --workspaces && docker-compose -f infrastructure/docker/docker-compose.dev.yml down",
     "atlas:up": "./scripts/atlas-up.sh",
     "atlas:down": "./scripts/atlas-down.sh",
-    "atlas:reset": "./scripts/atlas-reset.sh"
+    "atlas:reset": "./scripts/atlas-reset.sh",
+    "rust:build": "cd services/rust-financial-engine && cargo build --release",
+    "rust:test": "cd services/rust-financial-engine && cargo test --all",
+    "rust:lint": "cd services/rust-financial-engine && cargo clippy --all-targets --all-features -- -D warnings",
+    "rust:fmt": "cd services/rust-financial-engine && cargo fmt --all",
+    "rust:doc": "cd services/rust-financial-engine && cargo doc --open",
+    "audit": "npm audit && cd services/rust-financial-engine && cargo audit",
+    "validate": "npm run type-check && npm run lint && npm run test:ci && npm run rust:lint && npm run rust:test",
+    "quality:check": "npm run validate && npm run pre-commit"
   },
   "keywords": [
     "personal-finance",
@@ -40,12 +60,17 @@
     "npm": ">=8.0.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.4",
+    "@testing-library/react": "^16.3.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "eslint": "^8.0.0",
     "eslint-config-prettier": "^9.0.0",
+    "jest-environment-jsdom": "^30.0.5",
+    "pre-commit": "^1.2.2",
     "prettier": "^3.0.0",
-    "typescript": "^5.0.0",
-    "turbo": "^1.10.0"
+    "ts-jest": "^29.4.0",
+    "turbo": "^1.10.0",
+    "typescript": "^5.0.0"
   }
 }

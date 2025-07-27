@@ -89,13 +89,13 @@ services:
       HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
       HASURA_GRAPHQL_METADATA_DATABASE_URL: postgres://atlas:${POSTGRES_PASSWORD:-atlas_dev_password}@postgres:5432/hasura
       HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_ADMIN_SECRET:-atlas_hasura_admin_secret}
-      # JWT Configuration for SuperTokens - Disabled for initial testing
-      # HASURA_GRAPHQL_JWT_SECRET: |
-      #   {
-      #     "jwk_url": "http://supertokens:3567/recipe/jwt/jwks",
-      #     "issuer": "https://api.supertokens.io/auth",
-      #     "audience": "atlas-financial"
-      #   }
+      # JWT Configuration for SuperTokens integration
+      HASURA_GRAPHQL_JWT_SECRET: |
+        {
+          "jwk_url": "http://supertokens:3567/auth/jwt/jwks.json",
+          "issuer": "http://supertokens:3567",
+          "audience": "atlas-financial"
+        }
       HASURA_GRAPHQL_UNAUTHORIZED_ROLE: anonymous
     ports:
       - "8081:8080"
@@ -104,8 +104,12 @@ services:
         condition: service_healthy
       supertokens:
         condition: service_healthy
+      rust-financial-engine:
+        condition: service_healthy
     networks:
       - atlas-network
+    volumes:
+      - ../../services/hasura/metadata:/hasura-metadata
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/healthz || exit 1"]
       interval: 30s
@@ -182,6 +186,61 @@ services:
       - redis_data:/data
     healthcheck:
       test: ["CMD-SHELL", "redis-cli --no-auth-warning -a ${REDIS_PASSWORD:-atlas_redis_password} ping | grep PONG"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Rust Financial Engine - High-Performance Financial Calculations
+  rust-financial-engine:
+    build:
+      context: ../../services/rust-financial-engine
+      dockerfile: Dockerfile
+    container_name: atlas-rust-financial-engine
+    environment:
+      # Server configuration
+      HOST: "0.0.0.0"
+      PORT: 8080
+      ENVIRONMENT: development
+      
+      # JWT configuration for SuperTokens integration
+      JWT_ISSUER: http://supertokens:3567
+      JWT_AUDIENCE: atlas-financial
+      JWKS_URL: http://supertokens:3567/auth/jwt/jwks.json
+      
+      # Redis configuration
+      REDIS_URL: redis://:${REDIS_PASSWORD:-atlas_redis_password}@redis:6379
+      REDIS_ENABLED: "true"
+      REDIS_POOL_SIZE: 10
+      REDIS_TIMEOUT: 5
+      REDIS_DEFAULT_TTL: 3600
+      
+      # GraphQL configuration
+      GRAPHQL_MAX_DEPTH: 15
+      GRAPHQL_MAX_COMPLEXITY: 1000
+      GRAPHQL_TIMEOUT: 30
+      
+      # Monitoring configuration
+      ENABLE_METRICS: "true"
+      METRICS_NAMESPACE: atlas_financial
+      ENABLE_TRACING: "true"
+      LOG_LEVEL: info
+      
+      # Performance configuration
+      MAX_CONCURRENT_REQUESTS: 1000
+      RATE_LIMIT_PER_MINUTE: 1000
+      ENABLE_COMPRESSION: "true"
+      MAX_REQUEST_SIZE: 10485760  # 10MB
+    ports:
+      - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+      supertokens:
+        condition: service_healthy
+    networks:
+      - atlas-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
