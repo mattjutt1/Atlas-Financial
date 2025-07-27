@@ -55,3 +55,9 @@ logs
 **/target/doc/
 **/*.rs.bk
 Cargo.lock
+
+# Docker secrets (SECURITY CRITICAL)
+infrastructure/docker/config/secrets/
+**/secrets/*.txt
+**/secrets/*.key
+**/secrets/*.pem

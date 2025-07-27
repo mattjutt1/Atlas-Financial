@@ -6,8 +6,8 @@ import Session from "supertokens-auth-react/recipe/session";
 export const superTokensConfig = {
   appInfo: {
     appName: "Atlas Financial",
-    apiDomain: process.env.NEXT_PUBLIC_API_DOMAIN || "http://localhost:3000",
-    websiteDomain: process.env.NEXT_PUBLIC_WEBSITE_DOMAIN || "http://localhost:3000",
+    apiDomain: process.env.NEXT_PUBLIC_SUPERTOKENS_API_DOMAIN || "http://localhost:3000",
+    websiteDomain: process.env.NEXT_PUBLIC_SUPERTOKENS_WEBSITE_DOMAIN || "http://localhost:3000",
     apiBasePath: "/api/auth",
     websiteBasePath: "/auth"
   },
@@ -34,7 +34,9 @@ export const superTokensConfig = {
     Session.init({
       tokenTransferMethod: "cookie",
       cookieSecure: process.env.NODE_ENV === "production",
-      cookieSameSite: "lax"
+      cookieSameSite: "lax",
+      // Configure for cross-origin cookies in Docker environment
+      cookieDomain: process.env.NODE_ENV === "production" ? undefined : "localhost"
     })
   ]
 };

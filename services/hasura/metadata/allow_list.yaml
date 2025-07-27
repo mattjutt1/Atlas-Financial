@@ -1,1 +1,286 @@
-[]
+# GraphQL Allow List - Production Security
+# Only these queries/mutations are permitted in production
+
+- name: allowed-queries
+  definition:
+    queries:
+      # User Authentication Queries
+      - name: GetCurrentUser
+        query: |
+          query GetCurrentUser {
+            users {
+              id
+              email
+              created_at
+            }
+          }
+
+      # Account Management Queries  
+      - name: GetUserAccounts
+        query: |
+          query GetUserAccounts($userId: String!) {
+            accounts(where: {user_id: {_eq: $userId}}) {
+              id
+              name
+              type
+              virtual_balance
+              created_at
+              updated_at
+            }
+          }
+
+      - name: GetAccountById
+        query: |
+          query GetAccountById($accountId: Int!, $userId: String!) {
+            accounts(where: {id: {_eq: $accountId}, user_id: {_eq: $userId}}) {
+              id
+              name
+              type
+              virtual_balance
+              iban
+              bic
+              account_number
+            }
+          }
+
+      # Transaction Queries
+      - name: GetUserTransactions
+        query: |
+          query GetUserTransactions($userId: String!, $limit: Int = 50, $offset: Int = 0) {
+            transactions(
+              where: {user_id: {_eq: $userId}}
+              limit: $limit
+              offset: $offset
+              order_by: {created_at: desc}
+            ) {
+              id
+              description
+              amount
+              foreign_amount
+              currency_code
+              foreign_currency_code
+              date
+              created_at
+              source_account: account_transactions(where: {type: {_eq: "source"}}) {
+                account {
+                  id
+                  name
+                }
+              }
+              destination_account: account_transactions(where: {type: {_eq: "destination"}}) {
+                account {
+                  id
+                  name
+                }
+              }
+            }
+          }
+
+      - name: GetTransactionsByAccount
+        query: |
+          query GetTransactionsByAccount($accountId: Int!, $userId: String!) {
+            account_transactions(
+              where: {
+                account_id: {_eq: $accountId}
+                transaction: {user_id: {_eq: $userId}}
+              }
+            ) {
+              transaction {
+                id
+                description
+                amount
+                currency_code
+                date
+                created_at
+              }
+            }
+          }
+
+      # Budget and Category Queries
+      - name: GetUserBudgets
+        query: |
+          query GetUserBudgets($userId: String!) {
+            budgets(where: {user_id: {_eq: $userId}}) {
+              id
+              name
+              auto_budget_type
+              auto_budget_amount
+              auto_budget_period
+              auto_budget_currency_code
+            }
+          }
+
+      - name: GetUserCategories
+        query: |
+          query GetUserCategories($userId: String!) {
+            categories(where: {user_id: {_eq: $userId}}) {
+              id
+              name
+              notes
+              spent
+              created_at
+            }
+          }
+
+      # Financial Health Queries
+      - name: GetNetWorthData
+        query: |
+          query GetNetWorthData($userId: String!) {
+            accounts(where: {user_id: {_eq: $userId}}) {
+              id
+              name
+              type
+              virtual_balance
+              currency_code
+            }
+          }
+
+      # Debt Optimization Queries
+      - name: GetUserDebts
+        query: |
+          query GetUserDebts($userId: String!) {
+            accounts(where: {user_id: {_eq: $userId}, type: {_in: ["debt", "loan", "creditCard"]}}) {
+              id
+              name
+              virtual_balance
+              currency_code
+              liability_type
+              liability_direction
+              interest
+            }
+          }
+
+    mutations:
+      # Account Management Mutations
+      - name: CreateAccount
+        query: |
+          mutation CreateAccount($account: accounts_insert_input!) {
+            insert_accounts_one(object: $account) {
+              id
+              name
+              type
+              virtual_balance
+            }
+          }
+
+      - name: UpdateAccount
+        query: |
+          mutation UpdateAccount($accountId: Int!, $updates: accounts_set_input!, $userId: String!) {
+            update_accounts(
+              where: {id: {_eq: $accountId}, user_id: {_eq: $userId}}
+              _set: $updates
+            ) {
+              returning {
+                id
+                name
+                type
+                virtual_balance
+              }
+            }
+          }
+
+      - name: DeleteAccount
+        query: |
+          mutation DeleteAccount($accountId: Int!, $userId: String!) {
+            delete_accounts(where: {id: {_eq: $accountId}, user_id: {_eq: $userId}}) {
+              affected_rows
+            }
+          }
+
+      # Transaction Mutations
+      - name: CreateTransaction
+        query: |
+          mutation CreateTransaction($transaction: transactions_insert_input!) {
+            insert_transactions_one(object: $transaction) {
+              id
+              description
+              amount
+              currency_code
+              date
+            }
+          }
+
+      - name: UpdateTransaction
+        query: |
+          mutation UpdateTransaction($transactionId: Int!, $updates: transactions_set_input!, $userId: String!) {
+            update_transactions(
+              where: {id: {_eq: $transactionId}, user_id: {_eq: $userId}}
+              _set: $updates
+            ) {
+              returning {
+                id
+                description
+                amount
+                currency_code
+                date
+              }
+            }
+          }
+
+      - name: DeleteTransaction
+        query: |
+          mutation DeleteTransaction($transactionId: Int!, $userId: String!) {
+            delete_transactions(where: {id: {_eq: $transactionId}, user_id: {_eq: $userId}}) {
+              affected_rows
+            }
+          }
+
+      # Budget Mutations
+      - name: CreateBudget
+        query: |
+          mutation CreateBudget($budget: budgets_insert_input!) {
+            insert_budgets_one(object: $budget) {
+              id
+              name
+              auto_budget_amount
+              auto_budget_period
+            }
+          }
+
+      - name: UpdateBudget
+        query: |
+          mutation UpdateBudget($budgetId: Int!, $updates: budgets_set_input!, $userId: String!) {
+            update_budgets(
+              where: {id: {_eq: $budgetId}, user_id: {_eq: $userId}}
+              _set: $updates
+            ) {
+              returning {
+                id
+                name
+                auto_budget_amount
+                auto_budget_period
+              }
+            }
+          }
+
+    subscriptions:
+      # Real-time Account Updates
+      - name: SubscribeToAccountUpdates
+        query: |
+          subscription SubscribeToAccountUpdates($userId: String!) {
+            accounts(where: {user_id: {_eq: $userId}}) {
+              id
+              name
+              type
+              virtual_balance
+              updated_at
+            }
+          }
+
+      # Real-time Transaction Updates
+      - name: SubscribeToTransactionUpdates
+        query: |
+          subscription SubscribeToTransactionUpdates($userId: String!) {
+            transactions(
+              where: {user_id: {_eq: $userId}}
+              order_by: {created_at: desc}
+              limit: 10
+            ) {
+              id
+              description
+              amount
+              currency_code
+              date
+              created_at
+            }
+          }

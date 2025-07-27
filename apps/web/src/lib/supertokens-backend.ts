@@ -7,13 +7,13 @@ export const backendConfig = () => {
   return {
     framework: "express",
     supertokens: {
-      connectionURI: process.env.SUPERTOKENS_CONNECTION_URI || "http://localhost:3567",
+      connectionURI: process.env.SUPERTOKENS_CONNECTION_URI || "http://supertokens:3567",
       apiKey: process.env.SUPERTOKENS_API_KEY
     },
     appInfo: {
       appName: "Atlas Financial",
-      apiDomain: process.env.API_DOMAIN || "http://localhost:3000",
-      websiteDomain: process.env.WEBSITE_DOMAIN || "http://localhost:3000",
+      apiDomain: process.env.NEXT_PUBLIC_SUPERTOKENS_API_DOMAIN || "http://localhost:3000",
+      websiteDomain: process.env.NEXT_PUBLIC_SUPERTOKENS_WEBSITE_DOMAIN || "http://localhost:3000",
       apiBasePath: "/api/auth",
       websiteBasePath: "/auth"
     },
@@ -22,7 +22,7 @@ export const backendConfig = () => {
       Session.init({
         jwt: {
           enable: true,
-          issuer: "https://api.supertokens.io/auth",
+          issuer: "http://supertokens:3567",
           audience: "atlas-financial"
         },
         override: {
@@ -53,4 +53,14 @@ export const backendConfig = () => {
   };
 };
 
-SuperTokens.init(backendConfig());
+let initialized = false;
+
+export const ensureSuperTokensInit = () => {
+  if (!initialized) {
+    SuperTokens.init(backendConfig());
+    initialized = true;
+  }
+};
+
+// Auto-initialize for backwards compatibility
+ensureSuperTokensInit();

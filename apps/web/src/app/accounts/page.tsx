@@ -3,32 +3,15 @@
 import { useState } from 'react'
 import { AccountCard } from '@/components/dashboard/AccountCard'
 import { LoadingSpinner, Card } from '@/components/common'
-import { useAuthentication, useAccountSummary } from '@/hooks'
+import { SessionAuth } from '@/components/auth/AuthWrapper'
+import { useAccountSummary } from '@/hooks'
 import { formatCurrency } from '@/lib/utils'
 import { mockAccounts } from '@/lib/fixtures'
 import { PlusIcon, FunnelIcon } from '@heroicons/react/24/outline'
 
-
-export default function AccountsPage() {
-  const { session, status, isLoading, isAuthenticated, user } = useAuthentication()
+function AccountsContent() {
   const [filterType, setFilterType] = useState<string>('all')
   const { totalBalance, totalDebt, netWorth } = useAccountSummary({ accounts: mockAccounts as any })
-
-  if (isLoading) {
-    return <LoadingSpinner fullScreen />
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-            Please sign in to view your accounts
-          </h1>
-        </div>
-      </div>
-    )
-  }
 
   const filteredAccounts = filterType === 'all' 
     ? mockAccounts 
@@ -36,7 +19,6 @@ export default function AccountsPage() {
 
   const accountTypes = ['all', 'checking', 'savings', 'credit', 'investment']
   
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
@@ -144,5 +126,13 @@ export default function AccountsPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function AccountsPage() {
+  return (
+    <SessionAuth>
+      <AccountsContent />
+    </SessionAuth>
   )
 }

@@ -7,8 +7,8 @@ metadata_directory: metadata
 migrations_directory: migrations
 seeds_directory: seeds
 
-# Admin secret configuration
-admin_secret: atlas_hasura_admin_secret
+# Admin secret configuration (uses Docker secrets)
+admin_secret_file: /run/secrets/hasura_admin_secret
 
 # API configuration
 api_limits:
@@ -72,19 +72,17 @@ enabled_log_types:
   - websocket-log
   - query-log
 
-# Development configuration
-dev_mode: true
-enable_console: true
+# Production configuration (SECURED)
+dev_mode: false
+enable_console: false
 console_assets_dir: /srv/console-assets
 
-# Database configuration
-database_url: postgres://atlas:atlas_dev_password@postgres:5432/firefly
-metadata_database_url: postgres://atlas:atlas_dev_password@postgres:5432/hasura
+# Database configuration (uses Docker secrets)
+database_url_file: /run/secrets/hasura_database_url
+metadata_database_url_file: /run/secrets/hasura_metadata_url
 
 # JWT configuration
 jwt_secrets:
-  - type: HS256
-    key: atlas_jwt_secret_key
   - type: RS256
     jwk_url: http://supertokens:3567/auth/jwt/jwks.json
     issuer: http://supertokens:3567
@@ -119,7 +117,9 @@ events:
 experimental_features:
   - naming_convention
 
-# Security settings
+# Security settings (HARDENED)
 security:
-  enable_allowlist: false
-  enable_introspection: true
+  enable_allowlist: true
+  enable_introspection: false
+  query_complexity_limit: 1000
+  max_rows: 10000

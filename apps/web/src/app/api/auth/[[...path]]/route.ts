@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { superTokensNextWrapper } from "supertokens-node/nextjs";
 import { middleware } from "supertokens-node/framework/express";
-import "../../../../lib/supertokens-backend";
+import { ensureSuperTokensInit } from "../../../../lib/supertokens-backend";
+
+// Initialize SuperTokens
+ensureSuperTokensInit();
 
 const handleAuth = async (request: NextRequest) => {
-  const response = NextResponse.next();
-  
-  await superTokensNextWrapper(
+  return await superTokensNextWrapper(
     async (next) => {
-      await middleware()(request, response, next);
+      const res = NextResponse.next();
+      await middleware()(request, res, next);
+      return res;
     },
     request,
-    response
+    NextResponse.next()
   );
-  
-  return response;
 };
 
 export async function GET(request: NextRequest) {

@@ -5,66 +5,66 @@ import { NetWorthChart } from '@/components/dashboard/NetWorthChart'
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions'
 import { BrutalHonestyInsight } from '@/components/dashboard/BrutalHonestyInsight'
 import { LoadingSpinner, Card } from '@/components/common'
-import { useAuthentication, useFinancialData } from '@/hooks'
+import { SessionAuth } from '@/components/auth/AuthWrapper'
+import { useSessionContext } from 'supertokens-auth-react/recipe/session'
+import { useFinancialData } from '@/hooks'
 import { mockNetWorthData, mockInsights } from '@/lib/fixtures'
 
-
-
-export default function HomePage() {
-  const { session, status, isLoading, isAuthenticated, user } = useAuthentication()
-  const { accounts, transactions, loading: dataLoading, error } = useFinancialData()
-
-  if (isLoading || dataLoading) {
-    return <LoadingSpinner fullScreen />
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="container mx-auto px-4 py-16">
-          <div className="text-center">
-            <h1 className="text-6xl font-bold text-gray-900 dark:text-white mb-6">
-              Atlas Financial
-            </h1>
-            <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-              The brutally honest personal finance platform that tells you the truth about your money.
-              No sugar-coating. No false hope. Just reality.
-            </p>
-            <div className="space-y-4">
-              <div className="inline-block px-6 py-3 bg-primary-600 text-white rounded-lg font-medium">
-                Please sign in to access your dashboard
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Atlas Financial v1.1 - Next.js 15 + React 19
-              </p>
+function LandingPage() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="container mx-auto px-4 py-16">
+        <div className="text-center">
+          <h1 className="text-6xl font-bold text-gray-900 dark:text-white mb-6">
+            Atlas Financial
+          </h1>
+          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
+            The brutally honest personal finance platform that tells you the truth about your money.
+            No sugar-coating. No false hope. Just reality.
+          </p>
+          <div className="space-y-4">
+            <div className="inline-block px-6 py-3 bg-primary-600 text-white rounded-lg font-medium">
+              Please sign in to access your dashboard
             </div>
-          </div>
-          
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            <Card className="text-center">
-              <h3 className="text-lg font-semibold mb-2">Brutal Honesty</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Get the unfiltered truth about your financial situation
-              </p>
-            </Card>
-            
-            <Card className="text-center">
-              <h3 className="text-lg font-semibold mb-2">Real-time Insights</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                AI-powered analysis of your spending patterns and financial health
-              </p>
-            </Card>
-            
-            <Card className="text-center">
-              <h3 className="text-lg font-semibold mb-2">Action-Oriented</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Concrete steps to improve your financial future
-              </p>
-            </Card>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Atlas Financial v1.1 - Next.js 15 + React 19
+            </p>
           </div>
         </div>
+        
+        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          <Card className="text-center">
+            <h3 className="text-lg font-semibold mb-2">Brutal Honesty</h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Get the unfiltered truth about your financial situation
+            </p>
+          </Card>
+          
+          <Card className="text-center">
+            <h3 className="text-lg font-semibold mb-2">Real-time Insights</h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              AI-powered analysis of your spending patterns and financial health
+            </p>
+          </Card>
+          
+          <Card className="text-center">
+            <h3 className="text-lg font-semibold mb-2">Action-Oriented</h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Concrete steps to improve your financial future
+            </p>
+          </Card>
+        </div>
       </div>
-    )
+    </div>
+  )
+}
+
+function Dashboard() {
+  const session = useSessionContext()
+  const { accounts, transactions, loading: dataLoading, error } = useFinancialData()
+
+  if (dataLoading) {
+    return <LoadingSpinner fullScreen />
   }
 
   return (
@@ -75,7 +75,7 @@ export default function HomePage() {
           Financial Dashboard
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-2">
-          Welcome back, {user?.email || 'User'}. Here's your brutal financial reality.
+          Welcome back, {session.userId || 'User'}. Here's your brutal financial reality.
         </p>
         {error && (
           <div className="mt-2 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md">
@@ -114,5 +114,13 @@ export default function HomePage() {
         <RecentTransactions transactions={transactions.slice(0, 10)} />
       </div>
     </div>
+  )
+}
+
+export default function HomePage() {
+  return (
+    <SessionAuth fallback={<LandingPage />}>
+      <Dashboard />
+    </SessionAuth>
   )
 }
