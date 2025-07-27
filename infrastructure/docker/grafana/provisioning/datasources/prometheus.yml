@@ -1,0 +1,77 @@
+# Grafana Datasource Configuration for Atlas Financial
+# Prometheus integration for comprehensive monitoring
+
+apiVersion: 1
+
+datasources:
+  # Prometheus - Primary metrics data source
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: 5s
+      queryTimeout: 60s
+      httpMethod: POST
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: jaeger
+          urlDisplayLabel: "View Trace"
+      prometheusType: Prometheus
+      prometheusVersion: 2.51.2
+      cacheLevel: 'High'
+      incrementalQuerying: true
+      incrementalQueryOverlapWindow: 10m
+      manageAlerts: true
+      alertmanagerUid: alertmanager
+    secureJsonData: {}
+    uid: prometheus
+    version: 1
+
+  # PostgreSQL - Database metrics and application data
+  - name: PostgreSQL
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    database: grafana
+    user: atlas
+    secureJsonData:
+      password: ${POSTGRES_PASSWORD}
+    jsonData:
+      sslmode: disable
+      maxOpenConns: 100
+      maxIdleConns: 100
+      maxIdleConnsAuto: true
+      connMaxLifetime: 14400
+      postgresVersion: 1500
+      timescaledb: false
+    uid: postgres
+    version: 1
+    editable: true
+
+  # Redis - Cache performance metrics
+  - name: Redis
+    type: redis-datasource
+    access: proxy
+    url: redis://redis:6379
+    jsonData:
+      client: standalone
+      poolSize: 5
+      timeout: 10
+      pingInterval: 0
+      pipelineWindow: 0
+    secureJsonData:
+      password: ${REDIS_PASSWORD}
+    uid: redis
+    version: 1
+    editable: true
+
+  # TestData - For demonstration and testing
+  - name: TestData DB
+    type: testdata
+    uid: testdata
+    version: 1
+    isDefault: false
+    editable: true

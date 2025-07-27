@@ -155,7 +155,7 @@ start_services() {
     
     # Start authentication and API services
     log_info "Starting authentication and API services..."
-    $COMPOSE_CMD -f "$COMPOSE_FILE" up -d keycloak hasura
+    $COMPOSE_CMD -f "$COMPOSE_FILE" up -d supertokens hasura
     
     # Wait for auth services
     log_info "Waiting for authentication services..."
@@ -164,6 +164,11 @@ start_services() {
     # Start application services
     log_info "Starting application services..."
     $COMPOSE_CMD -f "$COMPOSE_FILE" up -d firefly ai-engine grafana
+    # Note: rust-financial-engine temporarily disabled due to compilation issues
+    
+    # Start monitoring services
+    log_info "Starting monitoring and observability services..."
+    $COMPOSE_CMD -f "$COMPOSE_FILE" up -d prometheus redis-exporter postgres-exporter
     
     log_success "All services started"
 }
@@ -180,7 +185,8 @@ wait_for_services() {
         local all_healthy=true
         
         # Check each service
-        services=("postgres:5432" "keycloak:8080/health/ready" "hasura:8081/healthz" "firefly:8082/health" "grafana:3001/api/health")
+        services=("postgres:5432" "supertokens:3567/hello" "hasura:8081/healthz" "firefly:8082/health" "grafana:3001/api/health" "prometheus:9090/-/healthy")
+        # Note: rust-financial-engine temporarily disabled due to compilation issues
         
         for service in "${services[@]}"; do
             if [[ "$service" == "postgres:5432" ]]; then
@@ -217,19 +223,21 @@ show_access_info() {
     echo ""
     echo -e "${GREEN}🌐 Service Access URLs:${NC}"
     echo "  • Web Frontend:     http://localhost:3000 (when started)"
-    echo "  • Keycloak Admin:   http://localhost:8080"
+    echo "  • SuperTokens:      http://localhost:3567 (API)"
     echo "  • Hasura Console:   http://localhost:8081"
     echo "  • Firefly III:      http://localhost:8082"
     echo "  • AI Engine API:    http://localhost:8083"
+    echo "  • Rust Financial:   http://localhost:8080"
     echo "  • Grafana:          http://localhost:3001"
+    echo "  • Prometheus:       http://localhost:9090"
     echo ""
     echo -e "${YELLOW}📋 Default Credentials:${NC}"
-    echo "  • Keycloak: admin / (check .env file)"
+    echo "  • SuperTokens: API-based authentication (no admin panel)"
     echo "  • Grafana:  admin / (check .env file)"
     echo ""
     echo -e "${BLUE}📚 Next Steps:${NC}"
     echo "  1. Start the web frontend: npm run dev:web"
-    echo "  2. Configure Keycloak realm and users"
+    echo "  2. Test SuperTokens authentication via API"
     echo "  3. Connect your first bank account"
     echo "  4. Get your first brutal honesty financial insight!"
     echo ""

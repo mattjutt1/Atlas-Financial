@@ -1,9 +1,7 @@
 [workspace]
 members = [
     "crates/financial-core",
-    "crates/financial-api", 
-    "crates/financial-db",
-    "crates/financial-cli"
+    "crates/financial-api"
 ]
 resolver = "2"
 
@@ -37,8 +35,8 @@ diesel_migrations = "2.2"
 r2d2 = "0.8"
 
 # GraphQL
-async-graphql = { version = "7.0", features = ["chrono", "uuid", "decimal"] }
-async-graphql-axum = "7.0"
+async-graphql = { version = "6.0", features = ["chrono", "uuid", "decimal"] }
+async-graphql-axum = "6.0"
 
 # Authentication and security
 jsonwebtoken = "9.3"
@@ -61,6 +59,9 @@ anyhow = "1.0"
 # Redis caching
 redis = { version = "0.25", features = ["tokio-comp", "connection-manager"] }
 
+# HTTP client
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+
 # Utilities
 uuid = { version = "1.10", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
@@ -72,6 +73,7 @@ quickcheck = "1.0"
 quickcheck_macros = "1.0"
 tokio-test = "0.4"
 criterion = { version = "0.5", features = ["html_reports"] }
+mockito = "1.5"
 
 # Development tools
 cargo-audit = "0.20"

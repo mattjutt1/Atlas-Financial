@@ -1,0 +1,324 @@
+name: Atlas Financial - Production Deployment
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  KUBE_NAMESPACE: atlas-financial
+
+jobs:
+  # Security scanning and code quality
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+            p/docker
+
+  # Build and test
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    needs: security-scan
+    strategy:
+      matrix:
+        service: [frontend, rust-engine, ai-engine]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./infrastructure/docker/production/Dockerfile.${{ matrix.service }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+  # Integration tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: atlas
+          POSTGRES_DB: atlas_financial
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          POSTGRES_URL: postgres://atlas:test_password@localhost:5432/atlas_financial
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            test-results.xml
+            coverage/
+
+  # Deploy to staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-and-test, integration-tests]
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: staging
+      url: https://staging.atlas-financial.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG_STAGING }}
+
+      - name: Deploy to staging
+        run: |
+          kubectl apply -f infrastructure/k8s/ -n atlas-financial-staging
+          kubectl rollout status deployment -n atlas-financial-staging --timeout=600s
+
+      - name: Run smoke tests
+        run: |
+          # Wait for services to be ready
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=atlas-financial -n atlas-financial-staging --timeout=300s
+          
+          # Run smoke tests
+          npm run test:smoke -- --environment=staging
+
+  # Security compliance check
+  compliance-check:
+    name: Compliance Check
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run compliance scan with Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: infrastructure/k8s/
+          framework: kubernetes
+          output_format: sarif
+          output_file_path: compliance-results.sarif
+
+      - name: Upload compliance results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: compliance-results.sarif
+
+  # Deploy to production
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, compliance-check]
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment:
+      name: production
+      url: https://atlas-financial.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG_PRODUCTION }}
+
+      - name: Update secrets
+        run: |
+          kubectl create secret generic atlas-financial-secrets \
+            --from-literal=POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}" \
+            --from-literal=REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}" \
+            --from-literal=HASURA_ADMIN_SECRET="${{ secrets.HASURA_ADMIN_SECRET }}" \
+            --from-literal=SUPERTOKENS_API_KEY="${{ secrets.SUPERTOKENS_API_KEY }}" \
+            --from-literal=FIREFLY_APP_KEY="${{ secrets.FIREFLY_APP_KEY }}" \
+            --from-literal=GRAFANA_ADMIN_PASSWORD="${{ secrets.GRAFANA_ADMIN_PASSWORD }}" \
+            --from-literal=NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy to production
+        run: |
+          # Update image tags to the released version
+          kubectl set image deployment/atlas-supertokens atlas-supertokens=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-supertokens:${{ github.ref_name }} -n ${{ env.KUBE_NAMESPACE }}
+          kubectl set image deployment/atlas-hasura atlas-hasura=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-hasura:${{ github.ref_name }} -n ${{ env.KUBE_NAMESPACE }}
+          kubectl set image deployment/atlas-firefly atlas-firefly=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-firefly:${{ github.ref_name }} -n ${{ env.KUBE_NAMESPACE }}
+          kubectl set image deployment/atlas-grafana atlas-grafana=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-grafana:${{ github.ref_name }} -n ${{ env.KUBE_NAMESPACE }}
+          
+          # Apply all manifests
+          kubectl apply -f infrastructure/k8s/ -n ${{ env.KUBE_NAMESPACE }}
+          
+          # Wait for rollout to complete
+          kubectl rollout status deployment -n ${{ env.KUBE_NAMESPACE }} --timeout=600s
+
+      - name: Run production health checks
+        run: |
+          # Wait for all services to be ready
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=atlas-financial -n ${{ env.KUBE_NAMESPACE }} --timeout=600s
+          
+          # Run comprehensive health checks
+          npm run test:production-health
+
+      - name: Notify deployment success
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: 'Atlas Financial deployment to production completed successfully! 🚀'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # Rollback on failure
+  rollback-on-failure:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: failure()
+    environment:
+      name: production
+      url: https://atlas-financial.com
+    steps:
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG_PRODUCTION }}
+
+      - name: Rollback deployment
+        run: |
+          kubectl rollout undo deployment -n ${{ env.KUBE_NAMESPACE }}
+          kubectl rollout status deployment -n ${{ env.KUBE_NAMESPACE }} --timeout=300s
+
+      - name: Notify rollback
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: 'Atlas Financial production deployment failed and was rolled back. Please investigate. ⚠️'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # Post-deployment monitoring
+  post-deployment-monitoring:
+    name: Post-Deployment Monitoring
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: success()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Monitor deployment metrics
+        run: |
+          # Wait 5 minutes for metrics to stabilize
+          sleep 300
+          
+          # Check key metrics and alert if anomalies detected
+          python scripts/check-deployment-metrics.py \
+            --prometheus-url="https://prometheus.atlas-financial.com" \
+            --duration=10m \
+            --alert-webhook="${{ secrets.SLACK_WEBHOOK_URL }}"
+
+      - name: Update deployment status
+        run: |
+          echo "Deployment completed at $(date)" >> deployment-log.txt
+          echo "Version: ${{ github.ref_name }}" >> deployment-log.txt
+          echo "Commit: ${{ github.sha }}" >> deployment-log.txt

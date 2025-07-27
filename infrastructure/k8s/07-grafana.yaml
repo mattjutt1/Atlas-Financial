@@ -1,0 +1,296 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-data-pvc
+  namespace: atlas-financial
+  labels:
+    app.kubernetes.io/name: atlas-financial
+    app.kubernetes.io/component: observability
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: gp2  # Use appropriate storage class for your cluster
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-provisioning-datasources
+  namespace: atlas-financial
+  labels:
+    app.kubernetes.io/name: atlas-financial
+    app.kubernetes.io/component: observability
+data:
+  prometheus.yml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://atlas-prometheus.atlas-financial.svc.cluster.local:9090
+        isDefault: true
+        uid: prometheus-uid
+        editable: false
+        jsonData:
+          httpMethod: POST
+          manageAlerts: true
+          prometheusType: Prometheus
+          prometheusVersion: 2.51.2
+          cacheLevel: 'High'
+          disableRecordingRules: false
+          incrementalQueryOverlapWindow: 10m
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-provisioning-dashboards
+  namespace: atlas-financial
+  labels:
+    app.kubernetes.io/name: atlas-financial
+    app.kubernetes.io/component: observability
+data:
+  dashboards.yml: |
+    apiVersion: 1
+    providers:
+      - name: 'atlas-dashboards'
+        orgId: 1
+        folder: 'Atlas Financial'
+        type: file
+        disableDeletion: false
+        editable: true
+        allowUiUpdates: true
+        options:
+          path: /etc/grafana/provisioning/dashboards/atlas
+      - name: 'infrastructure-dashboards'
+        orgId: 1
+        folder: 'Infrastructure'
+        type: file
+        disableDeletion: false
+        editable: true
+        allowUiUpdates: true
+        options:
+          path: /etc/grafana/provisioning/dashboards/infrastructure
+      - name: 'business-dashboards'
+        orgId: 1
+        folder: 'Business Metrics'
+        type: file
+        disableDeletion: false
+        editable: true
+        allowUiUpdates: true
+        options:
+          path: /etc/grafana/provisioning/dashboards/business
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: atlas-grafana
+  namespace: atlas-financial
+  labels:
+    app.kubernetes.io/name: atlas-financial
+    app.kubernetes.io/component: observability
+    app.kubernetes.io/instance: atlas-grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: atlas-financial
+      app.kubernetes.io/component: observability
+      app.kubernetes.io/instance: atlas-grafana
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: atlas-financial
+        app.kubernetes.io/component: observability
+        app.kubernetes.io/instance: atlas-grafana
+    spec:
+      serviceAccountName: atlas-financial-sa
+      securityContext:
+        runAsUser: 472  # Grafana user
+        runAsGroup: 472
+        runAsNonRoot: true
+        fsGroup: 472
+      initContainers:
+      - name: wait-for-postgres
+        image: postgres:15-alpine
+        command:
+        - sh
+        - -c
+        - |
+          until pg_isready -h atlas-postgres.atlas-financial.svc.cluster.local -p 5432 -U atlas; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+      containers:
+      - name: grafana
+        image: grafana/grafana-oss:10.4.1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        env:
+        - name: GF_SECURITY_ADMIN_USER
+          valueFrom:
+            configMapKeyRef:
+              name: atlas-financial-config
+              key: GF_SECURITY_ADMIN_USER
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: atlas-financial-secrets
+              key: GRAFANA_ADMIN_PASSWORD
+        - name: GF_DATABASE_TYPE
+          valueFrom:
+            configMapKeyRef:
+              name: atlas-financial-config
+              key: GF_DATABASE_TYPE
+        - name: GF_DATABASE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: atlas-financial-config
+              key: GF_DATABASE_HOST
+        - name: GF_DATABASE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: atlas-financial-config
+              key: GF_DATABASE_NAME
+        - name: GF_DATABASE_USER
+          valueFrom:
+            configMapKeyRef:
+              name: atlas-financial-config
+              key: GF_DATABASE_USER
+        - name: GF_DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: atlas-financial-secrets
+              key: POSTGRES_PASSWORD
+        - name: GF_INSTALL_PLUGINS
+          valueFrom:
+            configMapKeyRef:
+              name: atlas-financial-config
+              key: GF_INSTALL_PLUGINS
+        # Production security settings
+        - name: GF_SERVER_ROOT_URL
+          valueFrom:
+            configMapKeyRef:
+              name: atlas-financial-config
+              key: GRAFANA_URL
+        - name: GF_SECURITY_COOKIE_SECURE
+          value: "true"
+        - name: GF_SECURITY_COOKIE_SAMESITE
+          value: "strict"
+        - name: GF_SECURITY_CONTENT_TYPE_PROTECTION
+          value: "true"
+        - name: GF_SECURITY_X_CONTENT_TYPE_OPTIONS
+          value: "nosniff"
+        - name: GF_SECURITY_X_XSS_PROTECTION
+          value: "true"
+        - name: GF_SECURITY_STRICT_TRANSPORT_SECURITY
+          value: "true"
+        # Performance optimizations
+        - name: GF_DATABASE_MAX_OPEN_CONN
+          value: "25"
+        - name: GF_DATABASE_MAX_IDLE_CONN
+          value: "25"
+        - name: GF_DATABASE_CONN_MAX_LIFETIME
+          value: "14400"
+        - name: GF_ALERTING_ENABLED
+          value: "true"
+        - name: GF_UNIFIED_ALERTING_ENABLED
+          value: "true"
+        volumeMounts:
+        - name: grafana-storage
+          mountPath: /var/lib/grafana
+        - name: datasources-config
+          mountPath: /etc/grafana/provisioning/datasources
+          readOnly: true
+        - name: dashboards-config
+          mountPath: /etc/grafana/provisioning/dashboards
+          readOnly: true
+        - name: dashboards-atlas
+          mountPath: /etc/grafana/provisioning/dashboards/atlas
+          readOnly: true
+        - name: dashboards-infrastructure
+          mountPath: /etc/grafana/provisioning/dashboards/infrastructure
+          readOnly: true
+        - name: dashboards-business
+          mountPath: /etc/grafana/provisioning/dashboards/business
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 10
+      volumes:
+      - name: grafana-storage
+        persistentVolumeClaim:
+          claimName: grafana-data-pvc
+      - name: datasources-config
+        configMap:
+          name: grafana-provisioning-datasources
+      - name: dashboards-config
+        configMap:
+          name: grafana-provisioning-dashboards
+      - name: dashboards-atlas
+        configMap:
+          name: grafana-dashboards-atlas
+          optional: true
+      - name: dashboards-infrastructure
+        configMap:
+          name: grafana-dashboards-infrastructure
+          optional: true
+      - name: dashboards-business
+        configMap:
+          name: grafana-dashboards-business
+          optional: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: atlas-grafana
+  namespace: atlas-financial
+  labels:
+    app.kubernetes.io/name: atlas-financial
+    app.kubernetes.io/component: observability
+    app.kubernetes.io/instance: atlas-grafana
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app.kubernetes.io/name: atlas-financial
+    app.kubernetes.io/component: observability
+    app.kubernetes.io/instance: atlas-grafana

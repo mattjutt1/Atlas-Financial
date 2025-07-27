@@ -1,8 +1,9 @@
 /// Risk analysis and calculation module for portfolios
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use crate::{Money, Portfolio, FinancialError, Result};
-use crate::portfolio::types::{HistoricalReturns, PeriodReturn};
+use rust_decimal::prelude::ToPrimitive;
+use crate::{Money, FinancialError, Result};
+use crate::portfolio::types::{Portfolio, HistoricalReturns, PeriodReturn};
 
 /// Risk analysis engine for portfolio calculations
 pub struct RiskAnalyzer {
@@ -55,7 +56,7 @@ pub struct StressTestResult {
 }
 
 /// Monte Carlo simulation parameters
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MonteCarloParameters {
     pub num_simulations: usize,
     pub time_horizon_years: Decimal,
@@ -198,7 +199,7 @@ impl RiskAnalyzer {
         
         // Convert to annual figures
         let annual_return = mean_return * dec!(252); // Assuming daily returns
-        let annual_volatility = volatility * dec!(252).sqrt();
+        let annual_volatility = volatility * calculate_sqrt(dec!(252));
         
         let mut final_values = Vec::with_capacity(parameters.num_simulations);
         let mut random_generator = SimpleRandomGenerator::new(42); // Fixed seed for reproducibility
@@ -211,7 +212,7 @@ impl RiskAnalyzer {
             );
             
             let final_value = parameters.initial_portfolio_value.amount() 
-                * (Decimal::ONE + random_return).powf(parameters.time_horizon_years.to_f64().unwrap_or(1.0));
+                * decimal_power(Decimal::ONE + random_return, parameters.time_horizon_years);
             
             final_values.push(Money::new_unchecked(
                 final_value,
@@ -246,11 +247,14 @@ impl RiskAnalyzer {
         };
         
         let variance: Decimal = final_values.iter()
-            .map(|v| (v.amount() - expected_final_value.amount()).powf(2.0))
+            .map(|v| {
+                let diff = v.amount() - expected_final_value.amount();
+                diff * diff
+            })
             .sum::<Decimal>() / Decimal::from(parameters.num_simulations);
         
         let standard_deviation = Money::new_unchecked(
-            variance.sqrt(),
+            calculate_sqrt(variance),
             parameters.initial_portfolio_value.currency(),
         );
         
@@ -325,17 +329,23 @@ impl RiskAnalyzer {
     fn calculate_volatility(&self, returns: &[Decimal]) -> Result<Decimal> {
         let mean = self.calculate_mean(returns)?;
         let variance: Decimal = returns.iter()
-            .map(|r| (*r - mean).powf(2.0))
+            .map(|r| {
+                let diff = *r - mean;
+                diff * diff
+            })
             .sum::<Decimal>() / Decimal::from(returns.len() - 1);
         
-        Ok(variance.sqrt())
+        Ok(calculate_sqrt(variance))
     }
 
     fn calculate_downside_deviation(&self, returns: &[Decimal]) -> Result<Decimal> {
         let target_return = Decimal::ZERO; // Using 0 as target return
         let downside_returns: Vec<Decimal> = returns.iter()
             .filter(|&&r| r < target_return)
-            .map(|&r| (r - target_return).powf(2.0))
+            .map(|&r| {
+                let diff = r - target_return;
+                diff * diff
+            })
             .collect();
         
         if downside_returns.is_empty() {
@@ -343,7 +353,7 @@ impl RiskAnalyzer {
         }
         
         let downside_variance = downside_returns.iter().sum::<Decimal>() / Decimal::from(downside_returns.len());
-        Ok(downside_variance.sqrt())
+        Ok(calculate_sqrt(downside_variance))
     }
 
     fn calculate_value_at_risk(
@@ -412,7 +422,7 @@ impl RiskAnalyzer {
         let periods_per_year = dec!(252); // Assuming daily returns
         let years = Decimal::from(returns.len()) / periods_per_year;
         
-        Ok(cumulative_return.powf(Decimal::ONE / years) - Decimal::ONE)
+        Ok(decimal_power(cumulative_return, Decimal::ONE / years) - Decimal::ONE)
     }
 
     fn calculate_sortino_ratio(&self, returns: &[Decimal]) -> Result<Decimal> {
@@ -443,7 +453,8 @@ impl RiskAnalyzer {
         
         for (p, b) in portfolio_returns.iter().zip(benchmark_values.iter()) {
             covariance += (p - portfolio_mean) * (b - benchmark_mean);
-            benchmark_variance += (b - benchmark_mean).powf(2.0);
+            let diff = b - benchmark_mean;
+            benchmark_variance += diff * diff;
         }
         
         if benchmark_variance.is_zero() {
@@ -543,6 +554,34 @@ impl Default for RiskAnalyzer {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Helper function to calculate square root using Newton's method for Decimal
+fn calculate_sqrt(value: Decimal) -> Decimal {
+    if value.is_zero() || value.is_sign_negative() {
+        return Decimal::ZERO;
+    }
+    
+    // Convert to f64 for sqrt calculation, then back to Decimal
+    let f64_val = value.to_f64().unwrap_or(0.0);
+    let sqrt_result = f64_val.sqrt();
+    Decimal::from_f64_retain(sqrt_result).unwrap_or(Decimal::ZERO)
+}
+
+/// Helper function to calculate decimal power using f64 conversion
+fn decimal_power(base: Decimal, exponent: Decimal) -> Decimal {
+    if base.is_zero() {
+        return Decimal::ZERO;
+    }
+    if exponent.is_zero() {
+        return Decimal::ONE;
+    }
+    
+    let base_f64 = base.to_f64().unwrap_or(1.0);
+    let exp_f64 = exponent.to_f64().unwrap_or(1.0);
+    let result = base_f64.powf(exp_f64);
+    
+    Decimal::from_f64_retain(result).unwrap_or(Decimal::ONE)
 }
 
 #[cfg(test)]

@@ -125,6 +125,12 @@ pub enum FinancialError {
     #[error("Operation not supported: {operation}")]
     NotSupported { operation: String },
 
+    #[error("Unsupported operation: {operation}")]
+    UnsupportedOperation { operation: String },
+
+    #[error("Insufficient data: {details}")]
+    InsufficientData { details: String },
+
     #[error("Resource not found: {resource}")]
     NotFound { resource: String },
 }
@@ -186,6 +192,8 @@ impl FinancialError {
 
             FinancialError::InternalError { .. }
             | FinancialError::NotSupported { .. }
+            | FinancialError::UnsupportedOperation { .. }
+            | FinancialError::InsufficientData { .. }
             | FinancialError::NotFound { .. } => ErrorCategory::System,
         }
     }

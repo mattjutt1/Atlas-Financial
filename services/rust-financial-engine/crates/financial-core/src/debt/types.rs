@@ -214,23 +214,21 @@ impl DebtAccount {
     }
 
     /// Calculate monthly interest charge
-    pub fn monthly_interest_charge(&self) -> Money {
+    pub fn monthly_interest_charge(&self) -> crate::Result<Money> {
         let monthly_rate = self.interest_rate.convert_to_period(crate::types::Period::Monthly)
             .unwrap_or_else(|_| self.interest_rate);
         self.balance.multiply(monthly_rate.as_decimal())
     }
 
     /// Calculate minimum payment to principal ratio
-    pub fn payment_to_principal_ratio(&self) -> Percentage {
-        let monthly_interest = self.monthly_interest_charge();
-        let principal_payment = self.minimum_payment.subtract(&monthly_interest)
-            .unwrap_or_else(|_| Money::new_unchecked(Decimal::ZERO, self.balance.currency()));
+    pub fn payment_to_principal_ratio(&self) -> crate::Result<Percentage> {
+        let monthly_interest = self.monthly_interest_charge()?;
+        let principal_payment = self.minimum_payment.subtract(&monthly_interest)?;
         
         if self.minimum_payment.amount().is_zero() {
-            Percentage::from_percentage(Decimal::ZERO).unwrap()
+            Ok(Percentage::from_percentage(Decimal::ZERO)?)
         } else {
-            Percentage::from_decimal(principal_payment.amount() / self.minimum_payment.amount())
-                .unwrap_or_else(|_| Percentage::from_percentage(Decimal::ZERO).unwrap())
+            Ok(Percentage::from_decimal(principal_payment.amount() / self.minimum_payment.amount())?)
         }
     }
 

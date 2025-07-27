@@ -1,0 +1,416 @@
+---
+# Grafana Dashboard ConfigMaps for Atlas Financial
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards-atlas
+  namespace: atlas-financial
+  labels:
+    app.kubernetes.io/name: atlas-financial
+    app.kubernetes.io/component: observability
+    grafana_dashboard: "1"
+data:
+  atlas-financial-overview.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Atlas Financial - System Overview",
+        "tags": ["atlas-financial", "production"],
+        "style": "dark",
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Service Health Status",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "atlas_financial_health_status",
+                "legendFormat": "{{component}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "yellow", "value": 0.5},
+                    {"color": "green", "value": 1}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Request Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total[5m])",
+                "legendFormat": "{{service}} - {{method}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Response Times",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "95th percentile"
+              },
+              {
+                "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "50th percentile"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 4,
+            "title": "Error Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total{status=~\"5..\"}[5m])",
+                "legendFormat": "5xx errors"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards-infrastructure
+  namespace: atlas-financial
+  labels:
+    app.kubernetes.io/name: atlas-financial
+    app.kubernetes.io/component: observability
+    grafana_dashboard: "1"
+data:
+  infrastructure-overview.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Atlas Financial - Infrastructure",
+        "tags": ["atlas-financial", "infrastructure"],
+        "style": "dark",
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Pod Status",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "kube_pod_status_phase{namespace=\"atlas-financial\"}",
+                "legendFormat": "{{pod}} - {{phase}}"
+              }
+            ],
+            "gridPos": {"h": 6, "w": 8, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "CPU Usage by Pod",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(container_cpu_usage_seconds_total{namespace=\"atlas-financial\"}[5m]) * 100",
+                "legendFormat": "{{pod}}"
+              }
+            ],
+            "gridPos": {"h": 6, "w": 8, "x": 8, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Memory Usage by Pod",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "container_memory_usage_bytes{namespace=\"atlas-financial\"} / 1024 / 1024",
+                "legendFormat": "{{pod}}"
+              }
+            ],
+            "gridPos": {"h": 6, "w": 8, "x": 16, "y": 0}
+          },
+          {
+            "id": 4,
+            "title": "PostgreSQL Connections",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "pg_stat_activity_count",
+                "legendFormat": "Active connections"
+              }
+            ],
+            "gridPos": {"h": 6, "w": 12, "x": 0, "y": 6}
+          },
+          {
+            "id": 5,
+            "title": "Redis Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "redis_memory_used_bytes / 1024 / 1024",
+                "legendFormat": "Memory used (MB)"
+              }
+            ],
+            "gridPos": {"h": 6, "w": 12, "x": 12, "y": 6}
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards-business
+  namespace: atlas-financial
+  labels:
+    app.kubernetes.io/name: atlas-financial
+    app.kubernetes.io/component: observability
+    grafana_dashboard: "1"
+data:
+  business-metrics.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Atlas Financial - Business Metrics",
+        "tags": ["atlas-financial", "business"],
+        "style": "dark",
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Active Users",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "supertokens_active_users_total",
+                "legendFormat": "Active users"
+              }
+            ],
+            "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Authentication Events",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(supertokens_auth_events_total[5m])",
+                "legendFormat": "{{event_type}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 6, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Financial Transactions",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "firefly_transactions_total",
+                "legendFormat": "Total transactions"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}
+          },
+          {
+            "id": 4,
+            "title": "API Response Times by Endpoint",
+            "type": "heatmap",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"hasura\"}[5m]))",
+                "legendFormat": "{{endpoint}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8}
+          }
+        ],
+        "time": {
+          "from": "now-24h",
+          "to": "now"
+        },
+        "refresh": "1m"
+      }
+    }
+---
+# ServiceMonitor for Prometheus to scrape Atlas Financial services
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: atlas-financial-services
+  namespace: atlas-financial
+  labels:
+    app.kubernetes.io/name: atlas-financial
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: atlas-financial
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+---
+# PrometheusRule for Atlas Financial alerts
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: atlas-financial-alerts
+  namespace: atlas-financial
+  labels:
+    app.kubernetes.io/name: atlas-financial
+    app.kubernetes.io/component: monitoring
+spec:
+  groups:
+  - name: atlas-financial.rules
+    rules:
+    # High-level service availability
+    - alert: AtlasFinancialServiceDown
+      expr: atlas_financial_health_status == 0
+      for: 1m
+      labels:
+        severity: critical
+        component: "{{ $labels.component }}"
+      annotations:
+        summary: "Atlas Financial service {{ $labels.component }} is down"
+        description: "Service {{ $labels.component }} has been unhealthy for more than 1 minute."
+        runbook_url: "https://docs.atlas-financial.com/runbooks/service-down"
+
+    - alert: AtlasFinancialServiceDegraded
+      expr: atlas_financial_health_status == 0.5
+      for: 5m
+      labels:
+        severity: warning
+        component: "{{ $labels.component }}"
+      annotations:
+        summary: "Atlas Financial service {{ $labels.component }} is degraded"
+        description: "Service {{ $labels.component }} has been in a degraded state for more than 5 minutes."
+
+    # Database alerts
+    - alert: PostgreSQLHighConnections
+      expr: pg_stat_activity_count > 80
+      for: 2m
+      labels:
+        severity: warning
+      annotations:
+        summary: "PostgreSQL has too many connections"
+        description: "PostgreSQL has {{ $value }} connections, which is more than 80."
+
+    - alert: PostgreSQLSlowQueries
+      expr: rate(pg_stat_activity_max_tx_duration[5m]) > 300
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "PostgreSQL has slow queries"
+        description: "PostgreSQL has queries running for more than 5 minutes."
+
+    # Redis alerts
+    - alert: RedisHighMemoryUsage
+      expr: (redis_memory_used_bytes / redis_memory_max_bytes) * 100 > 90
+      for: 2m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Redis high memory usage"
+        description: "Redis is using {{ $value }}% of available memory."
+
+    - alert: RedisHighConnectionCount
+      expr: redis_connected_clients > 100
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Redis has too many connections"
+        description: "Redis has {{ $value }} connected clients."
+
+    # Application performance alerts
+    - alert: HighErrorRate
+      expr: (rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m])) * 100 > 5
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "High error rate detected"
+        description: "Error rate is {{ $value }}% for service {{ $labels.service }}."
+
+    - alert: HighResponseTime
+      expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2.0
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High response time detected"
+        description: "95th percentile response time is {{ $value }}s for service {{ $labels.service }}."
+
+    # Kubernetes resource alerts
+    - alert: PodCrashLooping
+      expr: rate(kube_pod_container_status_restarts_total{namespace="atlas-financial"}[15m]) > 0
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Pod {{ $labels.pod }} is crash looping"
+        description: "Pod {{ $labels.pod }} has restarted {{ $value }} times in the last 15 minutes."
+
+    - alert: PodMemoryUsageHigh
+      expr: (container_memory_usage_bytes{namespace="atlas-financial"} / container_spec_memory_limit_bytes) * 100 > 90
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Pod {{ $labels.pod }} memory usage high"
+        description: "Pod {{ $labels.pod }} is using {{ $value }}% of its memory limit."
+
+    - alert: PodCPUUsageHigh
+      expr: (rate(container_cpu_usage_seconds_total{namespace="atlas-financial"}[5m]) / container_spec_cpu_quota) * 100 > 90
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Pod {{ $labels.pod }} CPU usage high"
+        description: "Pod {{ $labels.pod }} is using {{ $value }}% of its CPU limit."
+
+    # Business logic alerts
+    - alert: AuthenticationFailureSpike
+      expr: rate(supertokens_auth_events_total{event_type="failure"}[5m]) > 10
+      for: 2m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High authentication failure rate"
+        description: "Authentication failures are occurring at a rate of {{ $value }} per second."
+
+    - alert: LowUserActivity
+      expr: supertokens_active_users_total < 1
+      for: 30m
+      labels:
+        severity: info
+      annotations:
+        summary: "Low user activity detected"
+        description: "There have been fewer than 1 active users in the last 30 minutes."

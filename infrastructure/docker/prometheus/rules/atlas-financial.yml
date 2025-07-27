@@ -1,0 +1,223 @@
+# Atlas Financial Alerting Rules
+# Critical business logic and infrastructure monitoring
+
+groups:
+  # High-level service availability
+  - name: atlas-financial-availability
+    interval: 30s
+    rules:
+      - alert: AtlasServiceDown
+        expr: up{job=~"atlas-.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: availability
+        annotations:
+          summary: "Atlas service {{ $labels.job }} is down"
+          description: "Atlas service {{ $labels.job }} has been down for more than 1 minute."
+          runbook_url: "https://docs.atlas-financial.com/runbooks/service-down"
+
+      - alert: AtlasHighErrorRate
+        expr: rate(http_requests_total{job=~"atlas-.*",status=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          component: availability
+        annotations:
+          summary: "High error rate on {{ $labels.job }}"
+          description: "Error rate is {{ $value }} errors per second on {{ $labels.job }}."
+
+  # Financial Engine Critical Alerts
+  - name: atlas-financial-engine
+    interval: 15s
+    rules:
+      - alert: FinancialCalculationErrors
+        expr: rate(financial_calculations_errors_total[5m]) > 0.01
+        for: 30s
+        labels:
+          severity: critical
+          component: financial-engine
+        annotations:
+          summary: "Financial calculation errors detected"
+          description: "Financial calculation error rate is {{ $value }} errors per second. This could impact financial accuracy."
+          runbook_url: "https://docs.atlas-financial.com/runbooks/financial-errors"
+
+      - alert: FinancialEngineHighLatency
+        expr: histogram_quantile(0.95, rate(financial_calculation_duration_seconds_bucket[5m])) > 1.0
+        for: 1m
+        labels:
+          severity: warning
+          component: financial-engine
+        annotations:
+          summary: "High latency in financial calculations"
+          description: "95th percentile latency is {{ $value }}s for financial calculations."
+
+      - alert: FinancialEngineHighMemory
+        expr: process_resident_memory_bytes{job="atlas-rust-financial-engine"} > 1073741824  # 1GB
+        for: 5m
+        labels:
+          severity: warning
+          component: financial-engine
+        annotations:
+          summary: "High memory usage in financial engine"
+          description: "Memory usage is {{ $value | humanizeBytes }} on financial engine."
+
+  # Redis Cache Monitoring
+  - name: atlas-redis-cache
+    interval: 30s
+    rules:
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "Redis cache is down"
+          description: "Redis cache has been down for more than 1 minute. This will impact performance."
+
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Redis memory usage is high"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}."
+
+      - alert: RedisConnectionSpike
+        expr: redis_connected_clients > 100
+        for: 2m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "High number of Redis connections"
+          description: "Redis has {{ $value }} connected clients."
+
+      - alert: RedisCacheHitRateLow
+        expr: rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m])) < 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Low Redis cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }} for Redis."
+
+  # Database Monitoring
+  - name: atlas-database
+    interval: 30s
+    rules:
+      - alert: PostgreSQLDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "PostgreSQL has been down for more than 1 minute."
+
+      - alert: PostgreSQLHighConnections
+        expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "PostgreSQL connection usage is high"
+          description: "PostgreSQL connection usage is {{ $value | humanizePercentage }}."
+
+      - alert: PostgreSQLSlowQueries
+        expr: rate(pg_stat_database_tup_fetched[5m]) / rate(pg_stat_database_tup_returned[5m]) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "PostgreSQL slow queries detected"
+          description: "Query efficiency is low. Fetched/Returned ratio: {{ $value }}."
+
+  # System Resource Monitoring
+  - name: atlas-system-resources
+    interval: 30s
+    rules:
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High CPU usage on {{ $labels.job }}"
+          description: "CPU usage is {{ $value }}% on {{ $labels.job }}."
+
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes > 2147483648  # 2GB
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High memory usage on {{ $labels.job }}"
+          description: "Memory usage is {{ $value | humanizeBytes }} on {{ $labels.job }}."
+
+  # Application Performance Monitoring
+  - name: atlas-performance
+    interval: 15s
+    rules:
+      - alert: HighRequestLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2.0
+        for: 2m
+        labels:
+          severity: warning
+          component: performance
+        annotations:
+          summary: "High request latency on {{ $labels.job }}"
+          description: "95th percentile latency is {{ $value }}s on {{ $labels.job }}."
+
+      - alert: HighRequestRate
+        expr: rate(http_requests_total[5m]) > 1000
+        for: 5m
+        labels:
+          severity: info
+          component: performance
+        annotations:
+          summary: "High request rate on {{ $labels.job }}"
+          description: "Request rate is {{ $value }} requests/sec on {{ $labels.job }}."
+
+  # Business Logic Monitoring
+  - name: atlas-business-logic
+    interval: 60s
+    rules:
+      - alert: DebtCalculationFailures
+        expr: rate(debt_optimization_failures_total[10m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: business-logic
+        annotations:
+          summary: "Debt calculation failures detected"
+          description: "Debt optimization calculations are failing at {{ $value }} failures per second."
+
+      - alert: PortfolioAnalysisFailures
+        expr: rate(portfolio_analysis_failures_total[10m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: business-logic
+        annotations:
+          summary: "Portfolio analysis failures detected"
+          description: "Portfolio risk analysis is failing at {{ $value }} failures per second."
+
+      - alert: AuthenticationFailures
+        expr: rate(authentication_failures_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "High authentication failure rate"
+          description: "Authentication failures at {{ $value }} failures per second."

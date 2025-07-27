@@ -18,7 +18,3 @@ validator = { workspace = true }
 quickcheck = { workspace = true }
 quickcheck_macros = { workspace = true }
 criterion = { workspace = true }
-
-[[bench]]
-name = "financial_calculations"
-harness = false

@@ -2,7 +2,7 @@
 # Multi-stage build for optimized production container
 
 # Build stage
-FROM rust:1.80-alpine AS builder
+FROM rust:1.82-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache \
@@ -25,8 +25,6 @@ WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY crates/financial-core/Cargo.toml ./crates/financial-core/
 COPY crates/financial-api/Cargo.toml ./crates/financial-api/
-COPY crates/financial-db/Cargo.toml ./crates/financial-db/
-COPY crates/financial-cli/Cargo.toml ./crates/financial-cli/
 
 # Copy source code
 COPY crates/ ./crates/

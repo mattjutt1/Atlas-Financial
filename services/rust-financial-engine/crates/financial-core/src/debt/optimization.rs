@@ -98,12 +98,12 @@ impl DebtOptimizer {
     pub fn optimize(&self, debts: &[DebtAccount]) -> Result<OptimizationAnalysis> {
         if debts.is_empty() {
             return Err(FinancialError::InsufficientData {
-                required: "At least one debt account".to_string(),
+                details: "At least one debt account".to_string(),
             });
         }
 
         // Calculate both strategies
-        let snowball_calculator = SnowballCalculator::new(self.extra_payment_budget.clone());
+        let _snowball_calculator = SnowballCalculator::new(self.extra_payment_budget.clone());
         let avalanche_calculator = AvalancheCalculator::new(self.extra_payment_budget.clone());
 
         let strategy_comparison = avalanche_calculator.compare_with_snowball(debts)?;
@@ -522,7 +522,7 @@ impl DebtOptimizer {
     ) -> Result<DebtOptimizationResult> {
         if plans.is_empty() {
             return Err(FinancialError::InsufficientData {
-                required: "At least one payment plan".to_string(),
+                details: "At least one payment plan".to_string(),
             });
         }
 
@@ -637,7 +637,7 @@ impl DebtOptimizer {
         }
     }
 
-    fn generate_talking_points(&self, debt: &DebtAccount, negotiation_type: &crate::debt::types::NegotiationType) -> Vec<String> {
+    fn generate_talking_points(&self, _debt: &DebtAccount, negotiation_type: &crate::debt::types::NegotiationType) -> Vec<String> {
         use crate::debt::types::NegotiationType;
         
         let mut points = vec![

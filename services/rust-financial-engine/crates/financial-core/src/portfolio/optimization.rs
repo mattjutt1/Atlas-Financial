@@ -276,7 +276,7 @@ impl PortfolioOptimizer {
         // This is a basic mean-variance optimization approximation
         
         let n_assets = portfolio.assets.len();
-        let expected_returns: Vec<Decimal> = returns.iter()
+        let _expected_returns: Vec<Decimal> = returns.iter()
             .map(|r| self.calculate_mean_return(&r.returns))
             .collect::<Result<Vec<_>>>()?;
         
@@ -337,7 +337,7 @@ impl PortfolioOptimizer {
         Ok(self.decimal_sqrt(portfolio_variance))
     }
 
-    fn calculate_max_drawdown(&self, returns: &[HistoricalReturns]) -> Result<Decimal> {
+    fn calculate_max_drawdown(&self, _returns: &[HistoricalReturns]) -> Result<Decimal> {
         // Simplified max drawdown calculation
         // In production, this would analyze the entire return series
         Ok(dec!(0.15)) // Placeholder 15% max drawdown

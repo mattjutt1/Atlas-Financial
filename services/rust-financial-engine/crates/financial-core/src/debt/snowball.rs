@@ -48,7 +48,7 @@ impl SnowballCalculator {
         if !debts.iter().all(|d| d.balance.currency() == currency) {
             return Err(FinancialError::CurrencyMismatch {
                 expected: currency,
-                found: debts.iter().find(|d| d.balance.currency() != currency)
+                actual: debts.iter().find(|d| d.balance.currency() != currency)
                     .map(|d| d.balance.currency())
                     .unwrap_or(currency),
             });
@@ -58,8 +58,8 @@ impl SnowballCalculator {
         let mut sorted_debts = debts.to_vec();
         sorted_debts.sort_by(|a, b| a.balance.amount().cmp(&b.balance.amount()));
 
-        let mut payment_plans = Vec::new();
-        let mut remaining_extra_budget = self.extra_payment_budget.clone();
+        let mut payment_plans: Vec<PaymentPlan> = Vec::new();
+        let remaining_extra_budget = self.extra_payment_budget.clone();
         let mut debt_payoff_dates = Vec::new();
 
         for (index, debt) in sorted_debts.iter().enumerate() {

@@ -1,0 +1,230 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hasura-metadata-pvc
+  namespace: atlas-financial
+  labels:
+    app.kubernetes.io/name: atlas-financial
+    app.kubernetes.io/component: api-gateway
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: gp2  # Use appropriate storage class for your cluster
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: atlas-hasura
+  namespace: atlas-financial
+  labels:
+    app.kubernetes.io/name: atlas-financial
+    app.kubernetes.io/component: api-gateway
+    app.kubernetes.io/instance: atlas-hasura
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: atlas-financial
+      app.kubernetes.io/component: api-gateway
+      app.kubernetes.io/instance: atlas-hasura
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: atlas-financial
+        app.kubernetes.io/component: api-gateway
+        app.kubernetes.io/instance: atlas-hasura
+    spec:
+      serviceAccountName: atlas-financial-sa
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        fsGroup: 1000
+      initContainers:
+      - name: wait-for-postgres
+        image: postgres:15-alpine
+        command:
+        - sh
+        - -c
+        - |
+          until pg_isready -h atlas-postgres.atlas-financial.svc.cluster.local -p 5432 -U atlas; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+      containers:
+      - name: hasura
+        image: hasura/graphql-engine:v2.42.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: HASURA_GRAPHQL_DATABASE_URL
+          value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@atlas-postgres.atlas-financial.svc.cluster.local:5432/firefly"
+        - name: HASURA_GRAPHQL_METADATA_DATABASE_URL
+          value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@atlas-postgres.atlas-financial.svc.cluster.local:5432/hasura"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: atlas-financial-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: atlas-financial-secrets
+              key: POSTGRES_PASSWORD
+        - name: HASURA_GRAPHQL_ADMIN_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: atlas-financial-secrets
+              key: HASURA_ADMIN_SECRET
+        - name: HASURA_GRAPHQL_ENABLE_CONSOLE
+          valueFrom:
+            configMapKeyRef:
+              name: atlas-financial-config
+              key: HASURA_GRAPHQL_ENABLE_CONSOLE
+        - name: HASURA_GRAPHQL_DEV_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: atlas-financial-config
+              key: HASURA_GRAPHQL_DEV_MODE
+        - name: HASURA_GRAPHQL_ENABLED_LOG_TYPES
+          valueFrom:
+            configMapKeyRef:
+              name: atlas-financial-config
+              key: HASURA_GRAPHQL_ENABLED_LOG_TYPES
+        - name: HASURA_GRAPHQL_UNAUTHORIZED_ROLE
+          valueFrom:
+            configMapKeyRef:
+              name: atlas-financial-config
+              key: HASURA_GRAPHQL_UNAUTHORIZED_ROLE
+        # JWT Configuration for SuperTokens integration
+        - name: HASURA_GRAPHQL_JWT_SECRET
+          value: |
+            {
+              "jwk_url": "http://atlas-supertokens.atlas-financial.svc.cluster.local:3567/auth/jwt/jwks.json",
+              "issuer": "http://atlas-supertokens.atlas-financial.svc.cluster.local:3567",
+              "audience": "atlas-financial"
+            }
+        # Performance optimizations
+        - name: HASURA_GRAPHQL_LIVE_QUERIES_MULTIPLEXED_REFETCH_INTERVAL
+          value: "1000"
+        - name: HASURA_GRAPHQL_LIVE_QUERIES_MULTIPLEXED_BATCH_SIZE
+          value: "100"
+        - name: HASURA_GRAPHQL_CONNECTION_COMPRESSION
+          value: "true"
+        - name: HASURA_GRAPHQL_PG_CONNECTIONS
+          value: "50"
+        - name: HASURA_GRAPHQL_PG_TIMEOUT
+          value: "180"
+        - name: HASURA_GRAPHQL_PG_CONN_LIFETIME
+          value: "600"
+        - name: HASURA_GRAPHQL_PG_POOL_TIMEOUT
+          value: "5"
+        volumeMounts:
+        - name: hasura-metadata
+          mountPath: /hasura-metadata
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "300m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 10
+      volumes:
+      - name: hasura-metadata
+        persistentVolumeClaim:
+          claimName: hasura-metadata-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: atlas-hasura
+  namespace: atlas-financial
+  labels:
+    app.kubernetes.io/name: atlas-financial
+    app.kubernetes.io/component: api-gateway
+    app.kubernetes.io/instance: atlas-hasura
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app.kubernetes.io/name: atlas-financial
+    app.kubernetes.io/component: api-gateway
+    app.kubernetes.io/instance: atlas-hasura
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: atlas-hasura-hpa
+  namespace: atlas-financial
+  labels:
+    app.kubernetes.io/name: atlas-financial
+    app.kubernetes.io/component: api-gateway
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: atlas-hasura
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60

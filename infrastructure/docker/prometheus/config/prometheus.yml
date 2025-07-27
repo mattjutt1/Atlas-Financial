@@ -1,0 +1,166 @@
+# Prometheus Configuration for Atlas Financial
+# Comprehensive monitoring for all Atlas services
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: 'atlas-dev'
+    cluster: 'atlas-financial'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+          # Future: Add alertmanager:9093 when implemented
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
+
+# Scrape configuration
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Atlas Rust Financial Engine - High-performance financial calculations
+  - job_name: 'atlas-rust-financial-engine'
+    static_configs:
+      - targets: ['rust-financial-engine:8080']
+    scrape_interval: 5s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+    honor_labels: true
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'atlas-rust-financial-engine'
+      - target_label: service
+        replacement: 'rust-financial-engine'
+      - target_label: component
+        replacement: 'financial-calculations'
+
+  # Atlas AI Engine - Financial AI/ML processing
+  - job_name: 'atlas-ai-engine'
+    static_configs:
+      - targets: ['ai-engine:8000']
+    scrape_interval: 15s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'atlas-ai-engine'
+      - target_label: service
+        replacement: 'ai-engine'
+      - target_label: component
+        replacement: 'ai-ml'
+
+  # Hasura GraphQL Engine
+  - job_name: 'atlas-hasura'
+    static_configs:
+      - targets: ['hasura:8080']
+    scrape_interval: 15s
+    metrics_path: /v1/metrics
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'atlas-hasura'
+      - target_label: service
+        replacement: 'hasura'
+      - target_label: component
+        replacement: 'graphql-gateway'
+
+  # Redis Exporter - Cache and session monitoring
+  - job_name: 'atlas-redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 15s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'atlas-redis'
+      - target_label: service
+        replacement: 'redis'
+      - target_label: component
+        replacement: 'cache'
+
+  # PostgreSQL Exporter - Database monitoring
+  - job_name: 'atlas-postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 15s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'atlas-postgres'
+      - target_label: service
+        replacement: 'postgres'
+      - target_label: component
+        replacement: 'database'
+
+  # Grafana self-monitoring
+  - job_name: 'atlas-grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'atlas-grafana'
+      - target_label: service
+        replacement: 'grafana'
+      - target_label: component
+        replacement: 'observability'
+
+  # Firefly III - Personal finance monitoring
+  - job_name: 'atlas-firefly'
+    static_configs:
+      - targets: ['firefly:8080']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'atlas-firefly'
+      - target_label: service
+        replacement: 'firefly'
+      - target_label: component
+        replacement: 'personal-finance'
+
+  # Node Exporter for system metrics (if added later)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: []
+        # Future: Add node-exporter:9100 when implemented
+    scrape_interval: 15s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+
+# Remote write configuration for long-term storage (future)
+# remote_write:
+#   - url: "http://cortex:9009/api/prom/push"
+#     queue_config:
+#       max_samples_per_send: 1000
+#       max_shards: 200
+#       capacity: 2500
+
+# Storage configuration
+storage:
+  tsdb:
+    retention.time: 30d
+    retention.size: 10GB
+    wal-compression: true

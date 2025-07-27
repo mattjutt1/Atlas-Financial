@@ -1,0 +1,1 @@
+Pin<Box<(dyn futures::Future<Output = Result<async_graphql::Value, ServerError>> + std::marker::Send + 'async_trait)>>

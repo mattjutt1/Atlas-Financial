@@ -48,7 +48,7 @@ impl AvalancheCalculator {
         if !debts.iter().all(|d| d.balance.currency() == currency) {
             return Err(FinancialError::CurrencyMismatch {
                 expected: currency,
-                found: debts.iter().find(|d| d.balance.currency() != currency)
+                actual: debts.iter().find(|d| d.balance.currency() != currency)
                     .map(|d| d.balance.currency())
                     .unwrap_or(currency),
             });
@@ -62,8 +62,8 @@ impl AvalancheCalculator {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        let mut payment_plans = Vec::new();
-        let mut remaining_extra_budget = self.extra_payment_budget.clone();
+        let mut payment_plans: Vec<PaymentPlan> = Vec::new();
+        let remaining_extra_budget = self.extra_payment_budget.clone();
 
         for (index, debt) in sorted_debts.iter().enumerate() {
             let extra_payment = if index == 0 {

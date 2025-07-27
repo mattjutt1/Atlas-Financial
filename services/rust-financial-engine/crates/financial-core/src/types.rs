@@ -6,7 +6,6 @@
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use validator::Validate;
 
 /// Supported currencies for financial calculations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -37,9 +36,8 @@ impl fmt::Display for Currency {
 }
 
 /// Exact decimal monetary amount with currency
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Money {
-    #[validate(range(min = -1000000000, max = 1000000000))]
     amount: Decimal,
     currency: Currency,
 }
@@ -47,10 +45,13 @@ pub struct Money {
 impl Money {
     /// Create a new Money instance with validation
     pub fn new(amount: Decimal, currency: Currency) -> crate::Result<Self> {
-        let money = Self { amount, currency };
-        money.validate()
-            .map_err(|e| crate::error::FinancialError::ValidationError(e.to_string()))?;
-        Ok(money)
+        // Basic validation for reasonable money amounts
+        if amount.abs() > Decimal::from(1_000_000_000) {
+            return Err(crate::error::FinancialError::ValidationError(
+                "Amount exceeds maximum allowed value".to_string()
+            ));
+        }
+        Ok(Self { amount, currency })
     }
 
     /// Create without validation (for internal use)
@@ -91,8 +92,10 @@ impl Money {
     }
 
     /// Multiply money by a decimal factor
-    pub fn multiply(&self, factor: Decimal) -> Money {
-        Money::new_unchecked(self.amount * factor, self.currency)
+    pub fn multiply(&self, factor: Decimal) -> crate::Result<Money> {
+        let result = self.amount.checked_mul(factor)
+            .ok_or_else(|| crate::error::FinancialError::Overflow)?;
+        Ok(Money::new_unchecked(result, self.currency))
     }
 
     /// Divide money by a decimal divisor
@@ -126,27 +129,33 @@ impl fmt::Display for Money {
 }
 
 /// Percentage type for rates and ratios
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Percentage {
-    #[validate(range(min = -100.0, max = 10000.0))]
     value: Decimal,
 }
 
 impl Percentage {
     /// Create a percentage from a decimal value (e.g., 0.05 for 5%)
     pub fn from_decimal(value: Decimal) -> crate::Result<Self> {
-        let percentage = Self { value: value * Decimal::from(100) };
-        percentage.validate()
-            .map_err(|e| crate::error::FinancialError::ValidationError(e.to_string()))?;
-        Ok(percentage)
+        let percentage_value = value * Decimal::from(100);
+        // Basic validation for reasonable percentage ranges
+        if percentage_value < Decimal::from(-100) || percentage_value > Decimal::from(10000) {
+            return Err(crate::error::FinancialError::ValidationError(
+                "Percentage value out of valid range".to_string()
+            ));
+        }
+        Ok(Self { value: percentage_value })
     }
 
     /// Create a percentage from a percentage value (e.g., 5.0 for 5%)
     pub fn from_percentage(value: Decimal) -> crate::Result<Self> {
-        let percentage = Self { value };
-        percentage.validate()
-            .map_err(|e| crate::error::FinancialError::ValidationError(e.to_string()))?;
-        Ok(percentage)
+        // Basic validation for reasonable percentage ranges
+        if value < Decimal::from(-100) || value > Decimal::from(10000) {
+            return Err(crate::error::FinancialError::ValidationError(
+                "Percentage value out of valid range".to_string()
+            ));
+        }
+        Ok(Self { value })
     }
 
     /// Get the decimal representation (e.g., 0.05 for 5%)
@@ -182,6 +191,11 @@ impl Rate {
     /// Get the rate as a decimal for the specified period
     pub fn as_decimal(&self) -> Decimal {
         self.percentage.as_decimal()
+    }
+
+    /// Get the period for this rate
+    pub fn period(&self) -> Period {
+        self.period
     }
 
     /// Convert rate to different period
@@ -223,7 +237,7 @@ pub enum RiskLevel {
 }
 
 /// Asset class for portfolio analysis
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AssetClass {
     Cash,
     Bonds,
@@ -250,7 +264,7 @@ mod tests {
         let diff = m1.subtract(&m2).unwrap();
         assert_eq!(diff.amount(), dec!(50.25));
         
-        let product = m1.multiply(dec!(2.0));
+        let product = m1.multiply(dec!(2.0)).unwrap();
         assert_eq!(product.amount(), dec!(201.00));
         
         let quotient = m1.divide(dec!(2.0)).unwrap();
