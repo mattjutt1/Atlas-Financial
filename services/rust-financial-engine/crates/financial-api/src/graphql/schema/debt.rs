@@ -1,8 +1,7 @@
+use crate::graphql::types::*;
 /// Debt GraphQL schema types
-
 use async_graphql::{InputObject, SimpleObject};
 use chrono::{DateTime, Utc};
-use crate::graphql::types::*;
 
 /// Debt account GraphQL type
 #[derive(SimpleObject, Clone, Debug)]
@@ -73,6 +72,29 @@ pub struct PaymentScheduleItem {
     pub interest: Money,
     /// Remaining balance after payment
     pub remaining_balance: Money,
+}
+
+/// Payoff plan for multiple debts
+#[derive(SimpleObject, Clone, Debug)]
+pub struct PayoffPlan {
+    /// Strategy used for payoff
+    pub strategy: DebtStrategy,
+    /// Individual payment plans for each debt
+    pub payment_plans: Vec<PaymentPlan>,
+    /// Total monthly payment across all debts
+    pub total_monthly_payment: Money,
+    /// Total interest paid across all debts
+    pub total_interest_paid: Money,
+    /// Total time to pay off all debts (months)
+    pub total_time_to_payoff_months: i32,
+    /// Final payoff date
+    pub final_payoff_date: DateTime<Utc>,
+    /// Interest savings compared to minimum payments
+    pub interest_savings_vs_minimum: Money,
+    /// Time savings compared to minimum payments (months)
+    pub time_savings_vs_minimum_months: i32,
+    /// Plan generation timestamp
+    pub generated_at: DateTime<Utc>,
 }
 
 /// Complete debt optimization result
@@ -349,8 +371,8 @@ pub type PaymentPlanConnection = Connection<PaymentPlan>;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use uuid::Uuid;
     use rust_decimal_macros::dec;
+    use uuid::Uuid;
 
     #[test]
     fn test_debt_account_creation() {

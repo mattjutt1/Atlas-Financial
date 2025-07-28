@@ -2,10 +2,9 @@
 ///
 /// Comprehensive monitoring and observability for the financial API
 /// including Prometheus metrics, health checks, and performance tracking.
-
 pub mod metrics;
 
-pub use metrics::{MetricsHandle, Timer, setup_metrics};
+pub use metrics::{setup_metrics, MetricsHandle, Timer};
 
 // Health check response structure
 #[derive(serde::Serialize, serde::Deserialize)]

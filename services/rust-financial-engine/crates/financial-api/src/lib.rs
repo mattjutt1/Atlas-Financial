@@ -6,24 +6,23 @@
 /// - Redis caching for performance
 /// - Comprehensive debt and portfolio analysis
 /// - Prometheus metrics and monitoring
-
 pub mod auth;
 pub mod config;
 pub mod error;
 pub mod graphql;
+pub mod handlers;
 pub mod monitoring;
 pub mod service;
 
 // Re-export commonly used types
 pub use config::Config;
 pub use error::{ApiError, Result};
-pub use service::ApiService;
+pub use service::FinancialService;
 
 // Re-export GraphQL types for convenience
 pub use graphql::{
-    schema::{Query, Mutation},
+    schema::{Mutation, Query},
     types::*,
-    GraphQLRequest, GraphQLResponse,
 };
 
 // Version information

@@ -1,6 +1,5 @@
 /// JWT token validation and management
-
-use crate::auth::claims::{JwtClaims, AuthContext};
+use crate::auth::claims::{AuthContext, JwtClaims};
 use crate::error::{ApiError, ApiResult};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
@@ -54,41 +53,32 @@ impl JwtManager {
     pub fn encode_token(&self, claims: &JwtClaims) -> ApiResult<String> {
         let header = Header::new(self.algorithm);
 
-        encode(&header, claims, &self.encoding_key)
-            .map_err(|e| {
-                warn!("Failed to encode JWT token: {}", e);
-                ApiError::InternalError {
-                    message: "Failed to generate authentication token".to_string(),
-                }
-            })
+        encode(&header, claims, &self.encoding_key).map_err(|e| {
+            warn!("Failed to encode JWT token: {}", e);
+            ApiError::InternalError {
+                message: "Failed to generate authentication token".to_string(),
+            }
+        })
     }
 
     /// Decode and validate a JWT token
     pub fn decode_token(&self, token: &str) -> ApiResult<JwtClaims> {
-        let token_data = decode::<JwtClaims>(token, &self.decoding_key, &self.validation)
-            .map_err(|e| {
+        let token_data =
+            decode::<JwtClaims>(token, &self.decoding_key, &self.validation).map_err(|e| {
                 debug!("JWT validation failed: {}", e);
                 match e.kind() {
-                    jsonwebtoken::errors::ErrorKind::ExpiredSignature => {
-                        ApiError::TokenExpired
-                    }
+                    jsonwebtoken::errors::ErrorKind::ExpiredSignature => ApiError::TokenExpired,
                     jsonwebtoken::errors::ErrorKind::InvalidToken
                     | jsonwebtoken::errors::ErrorKind::InvalidSignature
-                    | jsonwebtoken::errors::ErrorKind::InvalidAlgorithm => {
-                        ApiError::InvalidToken {
-                            reason: "Invalid token signature or format".to_string(),
-                        }
-                    }
-                    jsonwebtoken::errors::ErrorKind::InvalidIssuer => {
-                        ApiError::InvalidToken {
-                            reason: "Invalid token issuer".to_string(),
-                        }
-                    }
-                    jsonwebtoken::errors::ErrorKind::InvalidAudience => {
-                        ApiError::InvalidToken {
-                            reason: "Invalid token audience".to_string(),
-                        }
-                    }
+                    | jsonwebtoken::errors::ErrorKind::InvalidAlgorithm => ApiError::InvalidToken {
+                        reason: "Invalid token signature or format".to_string(),
+                    },
+                    jsonwebtoken::errors::ErrorKind::InvalidIssuer => ApiError::InvalidToken {
+                        reason: "Invalid token issuer".to_string(),
+                    },
+                    jsonwebtoken::errors::ErrorKind::InvalidAudience => ApiError::InvalidToken {
+                        reason: "Invalid token audience".to_string(),
+                    },
                     _ => ApiError::InvalidToken {
                         reason: format!("Token validation failed: {}", e),
                     },
@@ -98,7 +88,8 @@ impl JwtManager {
         let claims = token_data.claims;
 
         // Additional custom validation
-        claims.validate_basic()
+        claims
+            .validate_basic()
             .map_err(|msg| ApiError::InvalidToken { reason: msg })?;
 
         Ok(claims)
@@ -115,7 +106,8 @@ impl JwtManager {
             Ok(token)
         } else {
             Err(ApiError::InvalidToken {
-                reason: "Invalid authorization header format. Expected 'Bearer <token>'".to_string(),
+                reason: "Invalid authorization header format. Expected 'Bearer <token>'"
+                    .to_string(),
             })
         }
     }
@@ -123,7 +115,8 @@ impl JwtManager {
     /// Validate token and return auth context
     pub fn validate_and_extract_context(&self, token: &str) -> ApiResult<AuthContext> {
         let claims = self.decode_token(token)?;
-        claims.to_auth_context()
+        claims
+            .to_auth_context()
             .map_err(|msg| ApiError::InvalidToken { reason: msg })
     }
 
@@ -182,7 +175,7 @@ impl TokenBlacklist {
         self.blacklisted_tokens.retain(|token| {
             // Try to decode token and check if it's expired
             match jwt_manager.decode_token(token) {
-                Ok(_) => true,  // Keep non-expired tokens
+                Ok(_) => true,   // Keep non-expired tokens
                 Err(_) => false, // Remove expired/invalid tokens
             }
         });
@@ -230,7 +223,8 @@ mod tests {
         let jwt_manager = JwtManager::new(
             "super-secret-key-that-is-at-least-32-chars",
             vec!["atlas-financial".to_string()],
-        ).unwrap();
+        )
+        .unwrap();
 
         let claims = create_test_claims();
         let token = jwt_manager.encode_token(&claims).unwrap();
@@ -262,7 +256,8 @@ mod tests {
         let jwt_manager = JwtManager::new(
             "super-secret-key-that-is-at-least-32-chars",
             vec!["atlas-financial".to_string()],
-        ).unwrap();
+        )
+        .unwrap();
 
         let mut claims = create_test_claims();
         // Set expiration to 1 hour ago

@@ -1,12 +1,11 @@
 /// Authentication middleware for Axum
-
 use crate::auth::{AuthContext, JwtManager, TokenBlacklist};
 use crate::error::{ApiError, ApiResult};
 use axum::{
     extract::{Request, State},
     http::{header::AUTHORIZATION, StatusCode},
     middleware::Next,
-    response::Response,
+    response::{IntoResponse, Response},
 };
 use std::sync::Arc;
 use tower::ServiceExt;
@@ -22,11 +21,7 @@ pub struct AuthState {
 
 impl AuthState {
     /// Create new authentication state
-    pub fn new(
-        jwt_manager: JwtManager,
-        blacklist: TokenBlacklist,
-        require_auth: bool,
-    ) -> Self {
+    pub fn new(jwt_manager: JwtManager, blacklist: TokenBlacklist, require_auth: bool) -> Self {
         Self {
             jwt_manager: Arc::new(jwt_manager),
             blacklist: Arc::new(tokio::sync::RwLock::new(blacklist)),
@@ -36,6 +31,7 @@ impl AuthState {
 }
 
 /// Extension for adding AuthContext to request
+#[derive(Clone)]
 pub struct AuthContextExtension(pub AuthContext);
 
 /// Authentication middleware that validates JWT tokens
@@ -59,15 +55,13 @@ pub async fn auth_middleware(
         .and_then(|header| header.to_str().ok());
 
     let auth_context = match auth_header {
-        Some(header) => {
-            match validate_auth_header(&auth_state, header).await {
-                Ok(context) => Some(context),
-                Err(e) => {
-                    warn!("Authentication failed: {}", e);
-                    return Err(e.status_code());
-                }
+        Some(header) => match validate_auth_header(&auth_state, header).await {
+            Ok(context) => Some(context),
+            Err(e) => {
+                warn!("Authentication failed: {}", e);
+                return Err(e.status_code());
             }
-        }
+        },
         None => {
             warn!("Missing authorization header");
             return Err(StatusCode::UNAUTHORIZED);
@@ -76,7 +70,9 @@ pub async fn auth_middleware(
 
     // Add auth context to request extensions
     if let Some(context) = auth_context {
-        request.extensions_mut().insert(AuthContextExtension(context));
+        request
+            .extensions_mut()
+            .insert(AuthContextExtension(context));
     }
 
     Ok(next.run(request).await)
@@ -97,7 +93,9 @@ pub async fn optional_auth_middleware(
         .and_then(|header| header.to_str().ok())
     {
         if let Ok(auth_context) = validate_auth_header(&auth_state, auth_header).await {
-            request.extensions_mut().insert(AuthContextExtension(auth_context));
+            request
+                .extensions_mut()
+                .insert(AuthContextExtension(auth_context));
         }
     }
 
@@ -105,10 +103,7 @@ pub async fn optional_auth_middleware(
 }
 
 /// Validate authorization header and return auth context
-async fn validate_auth_header(
-    auth_state: &AuthState,
-    auth_header: &str,
-) -> ApiResult<AuthContext> {
+async fn validate_auth_header(auth_state: &AuthState, auth_header: &str) -> ApiResult<AuthContext> {
     // Extract token from header
     let token = JwtManager::extract_token_from_header(auth_header)?;
 
@@ -141,83 +136,98 @@ async fn validate_auth_header(
 }
 
 /// Authorization middleware that checks for specific permissions
-pub fn require_permission(permission: &'static str) -> impl Fn(Request, Next) -> Response + Clone {
-    move |mut request: Request, next: Next| async move {
-        // Extract auth context from request
-        let auth_context = match request.extensions().get::<AuthContextExtension>() {
-            Some(AuthContextExtension(context)) => context,
-            None => {
-                warn!("Authorization middleware called without authentication");
-                return (StatusCode::UNAUTHORIZED, "Authentication required").into_response();
-            }
-        };
+pub fn require_permission(
+    permission: &'static str,
+) -> impl Fn(Request, Next) -> std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send>>
+       + Clone {
+    move |mut request: Request, next: Next| {
+        Box::pin(async move {
+            // Extract auth context from request
+            let auth_context = match request.extensions().get::<AuthContextExtension>() {
+                Some(AuthContextExtension(context)) => context,
+                None => {
+                    warn!("Authorization middleware called without authentication");
+                    return (StatusCode::UNAUTHORIZED, "Authentication required").into_response();
+                }
+            };
 
-        // Check permission
-        if !auth_context.has_permission(permission) {
-            warn!(
-                "User {} lacks permission: {}",
+            // Check permission
+            if !auth_context.has_permission(permission) {
+                warn!(
+                    "User {} lacks permission: {}",
+                    auth_context.user_id, permission
+                );
+                return (
+                    StatusCode::FORBIDDEN,
+                    format!("Insufficient permissions: {} required", permission),
+                )
+                    .into_response();
+            }
+
+            debug!(
+                "User {} authorized for permission: {}",
                 auth_context.user_id, permission
             );
-            return (
-                StatusCode::FORBIDDEN,
-                format!("Insufficient permissions: {} required", permission),
-            )
-                .into_response();
-        }
 
-        debug!(
-            "User {} authorized for permission: {}",
-            auth_context.user_id, permission
-        );
-
-        next.run(request).await
+            next.run(request).await
+        })
     }
 }
 
 /// Authorization middleware that checks for any of the specified permissions
 pub fn require_any_permission(
     permissions: &'static [&'static str],
-) -> impl Fn(Request, Next) -> Response + Clone {
-    move |mut request: Request, next: Next| async move {
-        let auth_context = match request.extensions().get::<AuthContextExtension>() {
-            Some(AuthContextExtension(context)) => context,
-            None => {
-                return (StatusCode::UNAUTHORIZED, "Authentication required").into_response();
+) -> impl Fn(Request, Next) -> std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send>>
+       + Clone {
+    move |mut request: Request, next: Next| {
+        Box::pin(async move {
+            let auth_context = match request.extensions().get::<AuthContextExtension>() {
+                Some(AuthContextExtension(context)) => context,
+                None => {
+                    return (StatusCode::UNAUTHORIZED, "Authentication required").into_response();
+                }
+            };
+
+            if !auth_context.has_any_permission(permissions) {
+                warn!(
+                    "User {} lacks any of permissions: {:?}",
+                    auth_context.user_id, permissions
+                );
+                return (
+                    StatusCode::FORBIDDEN,
+                    format!(
+                        "Insufficient permissions: one of {:?} required",
+                        permissions
+                    ),
+                )
+                    .into_response();
             }
-        };
 
-        if !auth_context.has_any_permission(permissions) {
-            warn!(
-                "User {} lacks any of permissions: {:?}",
-                auth_context.user_id, permissions
-            );
-            return (
-                StatusCode::FORBIDDEN,
-                format!("Insufficient permissions: one of {:?} required", permissions),
-            )
-                .into_response();
-        }
-
-        next.run(request).await
+            next.run(request).await
+        })
     }
 }
 
 /// Authorization middleware that checks for admin role
-pub fn require_admin() -> impl Fn(Request, Next) -> Response + Clone {
-    move |mut request: Request, next: Next| async move {
-        let auth_context = match request.extensions().get::<AuthContextExtension>() {
-            Some(AuthContextExtension(context)) => context,
-            None => {
-                return (StatusCode::UNAUTHORIZED, "Authentication required").into_response();
+pub fn require_admin(
+) -> impl Fn(Request, Next) -> std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send>>
+       + Clone {
+    move |mut request: Request, next: Next| {
+        Box::pin(async move {
+            let auth_context = match request.extensions().get::<AuthContextExtension>() {
+                Some(AuthContextExtension(context)) => context,
+                None => {
+                    return (StatusCode::UNAUTHORIZED, "Authentication required").into_response();
+                }
+            };
+
+            if !auth_context.is_admin() {
+                warn!("User {} is not an admin", auth_context.user_id);
+                return (StatusCode::FORBIDDEN, "Admin role required").into_response();
             }
-        };
 
-        if !auth_context.is_admin() {
-            warn!("User {} is not an admin", auth_context.user_id);
-            return (StatusCode::FORBIDDEN, "Admin role required").into_response();
-        }
-
-        next.run(request).await
+            next.run(request).await
+        })
     }
 }
 
@@ -255,11 +265,11 @@ impl GraphQLContext {
 
     /// Get authenticated user context or return error
     pub fn require_auth(&self) -> ApiResult<&AuthContext> {
-        self.auth.as_ref().ok_or_else(|| {
-            ApiError::AuthenticationFailed {
+        self.auth
+            .as_ref()
+            .ok_or_else(|| ApiError::AuthenticationFailed {
                 message: "Authentication required for this operation".to_string(),
-            }
-        })
+            })
     }
 
     /// Check if user has permission
@@ -291,7 +301,7 @@ impl GraphQLContext {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::auth::claims::{JwtClaims, UserClaims, UserRole, Permissions};
+    use crate::auth::claims::{JwtClaims, Permissions, UserClaims, UserRole};
     use axum::{
         body::Body,
         http::{Request, StatusCode},
@@ -390,7 +400,11 @@ mod tests {
 
         assert!(context.require_auth().is_ok());
         assert!(context.has_permission(Permissions::PORTFOLIO_READ));
-        assert!(context.require_permission(Permissions::PORTFOLIO_READ).is_ok());
-        assert!(context.require_permission(Permissions::ADMIN_USERS).is_err());
+        assert!(context
+            .require_permission(Permissions::PORTFOLIO_READ)
+            .is_ok());
+        assert!(context
+            .require_permission(Permissions::ADMIN_USERS)
+            .is_err());
     }
 }

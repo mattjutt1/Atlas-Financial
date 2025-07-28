@@ -1,8 +1,7 @@
+use chrono::{DateTime, Utc};
 /// JWT claims and user context structures
-
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// JWT claims structure compatible with Atlas Financial
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -150,10 +149,12 @@ impl JwtClaims {
     pub fn to_auth_context(&self) -> Result<AuthContext, String> {
         self.validate_basic()?;
 
-        let user_id = Uuid::parse_str(&self.user.id)
-            .map_err(|_| "Invalid user ID format".to_string())?;
+        let user_id =
+            Uuid::parse_str(&self.user.id).map_err(|_| "Invalid user ID format".to_string())?;
 
-        let org_id = self.org_id.as_ref()
+        let org_id = self
+            .org_id
+            .as_ref()
             .map(|id| Uuid::parse_str(id))
             .transpose()
             .map_err(|_| "Invalid organization ID format".to_string())?;
@@ -220,10 +221,7 @@ impl AuthContext {
 
     /// Check if user can optimize portfolios/debt
     pub fn can_optimize(&self) -> bool {
-        self.has_any_permission(&[
-            Permissions::PORTFOLIO_OPTIMIZE,
-            Permissions::DEBT_OPTIMIZE,
-        ])
+        self.has_any_permission(&[Permissions::PORTFOLIO_OPTIMIZE, Permissions::DEBT_OPTIMIZE])
     }
 
     /// Check if user is an admin

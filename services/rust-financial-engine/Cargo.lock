@@ -1080,6 +1080,7 @@ dependencies = [
  "diesel",
  "dotenvy",
  "financial-core",
+ "futures",
  "hyper 1.6.0",
  "jsonwebtoken",
  "mockito",

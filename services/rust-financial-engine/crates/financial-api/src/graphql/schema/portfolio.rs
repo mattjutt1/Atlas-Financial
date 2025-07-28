@@ -1,8 +1,7 @@
+use crate::graphql::types::*;
 /// Portfolio GraphQL schema types
-
 use async_graphql::{InputObject, SimpleObject};
 use chrono::{DateTime, Utc};
-use crate::graphql::types::*;
 
 /// Portfolio GraphQL type
 #[derive(SimpleObject, Clone, Debug)]
@@ -240,6 +239,48 @@ pub struct AddAssetInput {
     pub allocation_target: Option<PercentageInput>,
 }
 
+/// Portfolio analysis result
+#[derive(SimpleObject, Clone, Debug)]
+pub struct PortfolioAnalysis {
+    /// Portfolio ID
+    pub portfolio_id: UuidType,
+    /// Current value
+    pub current_value: Money,
+    /// Total return
+    pub total_return: DecimalType,
+    /// Annualized return
+    pub annualized_return: DecimalType,
+    /// Portfolio volatility
+    pub volatility: DecimalType,
+    /// Sharpe ratio
+    pub sharpe_ratio: DecimalType,
+    /// Risk level
+    pub risk_level: RiskLevel,
+    /// Asset allocation breakdown
+    pub asset_allocation: Vec<AssetAllocation>,
+    /// Rebalancing recommendations
+    pub rebalancing_recommendations: Vec<TradeRecommendation>,
+    /// Analysis timestamp
+    pub analyzed_at: DateTime<Utc>,
+}
+
+/// Optimization strategy enumeration
+#[derive(async_graphql::Enum, Copy, Clone, Eq, PartialEq, Debug)]
+pub enum OptimizationStrategy {
+    /// Maximize returns
+    MaximizeReturn,
+    /// Minimize risk
+    MinimizeRisk,
+    /// Maximize Sharpe ratio
+    MaximizeSharpe,
+    /// Equal weight allocation
+    EqualWeight,
+    /// Target risk level
+    TargetRisk,
+    /// Target return level
+    TargetReturn,
+}
+
 /// Update asset input
 #[derive(InputObject, Clone, Debug)]
 pub struct UpdateAssetInput {
@@ -316,8 +357,8 @@ pub type AssetConnection = Connection<Asset>;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use uuid::Uuid;
     use rust_decimal_macros::dec;
+    use uuid::Uuid;
 
     #[test]
     fn test_portfolio_creation() {

@@ -53,6 +53,7 @@ chrono = { workspace = true }
 url = { workspace = true }
 validator = { workspace = true }
 rust_decimal = { workspace = true }
+futures = { workspace = true }
 
 # Database (if needed for user management/session storage)
 diesel = { workspace = true, optional = true }

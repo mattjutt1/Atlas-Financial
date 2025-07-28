@@ -2,14 +2,13 @@
 ///
 /// Provides GraphQL-compatible error types and automatic mapping
 /// from core financial errors to API responses.
-
-use async_graphql::{ErrorExtensions, FieldError, FieldResult};
+use async_graphql::ErrorExtensions;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
-use financial_core::error::{FinancialError, ErrorCategory};
+use financial_core::error::{ErrorCategory, FinancialError};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fmt;
@@ -18,6 +17,9 @@ use tracing::{error, warn};
 
 /// Result type alias for API operations
 pub type ApiResult<T> = std::result::Result<T, ApiError>;
+
+/// Result type alias for GraphQL operations
+pub type Result<T> = std::result::Result<T, ApiError>;
 
 /// Main API error type
 #[derive(Error, Debug, Clone)]
@@ -98,6 +100,10 @@ pub enum ApiError {
 
     #[error("Field resolution error: {field} - {message}")]
     FieldResolutionError { field: String, message: String },
+
+    /// Not implemented error for placeholder endpoints
+    #[error("Operation not implemented: {operation}")]
+    NotImplemented { operation: String },
 }
 
 /// Error response for REST endpoints
@@ -158,26 +164,50 @@ impl ApiError {
             ApiError::InternalError { .. } => "INTERNAL_ERROR",
             ApiError::GraphQLSchemaError { .. } => "GRAPHQL_SCHEMA_ERROR",
             ApiError::FieldResolutionError { .. } => "FIELD_RESOLUTION_ERROR",
+            ApiError::NotImplemented { .. } => "NOT_IMPLEMENTED",
         }
     }
 
     /// Get the error category
     pub fn category(&self) -> &'static str {
         match self {
-            ApiError::Financial(e) => e.category().to_string().as_str(),
-            ApiError::AuthenticationFailed { .. } | ApiError::AuthorizationFailed { .. }
-            | ApiError::InvalidToken { .. } | ApiError::TokenExpired => "authentication",
-            ApiError::ValidationError { .. } | ApiError::InvalidInput { .. }
+            ApiError::Financial(e) => match e.category() {
+                ErrorCategory::Mathematical => "mathematical",
+                ErrorCategory::Currency => "currency",
+                ErrorCategory::Validation => "validation",
+                ErrorCategory::Portfolio => "portfolio",
+                ErrorCategory::Debt => "debt",
+                ErrorCategory::TimeValue => "time_value",
+                ErrorCategory::Risk => "risk",
+                ErrorCategory::Budget => "budget",
+                ErrorCategory::Storage => "storage",
+                ErrorCategory::External => "external",
+                ErrorCategory::Configuration => "configuration",
+                ErrorCategory::System => "system",
+            },
+            ApiError::AuthenticationFailed { .. }
+            | ApiError::AuthorizationFailed { .. }
+            | ApiError::InvalidToken { .. }
+            | ApiError::TokenExpired => "authentication",
+            ApiError::ValidationError { .. }
+            | ApiError::InvalidInput { .. }
             | ApiError::MissingField { .. } => "validation",
-            ApiError::PortfolioNotFound { .. } | ApiError::AssetNotFound { .. }
-            | ApiError::DebtAccountNotFound { .. } | ApiError::UserNotFound { .. } => "not_found",
+            ApiError::PortfolioNotFound { .. }
+            | ApiError::AssetNotFound { .. }
+            | ApiError::DebtAccountNotFound { .. }
+            | ApiError::UserNotFound { .. } => "not_found",
             ApiError::InsufficientPermissions { .. } => "authorization",
-            ApiError::AtlasApiError { .. } | ApiError::CacheError { .. }
+            ApiError::AtlasApiError { .. }
+            | ApiError::CacheError { .. }
             | ApiError::DatabaseError { .. } => "external",
             ApiError::RateLimitExceeded { .. } | ApiError::RequestTimeout => "throttling",
-            ApiError::ConfigurationError { .. } | ApiError::ServiceUnavailable { .. }
+            ApiError::ConfigurationError { .. }
+            | ApiError::ServiceUnavailable { .. }
             | ApiError::InternalError { .. } => "system",
-            ApiError::GraphQLSchemaError { .. } | ApiError::FieldResolutionError { .. } => "graphql",
+            ApiError::GraphQLSchemaError { .. } | ApiError::FieldResolutionError { .. } => {
+                "graphql"
+            }
+            ApiError::NotImplemented { .. } => "not_implemented",
         }
     }
 
@@ -185,26 +215,30 @@ impl ApiError {
     pub fn status_code(&self) -> StatusCode {
         match self {
             ApiError::Financial(_) => StatusCode::BAD_REQUEST,
-            ApiError::AuthenticationFailed { .. } | ApiError::InvalidToken { .. }
+            ApiError::AuthenticationFailed { .. }
+            | ApiError::InvalidToken { .. }
             | ApiError::TokenExpired => StatusCode::UNAUTHORIZED,
             ApiError::AuthorizationFailed { .. } | ApiError::InsufficientPermissions { .. } => {
                 StatusCode::FORBIDDEN
             }
-            ApiError::ValidationError { .. } | ApiError::InvalidInput { .. }
+            ApiError::ValidationError { .. }
+            | ApiError::InvalidInput { .. }
             | ApiError::MissingField { .. } => StatusCode::BAD_REQUEST,
-            ApiError::PortfolioNotFound { .. } | ApiError::AssetNotFound { .. }
-            | ApiError::DebtAccountNotFound { .. } | ApiError::UserNotFound { .. } => {
-                StatusCode::NOT_FOUND
-            }
-            ApiError::AtlasApiError { .. } | ApiError::DatabaseError { .. }
+            ApiError::PortfolioNotFound { .. }
+            | ApiError::AssetNotFound { .. }
+            | ApiError::DebtAccountNotFound { .. }
+            | ApiError::UserNotFound { .. } => StatusCode::NOT_FOUND,
+            ApiError::AtlasApiError { .. }
+            | ApiError::DatabaseError { .. }
             | ApiError::ServiceUnavailable { .. } => StatusCode::BAD_GATEWAY,
             ApiError::CacheError { .. } => StatusCode::SERVICE_UNAVAILABLE,
             ApiError::RateLimitExceeded { .. } => StatusCode::TOO_MANY_REQUESTS,
             ApiError::RequestTimeout => StatusCode::REQUEST_TIMEOUT,
-            ApiError::ConfigurationError { .. } | ApiError::InternalError { .. }
-            | ApiError::GraphQLSchemaError { .. } | ApiError::FieldResolutionError { .. } => {
-                StatusCode::INTERNAL_SERVER_ERROR
-            }
+            ApiError::ConfigurationError { .. }
+            | ApiError::InternalError { .. }
+            | ApiError::GraphQLSchemaError { .. }
+            | ApiError::FieldResolutionError { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiError::NotImplemented { .. } => StatusCode::NOT_IMPLEMENTED,
         }
     }
 
@@ -212,8 +246,10 @@ impl ApiError {
     pub fn is_retryable(&self) -> bool {
         match self {
             ApiError::Financial(e) => e.is_recoverable(),
-            ApiError::AtlasApiError { .. } | ApiError::CacheError { .. }
-            | ApiError::DatabaseError { .. } | ApiError::ServiceUnavailable { .. }
+            ApiError::AtlasApiError { .. }
+            | ApiError::CacheError { .. }
+            | ApiError::DatabaseError { .. }
+            | ApiError::ServiceUnavailable { .. }
             | ApiError::RequestTimeout => true,
             ApiError::RateLimitExceeded { .. } => true,
             _ => false,
@@ -278,29 +314,26 @@ impl ApiError {
     }
 }
 
-/// Convert ApiError to GraphQL FieldError
-impl From<ApiError> for FieldError {
-    fn from(err: ApiError) -> Self {
-        let mut field_error = FieldError::new(err.to_string());
-
-        // Add error extensions for GraphQL introspection
-        field_error = field_error
-            .extend_with(|_, e| {
-                e.set("code", err.code());
-                e.set("category", err.category());
-                if let Some(suggestions) = err.suggestions() {
-                    e.set("suggestions", suggestions);
-                }
-            });
+/// Implement ErrorExtensions for ApiError to work with async_graphql
+impl ErrorExtensions for ApiError {
+    fn extend(&self) -> async_graphql::Error {
+        let mut error = async_graphql::Error::new(self.to_string());
+        error = error.extend_with(|_, e| {
+            e.set("code", self.code());
+            e.set("category", self.category());
+            if let Some(suggestions) = self.suggestions() {
+                e.set("suggestions", suggestions);
+            }
+        });
 
         // Log error based on severity
-        match err.category() {
-            "system" | "external" => error!("API Error: {}", err),
-            "authentication" | "authorization" => warn!("API Error: {}", err),
-            _ => tracing::info!("API Error: {}", err),
+        match self.category() {
+            "system" | "external" => error!("API Error: {}", self),
+            "authentication" | "authorization" => warn!("API Error: {}", self),
+            _ => tracing::info!("API Error: {}", self),
         }
 
-        field_error
+        error
     }
 }
 
@@ -331,9 +364,9 @@ impl IntoResponse for ApiError {
     }
 }
 
-/// Helper function to convert Result<T, ApiError> to FieldResult<T>
-pub fn to_field_result<T>(result: ApiResult<T>) -> FieldResult<T> {
-    result.map_err(|e| e.into())
+/// Helper function to convert Result<T, ApiError> to async_graphql::Result<T>
+pub fn to_field_result<T>(result: ApiResult<T>) -> async_graphql::Result<T> {
+    result.map_err(|e| e.extend())
 }
 
 /// Helper macro for creating validation errors

@@ -2,10 +2,9 @@
 ///
 /// Comprehensive Prometheus metrics for monitoring financial calculations,
 /// system performance, and business logic health.
-
 use prometheus::{
-    Counter, Histogram, IntCounter, IntGauge, Opts, Registry, register_counter,
-    register_histogram, register_int_counter, register_int_gauge,
+    register_counter, register_histogram, register_int_counter, register_int_gauge, Counter,
+    Histogram, IntCounter, IntGauge, Opts, Registry,
 };
 use std::time::Instant;
 
@@ -51,151 +50,132 @@ impl MetricsHandle {
     /// Create a new metrics handle with all metrics registered
     pub fn new() -> Result<Self, prometheus::Error> {
         // HTTP request metrics
-        let http_requests_total = register_counter!(
-            Opts::new(
-                "http_requests_total",
-                "Total number of HTTP requests processed"
-            ).namespace("atlas_financial")
-        )?;
+        let http_requests_total = register_counter!(Opts::new(
+            "http_requests_total",
+            "Total number of HTTP requests processed"
+        )
+        .namespace("atlas_financial"))?;
 
-        let http_request_duration = register_histogram!(
-            Opts::new(
-                "http_request_duration_seconds",
-                "HTTP request duration in seconds"
-            ).namespace("atlas_financial")
-        )?;
+        let http_request_duration = register_histogram!(Opts::new(
+            "http_request_duration_seconds",
+            "HTTP request duration in seconds"
+        )
+        .namespace("atlas_financial")
+        .into())?;
 
         // Financial calculation metrics
-        let financial_calculations_total = register_int_counter!(
-            Opts::new(
-                "financial_calculations_total",
-                "Total number of financial calculations performed"
-            ).namespace("atlas_financial")
-        )?;
+        let financial_calculations_total = register_int_counter!(Opts::new(
+            "financial_calculations_total",
+            "Total number of financial calculations performed"
+        )
+        .namespace("atlas_financial"))?;
 
-        let financial_calculations_errors = register_int_counter!(
-            Opts::new(
-                "financial_calculations_errors_total",
-                "Total number of financial calculation errors"
-            ).namespace("atlas_financial")
-        )?;
+        let financial_calculations_errors = register_int_counter!(Opts::new(
+            "financial_calculations_errors_total",
+            "Total number of financial calculation errors"
+        )
+        .namespace("atlas_financial"))?;
 
-        let financial_calculation_duration = register_histogram!(
-            Opts::new(
-                "financial_calculation_duration_seconds",
-                "Financial calculation duration in seconds"
-            ).namespace("atlas_financial")
-        )?;
+        let financial_calculation_duration = register_histogram!(Opts::new(
+            "financial_calculation_duration_seconds",
+            "Financial calculation duration in seconds"
+        )
+        .namespace("atlas_financial")
+        .into())?;
 
         // Debt optimization metrics
-        let debt_optimizations_total = register_int_counter!(
-            Opts::new(
-                "debt_optimizations_total",
-                "Total number of debt optimizations performed"
-            ).namespace("atlas_financial")
-        )?;
+        let debt_optimizations_total = register_int_counter!(Opts::new(
+            "debt_optimizations_total",
+            "Total number of debt optimizations performed"
+        )
+        .namespace("atlas_financial"))?;
 
-        let debt_optimization_failures = register_int_counter!(
-            Opts::new(
-                "debt_optimization_failures_total",
-                "Total number of debt optimization failures"
-            ).namespace("atlas_financial")
-        )?;
+        let debt_optimization_failures = register_int_counter!(Opts::new(
+            "debt_optimization_failures_total",
+            "Total number of debt optimization failures"
+        )
+        .namespace("atlas_financial"))?;
 
-        let debt_optimization_duration = register_histogram!(
-            Opts::new(
-                "debt_optimization_duration_seconds",
-                "Debt optimization calculation duration in seconds"
-            ).namespace("atlas_financial")
-        )?;
+        let debt_optimization_duration = register_histogram!(Opts::new(
+            "debt_optimization_duration_seconds",
+            "Debt optimization calculation duration in seconds"
+        )
+        .namespace("atlas_financial")
+        .into())?;
 
         // Portfolio analysis metrics
-        let portfolio_analyses_total = register_int_counter!(
-            Opts::new(
-                "portfolio_analyses_total",
-                "Total number of portfolio analyses performed"
-            ).namespace("atlas_financial")
-        )?;
+        let portfolio_analyses_total = register_int_counter!(Opts::new(
+            "portfolio_analyses_total",
+            "Total number of portfolio analyses performed"
+        )
+        .namespace("atlas_financial"))?;
 
-        let portfolio_analysis_failures = register_int_counter!(
-            Opts::new(
-                "portfolio_analysis_failures_total",
-                "Total number of portfolio analysis failures"
-            ).namespace("atlas_financial")
-        )?;
+        let portfolio_analysis_failures = register_int_counter!(Opts::new(
+            "portfolio_analysis_failures_total",
+            "Total number of portfolio analysis failures"
+        )
+        .namespace("atlas_financial"))?;
 
-        let portfolio_analysis_duration = register_histogram!(
-            Opts::new(
-                "portfolio_analysis_duration_seconds",
-                "Portfolio analysis duration in seconds"
-            ).namespace("atlas_financial")
-        )?;
+        let portfolio_analysis_duration = register_histogram!(Opts::new(
+            "portfolio_analysis_duration_seconds",
+            "Portfolio analysis duration in seconds"
+        )
+        .namespace("atlas_financial")
+        .into())?;
 
         // Cache metrics
-        let cache_hits = register_int_counter!(
-            Opts::new(
-                "cache_hits_total",
-                "Total number of cache hits"
-            ).namespace("atlas_financial")
-        )?;
+        let cache_hits =
+            register_int_counter!(Opts::new("cache_hits_total", "Total number of cache hits")
+                .namespace("atlas_financial"))?;
 
-        let cache_misses = register_int_counter!(
-            Opts::new(
-                "cache_misses_total",
-                "Total number of cache misses"
-            ).namespace("atlas_financial")
-        )?;
+        let cache_misses = register_int_counter!(Opts::new(
+            "cache_misses_total",
+            "Total number of cache misses"
+        )
+        .namespace("atlas_financial"))?;
 
-        let cache_operations_duration = register_histogram!(
-            Opts::new(
-                "cache_operations_duration_seconds",
-                "Cache operation duration in seconds"
-            ).namespace("atlas_financial")
-        )?;
+        let cache_operations_duration = register_histogram!(Opts::new(
+            "cache_operations_duration_seconds",
+            "Cache operation duration in seconds"
+        )
+        .namespace("atlas_financial")
+        .into())?;
 
         // Authentication metrics
-        let authentication_attempts = register_int_counter!(
-            Opts::new(
-                "authentication_attempts_total",
-                "Total number of authentication attempts"
-            ).namespace("atlas_financial")
-        )?;
+        let authentication_attempts = register_int_counter!(Opts::new(
+            "authentication_attempts_total",
+            "Total number of authentication attempts"
+        )
+        .namespace("atlas_financial"))?;
 
-        let authentication_failures = register_int_counter!(
-            Opts::new(
-                "authentication_failures_total",
-                "Total number of authentication failures"
-            ).namespace("atlas_financial")
-        )?;
+        let authentication_failures = register_int_counter!(Opts::new(
+            "authentication_failures_total",
+            "Total number of authentication failures"
+        )
+        .namespace("atlas_financial"))?;
 
-        let authentication_duration = register_histogram!(
-            Opts::new(
-                "authentication_duration_seconds",
-                "Authentication duration in seconds"
-            ).namespace("atlas_financial")
-        )?;
+        let authentication_duration = register_histogram!(Opts::new(
+            "authentication_duration_seconds",
+            "Authentication duration in seconds"
+        )
+        .namespace("atlas_financial")
+        .into())?;
 
         // System metrics
-        let active_connections = register_int_gauge!(
-            Opts::new(
-                "active_connections",
-                "Number of active connections"
-            ).namespace("atlas_financial")
-        )?;
+        let active_connections = register_int_gauge!(Opts::new(
+            "active_connections",
+            "Number of active connections"
+        )
+        .namespace("atlas_financial"))?;
 
-        let memory_usage_bytes = register_int_gauge!(
-            Opts::new(
-                "memory_usage_bytes",
-                "Memory usage in bytes"
-            ).namespace("atlas_financial")
-        )?;
+        let memory_usage_bytes =
+            register_int_gauge!(Opts::new("memory_usage_bytes", "Memory usage in bytes")
+                .namespace("atlas_financial"))?;
 
-        let cpu_usage_percent = register_int_gauge!(
-            Opts::new(
-                "cpu_usage_percent",
-                "CPU usage percentage"
-            ).namespace("atlas_financial")
-        )?;
+        let cpu_usage_percent =
+            register_int_gauge!(
+                Opts::new("cpu_usage_percent", "CPU usage percentage").namespace("atlas_financial")
+            )?;
 
         Ok(Self {
             http_requests_total,
@@ -233,7 +213,8 @@ impl MetricsHandle {
         if !success {
             self.financial_calculations_errors.inc();
         }
-        self.financial_calculation_duration.observe(duration.as_secs_f64());
+        self.financial_calculation_duration
+            .observe(duration.as_secs_f64());
     }
 
     /// Record a debt optimization
@@ -242,7 +223,8 @@ impl MetricsHandle {
         if !success {
             self.debt_optimization_failures.inc();
         }
-        self.debt_optimization_duration.observe(duration.as_secs_f64());
+        self.debt_optimization_duration
+            .observe(duration.as_secs_f64());
     }
 
     /// Record a portfolio analysis
@@ -251,7 +233,8 @@ impl MetricsHandle {
         if !success {
             self.portfolio_analysis_failures.inc();
         }
-        self.portfolio_analysis_duration.observe(duration.as_secs_f64());
+        self.portfolio_analysis_duration
+            .observe(duration.as_secs_f64());
     }
 
     /// Record cache operation
@@ -261,7 +244,8 @@ impl MetricsHandle {
         } else {
             self.cache_misses.inc();
         }
-        self.cache_operations_duration.observe(duration.as_secs_f64());
+        self.cache_operations_duration
+            .observe(duration.as_secs_f64());
     }
 
     /// Record authentication attempt

@@ -373,7 +373,7 @@ mod tests {
         );
 
         let monthly_interest = debt.monthly_interest_charge();
-        assert_eq!(monthly_interest.amount(), dec!(10)); // 1% of $1000
+        assert_eq!(monthly_interest.unwrap().amount(), dec!(10)); // 1% of $1000
     }
 
     #[test]

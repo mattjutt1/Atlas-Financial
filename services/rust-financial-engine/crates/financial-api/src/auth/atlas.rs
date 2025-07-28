@@ -1,5 +1,4 @@
 /// Atlas Financial API integration for user validation and session management
-
 use crate::auth::claims::{UserClaims, UserRole};
 use crate::error::{ApiError, ApiResult};
 use chrono::{DateTime, Utc};
@@ -122,12 +121,17 @@ impl AtlasApiClient {
             Ok(user)
         } else {
             let status = response.status();
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
 
             warn!("Atlas API returned error {}: {}", status, error_text);
 
             match status.as_u16() {
-                404 => Err(ApiError::UserNotFound { id: user_id.to_string() }),
+                404 => Err(ApiError::UserNotFound {
+                    id: user_id.to_string(),
+                }),
                 401 => Err(ApiError::AuthenticationFailed {
                     message: "Invalid API credentials".to_string(),
                 }),
@@ -179,7 +183,10 @@ impl AtlasApiClient {
                 return Err(ApiError::TokenExpired);
             }
 
-            debug!("Successfully validated session for user: {}", session.user_id);
+            debug!(
+                "Successfully validated session for user: {}",
+                session.user_id
+            );
             Ok(session)
         } else {
             let status = response.status();
@@ -200,7 +207,12 @@ impl AtlasApiClient {
     }
 
     /// Create a new user session
-    pub async fn create_session(&self, user_id: &str, device_info: Option<String>, ip_address: Option<String>) -> ApiResult<AtlasSession> {
+    pub async fn create_session(
+        &self,
+        user_id: &str,
+        device_info: Option<String>,
+        ip_address: Option<String>,
+    ) -> ApiResult<AtlasSession> {
         debug!("Creating session for user: {}", user_id);
 
         let url = format!("{}/api/v1/sessions", self.base_url);
@@ -237,7 +249,10 @@ impl AtlasApiClient {
             Ok(session)
         } else {
             let status = response.status();
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
 
             error!("Session creation failed {}: {}", status, error_text);
             Err(ApiError::AtlasApiError {
@@ -326,7 +341,9 @@ impl AtlasApiClient {
             warn!("Permission fetch failed with status: {}", status);
 
             match status.as_u16() {
-                404 => Err(ApiError::UserNotFound { id: user_id.to_string() }),
+                404 => Err(ApiError::UserNotFound {
+                    id: user_id.to_string(),
+                }),
                 403 => Ok(vec![]), // User exists but has no permissions
                 _ => Err(ApiError::AtlasApiError {
                     message: format!("Permission fetch error: {}", status),

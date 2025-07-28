@@ -2,12 +2,15 @@
 ///
 /// Provides GraphQL-compatible types that map to core financial types
 /// with proper serialization and validation.
-
 use async_graphql::{scalar, Enum, InputObject, Object, SimpleObject};
 use chrono::{DateTime, Utc};
-use financial_core::types::{Currency as CoreCurrency, AssetClass as CoreAssetClass, Period as CorePeriod};
-use financial_core::portfolio::{TradeAction as CoreTradeAction, RiskTolerance as CoreRiskTolerance};
-use financial_core::debt::{DebtType as CoreDebtType, DebtStrategy as CoreDebtStrategy};
+use financial_core::debt::{DebtStrategy as CoreDebtStrategy, DebtType as CoreDebtType};
+use financial_core::portfolio::{
+    RiskTolerance as CoreRiskTolerance, TradeAction as CoreTradeAction,
+};
+use financial_core::types::{
+    AssetClass as CoreAssetClass, Currency as CoreCurrency, Period as CorePeriod,
+};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -322,7 +325,9 @@ pub struct Rate {
 impl From<financial_core::types::Rate> for Rate {
     fn from(rate: financial_core::types::Rate) -> Self {
         Self {
-            percentage: financial_core::types::Percentage::from_decimal(rate.as_decimal()).unwrap().into(),
+            percentage: financial_core::types::Percentage::from_decimal(rate.as_decimal())
+                .unwrap()
+                .into(),
             period: Period::Annual, // Default to annual, would need to track period in Rate
         }
     }
@@ -362,6 +367,34 @@ pub struct DateRangeInput {
     pub end: DateTime<Utc>,
 }
 
+/// Value range input for filtering
+#[derive(InputObject, Clone, Debug)]
+pub struct ValueRangeInput {
+    /// Minimum value (inclusive)
+    pub min: DecimalType,
+    /// Maximum value (inclusive)
+    pub max: DecimalType,
+}
+
+/// Risk level enum for GraphQL compatibility
+#[derive(Enum, Copy, Clone, Eq, PartialEq, Debug)]
+pub enum RiskLevel {
+    Low,
+    Medium,
+    High,
+}
+
+impl From<financial_core::types::RiskLevel> for RiskLevel {
+    fn from(risk_level: financial_core::types::RiskLevel) -> Self {
+        match risk_level {
+            financial_core::types::RiskLevel::Conservative => RiskLevel::Low,
+            financial_core::types::RiskLevel::Moderate => RiskLevel::Medium,
+            financial_core::types::RiskLevel::Aggressive => RiskLevel::High,
+            financial_core::types::RiskLevel::Speculative => RiskLevel::High,
+        }
+    }
+}
+
 /// Pagination input
 #[derive(InputObject, Clone, Debug)]
 pub struct PaginationInput {
@@ -382,7 +415,7 @@ pub struct SortInput {
 
 /// Connection type for pagination
 #[derive(SimpleObject, Clone, Debug)]
-pub struct Connection<T> {
+pub struct Connection<T: Send + Sync + async_graphql::OutputType> {
     /// The items in this page
     pub edges: Vec<Edge<T>>,
     /// Information about the current page
@@ -393,7 +426,7 @@ pub struct Connection<T> {
 
 /// Edge type for pagination
 #[derive(SimpleObject, Clone, Debug)]
-pub struct Edge<T> {
+pub struct Edge<T: Send + Sync + async_graphql::OutputType> {
     /// The item
     pub node: T,
     /// Cursor for pagination
@@ -413,7 +446,7 @@ pub struct PageInfo {
     pub end_cursor: Option<String>,
 }
 
-impl<T> Connection<T> {
+impl<T: Send + Sync + async_graphql::OutputType> Connection<T> {
     /// Create a new connection
     pub fn new(items: Vec<T>, total_count: i32, offset: i32, limit: i32) -> Self
     where
@@ -464,7 +497,8 @@ mod tests {
 
     #[test]
     fn test_money_conversion() {
-        let core_money = financial_core::types::Money::new(dec!(100.50), CoreCurrency::USD).unwrap();
+        let core_money =
+            financial_core::types::Money::new(dec!(100.50), CoreCurrency::USD).unwrap();
         let gql_money: Money = core_money.into();
 
         assert_eq!(gql_money.amount.0, dec!(100.50));

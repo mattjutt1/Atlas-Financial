@@ -2,7 +2,6 @@
 ///
 /// Loads configuration from environment variables with sensible defaults
 /// for development and production environments.
-
 use serde::{Deserialize, Serialize};
 use std::env;
 use thiserror::Error;
@@ -135,7 +134,9 @@ pub enum ConfigError {
     InvalidUrl { url: String },
 
     #[error("Parse error: {source}")]
-    ParseError { source: String },
+    ParseError {
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
 }
 
 impl Config {
@@ -144,7 +145,12 @@ impl Config {
         let environment = Self::get_env_var("ENVIRONMENT")
             .unwrap_or_else(|| "development".to_string())
             .parse::<Environment>()
-            .map_err(|e| ConfigError::ParseError { source: e.to_string() })?;
+            .map_err(|e| ConfigError::ParseError {
+                source: Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    e.to_string(),
+                )),
+            })?;
 
         let host = Self::get_env_var("HOST").unwrap_or_else(|| "0.0.0.0".to_string());
         let port = Self::get_env_var("PORT")
@@ -156,17 +162,19 @@ impl Config {
             })?;
 
         // JWT configuration
-        let jwt_issuer = Self::get_env_var("JWT_ISSUER")
-            .unwrap_or_else(|| "http://localhost:3567".to_string());
+        let jwt_issuer =
+            Self::get_env_var("JWT_ISSUER").unwrap_or_else(|| "http://localhost:3567".to_string());
 
-        let jwt_audience = Self::get_env_var("JWT_AUDIENCE")
-            .unwrap_or_else(|| "atlas-financial".to_string());
+        let jwt_audience =
+            Self::get_env_var("JWT_AUDIENCE").unwrap_or_else(|| "atlas-financial".to_string());
 
         let jwks_url = Self::get_env_var("JWKS_URL")
             .unwrap_or_else(|| format!("{}/auth/jwt/jwks.json", jwt_issuer));
 
         // Validate JWKS URL
-        Url::parse(&jwks_url).map_err(|_| ConfigError::InvalidUrl { url: jwks_url.clone() })?;
+        Url::parse(&jwks_url).map_err(|_| ConfigError::InvalidUrl {
+            url: jwks_url.clone(),
+        })?;
 
         let jwt = JwtConfig {
             issuer: jwt_issuer,
@@ -223,8 +231,7 @@ impl Config {
             enable_tracing: Self::get_env_var("ENABLE_TRACING")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(true),
-            log_level: Self::get_env_var("LOG_LEVEL")
-                .unwrap_or_else(|| "info".to_string()),
+            log_level: Self::get_env_var("LOG_LEVEL").unwrap_or_else(|| "info".to_string()),
         };
 
         // Performance configuration
@@ -284,7 +291,7 @@ impl Config {
                 pool_size: 5,
                 timeout: 2,
                 default_ttl: 300, // 5 minutes for tests
-                enabled: false, // Disable Redis for unit tests
+                enabled: false,   // Disable Redis for unit tests
             },
             monitoring: MonitoringConfig {
                 enable_metrics: false,
@@ -309,17 +316,20 @@ impl Config {
     /// Validate configuration
     pub fn validate(&self) -> Result<(), ConfigError> {
         // Validate JWT issuer URL
-        Url::parse(&self.jwt.issuer)
-            .map_err(|_| ConfigError::InvalidUrl { url: self.jwt.issuer.clone() })?;
+        Url::parse(&self.jwt.issuer).map_err(|_| ConfigError::InvalidUrl {
+            url: self.jwt.issuer.clone(),
+        })?;
 
         // Validate JWKS URL
-        Url::parse(&self.jwt.jwks_url)
-            .map_err(|_| ConfigError::InvalidUrl { url: self.jwt.jwks_url.clone() })?;
+        Url::parse(&self.jwt.jwks_url).map_err(|_| ConfigError::InvalidUrl {
+            url: self.jwt.jwks_url.clone(),
+        })?;
 
         // Validate Redis URL if enabled
         if self.redis.enabled {
-            Url::parse(&self.redis.url)
-                .map_err(|_| ConfigError::InvalidUrl { url: self.redis.url.clone() })?;
+            Url::parse(&self.redis.url).map_err(|_| ConfigError::InvalidUrl {
+                url: self.redis.url.clone(),
+            })?;
         }
 
         // Validate port range
@@ -335,16 +345,13 @@ impl Config {
 
     /// Get database URL for this environment
     pub fn database_url(&self) -> String {
-        Self::get_env_var("DATABASE_URL")
-            .unwrap_or_else(|| {
-                match self.environment {
-                    Environment::Test => "postgresql://atlas:atlas@localhost/atlas_test".to_string(),
-                    Environment::Development => "postgresql://atlas:atlas@localhost/atlas_dev".to_string(),
-                    Environment::Production => {
-                        panic!("DATABASE_URL must be set in production")
-                    }
-                }
-            })
+        Self::get_env_var("DATABASE_URL").unwrap_or_else(|| match self.environment {
+            Environment::Test => "postgresql://atlas:atlas@localhost/atlas_test".to_string(),
+            Environment::Development => "postgresql://atlas:atlas@localhost/atlas_dev".to_string(),
+            Environment::Production => {
+                panic!("DATABASE_URL must be set in production")
+            }
+        })
     }
 
     /// Check if running in development mode
@@ -396,11 +403,23 @@ mod tests {
 
     #[test]
     fn test_environment_parsing() {
-        assert_eq!("development".parse::<Environment>().unwrap(), Environment::Development);
-        assert_eq!("production".parse::<Environment>().unwrap(), Environment::Production);
+        assert_eq!(
+            "development".parse::<Environment>().unwrap(),
+            Environment::Development
+        );
+        assert_eq!(
+            "production".parse::<Environment>().unwrap(),
+            Environment::Production
+        );
         assert_eq!("test".parse::<Environment>().unwrap(), Environment::Test);
-        assert_eq!("dev".parse::<Environment>().unwrap(), Environment::Development);
-        assert_eq!("prod".parse::<Environment>().unwrap(), Environment::Production);
+        assert_eq!(
+            "dev".parse::<Environment>().unwrap(),
+            Environment::Development
+        );
+        assert_eq!(
+            "prod".parse::<Environment>().unwrap(),
+            Environment::Production
+        );
 
         assert!("invalid".parse::<Environment>().is_err());
     }
