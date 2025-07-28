@@ -12,43 +12,43 @@ graph TB
     %% Client Layer
     Client[🌐 Atlas Frontend<br/>Next.js] --> API[⚡ GraphQL API<br/>Axum + async-graphql<br/>Port: 8080]
     Hasura[📊 Hasura GraphQL<br/>Unified Schema] --> API
-    
+
     %% API Server Layer
     API --> Auth[🔐 JWT Middleware<br/>SuperTokens Integration]
     API --> Cache[📦 Redis Cache<br/>Performance Layer]
     API --> Core[🦀 Financial Core<br/>Rust Library]
-    
+
     %% Core Calculation Engine
     Core --> Portfolio[📈 Portfolio Engine<br/>Modern Portfolio Theory]
     Core --> Debt[💳 Debt Engine<br/>Optimization Algorithms]
     Core --> Types[💰 Type System<br/>Exact Decimal Precision]
-    
+
     %% Portfolio Analysis Modules
     Portfolio --> Risk[📊 Risk Analysis<br/>VaR, CVaR, Monte Carlo]
     Portfolio --> Optimization[⚖️ Portfolio Optimization<br/>Sharpe Ratio, Efficient Frontier]
     Portfolio --> Allocation[🎯 Asset Allocation<br/>Rebalancing Strategies]
-    
+
     %% Debt Management Modules
     Debt --> Snowball[❄️ Snowball Algorithm<br/>Psychological Optimization]
     Debt --> Avalanche[🏔️ Avalanche Algorithm<br/>Mathematical Optimization]
     Debt --> DebtOpt[🔍 Debt Optimizer<br/>Strategy Comparison]
-    
+
     %% Foundation Layer
     Types --> Money[💵 Money Type<br/>Currency + Decimal]
     Types --> Percentage[📊 Percentage Type<br/>Exact Precision]
     Types --> Rate[📈 Rate Type<br/>Period-Aware Interest]
-    
+
     %% External Integrations
     API --> Monitoring[📈 Prometheus Metrics<br/>Performance Monitoring]
     API --> Logging[📝 Structured Logging<br/>Tracing + Observability]
-    
+
     classDef client fill:#e1f5fe
     classDef api fill:#f3e5f5
     classDef core fill:#e8f5e8
     classDef module fill:#fff3e0
     classDef foundation fill:#fff8e1
     classDef external fill:#fce4ec
-    
+
     class Client,Hasura client
     class API,Auth,Cache api
     class Core,Portfolio,Debt core
@@ -94,10 +94,10 @@ pub struct PortfolioOptimizer {
 impl PortfolioOptimizer {
     // Sharpe ratio optimization
     pub fn optimize_sharpe_ratio(&self, assets: &[Asset]) -> Result<Portfolio>;
-    
+
     // Efficient frontier calculation
     pub fn calculate_efficient_frontier(&self, returns: &[HistoricalReturns]) -> Result<Vec<Point>>;
-    
+
     // Expected return estimation
     pub fn calculate_expected_return(&self, weights: &[Decimal], returns: &[Decimal]) -> Decimal;
 }
@@ -141,7 +141,7 @@ pub struct SnowballCalculator {
 impl SnowballCalculator {
     // Prioritizes smallest balances first for psychological wins
     pub fn calculate_payment_plan(&self, debts: &[DebtAccount]) -> Result<Vec<PaymentPlan>>;
-    
+
     // Psychological motivation scoring
     pub fn calculate_psychological_wins(&self, plans: &[PaymentPlan]) -> Vec<PsychologicalWin>;
 }
@@ -157,7 +157,7 @@ pub struct AvalancheCalculator {
 impl AvalancheCalculator {
     // Prioritizes highest interest rates for mathematical optimization
     pub fn calculate_payment_plan(&self, debts: &[DebtAccount]) -> Result<Vec<PaymentPlan>>;
-    
+
     // Interest rate efficiency analysis
     pub fn calculate_efficiency_metrics(&self, debts: &[DebtAccount]) -> Result<Vec<EfficiencyMetric>>;
 }
@@ -174,13 +174,13 @@ pub struct DebtOptimizer {
 impl DebtOptimizer {
     // Multi-strategy analysis with recommendations
     pub fn optimize(&self, debts: &[DebtAccount]) -> Result<OptimizationAnalysis>;
-    
+
     // Strategy comparison (snowball vs avalanche)
     pub fn create_debt_comparison(&self, debts: &[DebtAccount]) -> Result<DebtComparison>;
-    
+
     // Consolidation opportunity detection
     pub fn find_consolidation_opportunities(&self, debts: &[DebtAccount]) -> Result<Vec<ConsolidationOpportunity>>;
-    
+
     // Negotiation recommendations
     pub fn find_negotiation_opportunities(&self, debts: &[DebtAccount]) -> Result<Vec<NegotiationOpportunity>>;
 }
@@ -194,7 +194,7 @@ impl DebtOptimizer {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let schema = create_schema(api_service).await?;
-    
+
     let app = Router::new()
         .route("/graphql", post(graphql_handler))
         .route("/health", get(health_check))
@@ -203,7 +203,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(auth_middleware)
         .layer(cors_layer)
         .layer(tracing_layer);
-    
+
     axum::serve(listener, app).await?;
 }
 ```
@@ -305,7 +305,7 @@ async fn calculate_portfolio_optimization(
     let risk_metrics = calculate_risk_metrics(&portfolio, &historical_returns).await?;
     let optimization = optimize_sharpe_ratio(&portfolio, &historical_returns).await?;
     let allocation = generate_allocation_strategy(&optimization).await?;
-    
+
     Ok(OptimizationResult {
         risk_metrics,
         optimization,
@@ -373,7 +373,7 @@ impl CacheService {
         portfolio_id: Uuid,
         result: &OptimizationResult,
     ) -> Result<()>;
-    
+
     // Cache invalidation strategies
     pub async fn invalidate_portfolio_cache(&self, portfolio_id: Uuid) -> Result<()>;
 }
@@ -387,32 +387,32 @@ impl CacheService {
 mod tests {
     use super::*;
     use rust_decimal_macros::dec;
-    
+
     #[test]
     fn test_exact_decimal_precision() {
         let amount1 = Money::new(dec!(0.1), Currency::USD).unwrap();
         let amount2 = Money::new(dec!(0.2), Currency::USD).unwrap();
         let result = amount1.add(&amount2).unwrap();
-        
+
         assert_eq!(result.amount(), dec!(0.3)); // Exact, no floating-point errors
     }
-    
+
     #[test]
     fn test_debt_snowball_prioritization() {
         let debts = create_test_debts();
         let calculator = SnowballCalculator::new(extra_payment);
         let priority_order = calculator.get_priority_order(&debts);
-        
+
         // Should prioritize lowest balance first
         assert_eq!(priority_order[0].1, "Personal Loan"); // $2000
         assert_eq!(priority_order[1].1, "Credit Card");   // $5000
     }
-    
+
     #[test]
     fn test_portfolio_risk_metrics() {
         let analyzer = RiskAnalyzer::new();
         let metrics = analyzer.calculate_risk_metrics(&portfolio, &returns, None).unwrap();
-        
+
         assert!(metrics.volatility > Decimal::ZERO);
         assert!(metrics.value_at_risk_95.amount() > Decimal::ZERO);
         assert!(metrics.sharpe_ratio.is_finite());
@@ -425,7 +425,7 @@ mod tests {
 #[tokio::test]
 async fn test_graphql_debt_optimization() {
     let schema = create_test_schema().await;
-    
+
     let query = r#"
         query {
             optimizeDebts(input: {
@@ -437,10 +437,10 @@ async fn test_graphql_debt_optimization() {
             }
         }
     "#;
-    
+
     let result = schema.execute(query).await;
     assert!(result.errors.is_empty());
-    
+
     let data = result.data.into_json().unwrap();
     assert!(data["optimizeDebts"]["totalInterestPaid"]["amount"].is_number());
 }

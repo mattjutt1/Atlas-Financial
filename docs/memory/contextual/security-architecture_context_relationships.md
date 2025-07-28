@@ -9,21 +9,21 @@ graph TB
     SecurityHardening --> HasuraSecurity[Hasura Security]
     SecurityHardening --> SuperTokensAuth[SuperTokens Authentication]
     SecurityHardening --> GraphQLSecurity[GraphQL Security]
-    
+
     DockerSecrets --> SecretFiles[10 Secret Files]
     DockerSecrets --> FileEnvVars[_FILE Environment Variables]
     DockerSecrets --> GitIgnore[GitIgnore Protection]
-    
+
     HasuraSecurity --> DevModeDisabled[Dev Mode Disabled]
     HasuraSecurity --> ConsoleDisabled[Console Disabled]
     HasuraSecurity --> AnonymousRemoved[Anonymous Role Removed]
     HasuraSecurity --> RateLimiting[Rate Limiting]
-    
+
     SuperTokensAuth --> JWTCorrection[JWT Issuer Correction]
     SuperTokensAuth --> MiddlewareRemoval[Middleware Removal]
     SuperTokensAuth --> SessionAuth[SessionAuth Wrapper]
     SuperTokensAuth --> APIRoutes[Proper API Routes]
-    
+
     GraphQLSecurity --> AllowList[Comprehensive Allow List]
     GraphQLSecurity --> UserScoping[User-Scoped Queries]
     GraphQLSecurity --> ComplexityLimits[Query Complexity Limits]
@@ -113,7 +113,7 @@ secrets:
   postgres_password:
     file: ./config/secrets/postgres_password.txt
 
-# Service Usage  
+# Service Usage
 services:
   postgres:
     environment:
@@ -223,7 +223,7 @@ Security Scorecard:
 - **Audit Trails**: Comprehensive logging and monitoring
 - **Network Segmentation**: Container isolation and secure networking
 
-### GDPR Compliance  
+### GDPR Compliance
 - **Data Minimization**: User-scoped data access only
 - **Access Controls**: Strong authentication and authorization
 - **Data Portability**: GraphQL provides structured data export

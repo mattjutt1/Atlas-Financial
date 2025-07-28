@@ -12,7 +12,7 @@ const httpLink = createHttpLink({
 const authLink = setContext(async (_, { headers }) => {
   // Get the authentication token from NextAuth session
   const session = await getSession()
-  
+
   return {
     headers: {
       ...headers,
@@ -35,7 +35,7 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
 
   if (networkError) {
     console.warn(`Network error: ${networkError}`)
-    
+
     // Handle authentication errors
     if ('statusCode' in networkError && networkError.statusCode === 401) {
       // Could trigger a re-authentication flow here

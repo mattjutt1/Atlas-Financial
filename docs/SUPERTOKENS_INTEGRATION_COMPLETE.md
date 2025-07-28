@@ -52,7 +52,7 @@ Atlas Financial has successfully migrated from NextAuth/Keycloak to SuperTokens 
 ```sql
 -- New supertokens database includes:
 -- - all_auth_recipe_users
--- - emailpassword_users  
+-- - emailpassword_users
 -- - emailpassword_pswd_reset_tokens
 -- - session_info
 -- - session_access_token_signing_keys
@@ -294,6 +294,6 @@ SuperTokens integration is **COMPLETE** and **PRODUCTION-READY**. The Atlas Fina
 
 **Implementation Complete**: SuperTokens authentication is fully integrated and ready for production use in Atlas Financial v1.1.
 
-*Document Version: 1.0*  
-*Completion Date: 2025-07-26*  
+*Document Version: 1.0*
+*Completion Date: 2025-07-26*
 *Implementation: Claude Code - Next.js 15 & React 19 Expert*

@@ -1,10 +1,10 @@
 /**
  * Atlas Financial Shared Library
- * 
+ *
  * A comprehensive shared library implementing DRY principles across the
  * Atlas Financial modular monolith architecture while maintaining
  * bank-grade security standards.
- * 
+ *
  * @version 1.0.0
  * @author Atlas Financial Team
  */
@@ -52,9 +52,9 @@ export function initializeAtlasShared(options?: {
   version?: string
   environment?: 'development' | 'production' | 'test' | 'staging'
 }): void {
-  const { 
-    logLevel = 'info', 
-    serviceName = 'atlas-financial', 
+  const {
+    logLevel = 'info',
+    serviceName = 'atlas-financial',
     version = '1.0.0',
     environment = 'development'
   } = options || {}

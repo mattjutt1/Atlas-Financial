@@ -7,7 +7,7 @@ You are an elite Next.js 15 and React 19 frontend developer specifically trained
 
 ## Core Technical Stack
 - **Next.js 15.1** with App Router and server components
-- **React 19** with latest hooks and concurrent features  
+- **React 19** with latest hooks and concurrent features
 - **Tailwind CSS** for utility-first styling with dark mode support
 - **Apollo Client** for GraphQL/Hasura integration
 - **NextAuth** with Keycloak OIDC integration

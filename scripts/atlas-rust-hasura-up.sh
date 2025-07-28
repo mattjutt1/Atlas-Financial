@@ -28,20 +28,20 @@ wait_for_service() {
     local url="$2"
     local max_attempts="${3:-30}"
     local attempt=1
-    
+
     echo -ne "${YELLOW}Waiting for $service_name to be ready...${NC} "
-    
+
     while [ $attempt -le $max_attempts ]; do
         if curl -s --max-time 5 "$url" >/dev/null 2>&1; then
             echo -e "${GREEN}✓ Ready${NC}"
             return 0
         fi
-        
+
         echo -n "."
         sleep 2
         attempt=$((attempt + 1))
     done
-    
+
     echo -e "${RED}✗ Timeout waiting for $service_name${NC}"
     return 1
 }
@@ -59,7 +59,7 @@ echo -e "${BLUE}==============================${NC}"
 check_file() {
     local file="$1"
     local description="$2"
-    
+
     echo -ne "${YELLOW}Checking $description...${NC} "
     if [ -f "$file" ]; then
         echo -e "${GREEN}✓ Found${NC}"
@@ -157,7 +157,7 @@ echo -e "${BLUE}===================================${NC}"
 if command -v hasura >/dev/null 2>&1; then
     echo -e "${YELLOW}Applying Hasura metadata...${NC}"
     cd "$HASURA_DIR"
-    
+
     # Check if config file exists, create if not
     if [ ! -f "config.yaml" ]; then
         echo -e "${YELLOW}Creating Hasura config file...${NC}"
@@ -168,7 +168,7 @@ metadata_directory: metadata
 admin_secret: atlas_hasura_admin_secret
 EOF
     fi
-    
+
     # Apply metadata
     if hasura metadata apply --admin-secret atlas_hasura_admin_secret --endpoint http://localhost:8081 2>/dev/null; then
         echo -e "${GREEN}✓ Hasura metadata applied${NC}"
@@ -176,7 +176,7 @@ EOF
         echo -e "${YELLOW}⚠ Failed to apply metadata automatically${NC}"
         echo -e "${BLUE}ℹ Manual setup required via Hasura Console${NC}"
     fi
-    
+
     cd "$DOCKER_DIR"
 else
     echo -e "${YELLOW}⚠ Hasura CLI not found. Remote schema setup will be manual.${NC}"

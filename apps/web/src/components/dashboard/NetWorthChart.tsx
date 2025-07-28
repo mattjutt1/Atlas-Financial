@@ -36,8 +36,8 @@ export function NetWorthChart({ data }: NetWorthChartProps) {
   const currentNetWorth = data[data.length - 1]?.netWorth || 0
   const previousNetWorth = data[data.length - 2]?.netWorth || 0
   const netWorthChange = currentNetWorth - previousNetWorth
-  const netWorthChangePercent = previousNetWorth !== 0 
-    ? ((netWorthChange / Math.abs(previousNetWorth)) * 100) 
+  const netWorthChangePercent = previousNetWorth !== 0
+    ? ((netWorthChange / Math.abs(previousNetWorth)) * 100)
     : 0
 
   const timeframeButtons = [
@@ -99,12 +99,12 @@ export function NetWorthChart({ data }: NetWorthChartProps) {
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-            <XAxis 
-              dataKey="date" 
+            <XAxis
+              dataKey="date"
               tickFormatter={formatDate}
               className="text-gray-500 dark:text-gray-400"
             />
-            <YAxis 
+            <YAxis
               tickFormatter={formatCurrency}
               className="text-gray-500 dark:text-gray-400"
             />

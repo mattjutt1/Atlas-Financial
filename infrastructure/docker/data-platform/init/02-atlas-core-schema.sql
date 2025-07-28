@@ -460,13 +460,13 @@ CREATE TRIGGER update_dashboard_configs_updated_at BEFORE UPDATE ON dashboard.da
 CREATE TRIGGER update_connections_updated_at BEFORE UPDATE ON integrations.connections FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Insert default data
-INSERT INTO auth.roles (name, description, permissions) VALUES 
+INSERT INTO auth.roles (name, description, permissions) VALUES
 ('user', 'Standard user with basic access', '["read:own_data", "write:own_data"]'),
 ('premium', 'Premium user with advanced features', '["read:own_data", "write:own_data", "access:premium_features"]'),
 ('admin', 'Administrator with full access', '["read:all_data", "write:all_data", "admin:users", "admin:system"]');
 
 -- Insert default categories
-INSERT INTO financial.categories (id, user_id, name, is_income, color, icon) VALUES 
+INSERT INTO financial.categories (id, user_id, name, is_income, color, icon) VALUES
 (uuid_generate_v4(), NULL, 'Income', true, '#22c55e', 'dollar-sign'),
 (uuid_generate_v4(), NULL, 'Food & Dining', false, '#f59e0b', 'utensils'),
 (uuid_generate_v4(), NULL, 'Transportation', false, '#3b82f6', 'car'),

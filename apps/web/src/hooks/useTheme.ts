@@ -10,7 +10,7 @@ export function useTheme() {
   useEffect(() => {
     // Check localStorage for saved theme preference
     const savedTheme = localStorage.getItem('theme') as Theme | null
-    
+
     // Check system preference if no saved theme
     if (!savedTheme) {
       const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -23,7 +23,7 @@ export function useTheme() {
   useEffect(() => {
     // Apply theme to document
     const root = document.documentElement
-    
+
     if (theme === 'dark') {
       root.classList.add('dark')
     } else {

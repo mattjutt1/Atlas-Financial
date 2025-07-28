@@ -1,9 +1,9 @@
 # Knowledge Graph: Financial Precision Math Engine v1.0
 
-**Version**: 1.0  
-**Created**: 2025-07-27  
-**Phase**: 1.5 Financial Precision Foundation  
-**Status**: Implementation Ready  
+**Version**: 1.0
+**Created**: 2025-07-27
+**Phase**: 1.5 Financial Precision Foundation
+**Status**: Implementation Ready
 
 ## Financial Precision Architecture Overview
 
@@ -15,14 +15,14 @@ graph TB
         CurrencyJS[💰 Currency.js<br/>Secondary Currency Operations<br/>Formatting & Localization<br/><10KB Bundle]
         TestFramework[🧪 Chai.js<br/>Precision Validation<br/>100% Test Coverage<br/>Development Only]
     end
-    
+
     %% Data Layer Integration
     subgraph "Database Precision Layer"
         PostgreSQL[(🗄️ PostgreSQL<br/>DECIMAL(19,4) Precision<br/>No Floating Point Storage)]
         HasuraSchema[⚡ Hasura<br/>Decimal-Aware GraphQL<br/>Type-Safe Queries]
         FireflyData[🔥 Firefly III<br/>Precision-Compatible<br/>Financial Ledger]
     end
-    
+
     %% Frontend Integration Layer
     subgraph "Frontend Precision Components"
         PrecisionHooks[🎣 Precision Hooks<br/>useDecimalMath()<br/>useCurrencyFormat()]
@@ -30,7 +30,7 @@ graph TB
         TransactionForms[📝 Transaction Forms<br/>Decimal Input Validation<br/>Precise Calculations]
         DashboardCharts[📊 Dashboard Charts<br/>Precision Data Display<br/>Financial Accuracy]
     end
-    
+
     %% Advanced Analytics Layer (Future)
     subgraph "Advanced Analytics (Enabled by Precision)"
         PortfolioAnalysis[📈 Portfolio Analysis<br/>portfolio_allocation_js<br/>Risk-Parity Calculations]
@@ -38,44 +38,44 @@ graph TB
         AIInsights[🧠 AI Financial Insights<br/>ML Transaction Analysis<br/>Decimal-Compatible Pipeline]
         MonteCarloSims[🎲 Monte Carlo Simulations<br/>Precise Scenario Modeling<br/>Financial Projections]
     end
-    
+
     %% Professional Charting Layer
     subgraph "Financial Visualization"
         TradingViewCharts[📈 TradingView-Style Charts<br/>react-financial-charts<br/>Professional OHLC Display]
         CashFlowCharts[💰 Cash Flow Charts<br/>react-cash-flow<br/>Precision Flow Analysis]
         LightweightCharts[⚡ Lightweight Charts<br/>Real-time Financial Data<br/>Performance Optimized]
     end
-    
+
     %% Data Flow Relationships
     DecimalJS --> PrecisionHooks
     CurrencyJS --> PrecisionHooks
     TestFramework --> DecimalJS
     TestFramework --> CurrencyJS
-    
+
     PrecisionHooks --> AccountCards
     PrecisionHooks --> TransactionForms
     PrecisionHooks --> DashboardCharts
-    
+
     PostgreSQL --> HasuraSchema
     HasuraSchema --> PrecisionHooks
     FireflyData --> PostgreSQL
-    
+
     DecimalJS --> PortfolioAnalysis
     DecimalJS --> DebtOptimization
     DecimalJS --> AIInsights
     DecimalJS --> MonteCarloSims
-    
+
     PrecisionHooks --> TradingViewCharts
     PrecisionHooks --> CashFlowCharts
     PrecisionHooks --> LightweightCharts
-    
+
     %% Styling
     classDef precision fill:#fff3e0
     classDef database fill:#fff8e1
     classDef frontend fill:#e1f5fe
     classDef analytics fill:#f3e5f5
     classDef charts fill:#e8f5e8
-    
+
     class DecimalJS,CurrencyJS,TestFramework precision
     class PostgreSQL,HasuraSchema,FireflyData database
     class PrecisionHooks,AccountCards,TransactionForms,DashboardCharts frontend
@@ -154,23 +154,23 @@ graph TB
         Constraints[Precision Constraints<br/>Data Validation]
         Migration[Schema Migration Scripts<br/>Floating Point → Decimal]
     end
-    
+
     subgraph "Application Layer"
         Hasura[Hasura GraphQL<br/>Decimal Type Mapping]
         TypeGen[TypeScript Generation<br/>Decimal-Aware Types]
         Validation[Input/Output Validation<br/>Precision Preservation]
     end
-    
+
     Tables --> Hasura
     Indexes --> Hasura
     Constraints --> Validation
     Migration --> Tables
     Hasura --> TypeGen
     TypeGen --> Validation
-    
+
     classDef database fill:#fff8e1
     classDef application fill:#e8f5e8
-    
+
     class Tables,Indexes,Constraints,Migration database
     class Hasura,TypeGen,Validation application
 ```
@@ -181,10 +181,10 @@ graph TB
 -- Phase 1.5: Convert existing float columns to DECIMAL(19,4)
 
 -- Account Balances
-ALTER TABLE accounts 
+ALTER TABLE accounts
 ALTER COLUMN virtual_balance TYPE DECIMAL(19,4);
 
--- Transaction Amounts  
+-- Transaction Amounts
 ALTER TABLE transactions
 ALTER COLUMN amount TYPE DECIMAL(19,4);
 
@@ -197,19 +197,19 @@ ALTER TABLE accounts
 ALTER COLUMN current_balance TYPE DECIMAL(19,4);
 
 -- Create optimized indexes for decimal operations
-CREATE INDEX idx_accounts_virtual_balance_decimal 
+CREATE INDEX idx_accounts_virtual_balance_decimal
 ON accounts USING btree (virtual_balance);
 
-CREATE INDEX idx_transactions_amount_decimal 
+CREATE INDEX idx_transactions_amount_decimal
 ON transactions USING btree (amount);
 
 -- Add precision validation constraints
-ALTER TABLE accounts 
-ADD CONSTRAINT check_balance_precision 
+ALTER TABLE accounts
+ADD CONSTRAINT check_balance_precision
 CHECK (virtual_balance = ROUND(virtual_balance, 4));
 
-ALTER TABLE transactions 
-ADD CONSTRAINT check_amount_precision 
+ALTER TABLE transactions
+ADD CONSTRAINT check_amount_precision
 CHECK (amount = ROUND(amount, 4));
 ```
 
@@ -223,44 +223,44 @@ graph TB
         useCurrencyFormat[useCurrencyFormat()<br/>Display formatting hook<br/>Currency.js integration]
         usePrecisionValidation[usePrecisionValidation()<br/>Input validation hook<br/>Form integration]
     end
-    
+
     subgraph "Component Layer"
         AccountBalance[AccountBalance Component<br/>Precision balance display<br/>Real-time updates]
         TransactionForm[TransactionForm Component<br/>Decimal input validation<br/>Calculation preview]
         NetWorthChart[NetWorthChart Component<br/>Precision aggregations<br/>Historical accuracy]
         BudgetAnalysis[BudgetAnalysis Component<br/>Precise spending ratios<br/>Decimal calculations]
     end
-    
+
     subgraph "Data Layer Integration"
         GraphQLQueries[GraphQL Queries<br/>Decimal field handling<br/>Type-safe operations]
         ApolloCache[Apollo Cache<br/>Decimal data caching<br/>Consistency maintenance]
         FormValidation[Form Validation<br/>Precision input rules<br/>Error prevention]
     end
-    
+
     useDecimalMath --> AccountBalance
     useDecimalMath --> TransactionForm
     useDecimalMath --> NetWorthChart
     useDecimalMath --> BudgetAnalysis
-    
+
     useCurrencyFormat --> AccountBalance
     useCurrencyFormat --> TransactionForm
     useCurrencyFormat --> NetWorthChart
     useCurrencyFormat --> BudgetAnalysis
-    
+
     usePrecisionValidation --> TransactionForm
     usePrecisionValidation --> FormValidation
-    
+
     AccountBalance --> GraphQLQueries
     TransactionForm --> GraphQLQueries
     NetWorthChart --> GraphQLQueries
     BudgetAnalysis --> GraphQLQueries
-    
+
     GraphQLQueries --> ApolloCache
-    
+
     classDef hooks fill:#e1f5fe
     classDef components fill:#f3e5f5
     classDef data fill:#e8f5e8
-    
+
     class useDecimalMath,useCurrencyFormat,usePrecisionValidation hooks
     class AccountBalance,TransactionForm,NetWorthChart,BudgetAnalysis components
     class GraphQLQueries,ApolloCache,FormValidation data
@@ -279,10 +279,10 @@ interface AccountBalanceProps {
 const AccountBalance: React.FC<AccountBalanceProps> = ({ balance, currency }) => {
   const { add, subtract } = useDecimalMath();
   const { formatCurrency } = useCurrencyFormat();
-  
+
   // All calculations use Decimal.js internally
   const formattedBalance = formatCurrency(balance, currency);
-  
+
   return (
     <div className="account-balance">
       <span className="balance-amount">{formattedBalance}</span>
@@ -295,16 +295,16 @@ const AccountBalance: React.FC<AccountBalanceProps> = ({ balance, currency }) =>
 const TransactionForm: React.FC = () => {
   const { multiply, add } = useDecimalMath();
   const { validatePrecision } = usePrecisionValidation();
-  
+
   const [amount, setAmount] = useState('');
   const [taxRate, setTaxRate] = useState('0.08');
-  
+
   // Real-time calculation with precision
   const total = useMemo(() => {
     if (!amount) return '0';
     return multiply(amount, add('1', taxRate));
   }, [amount, taxRate, multiply, add]);
-  
+
   return (
     <form>
       <input
@@ -330,19 +330,19 @@ graph TB
         RiskMetrics[Risk Calculations<br/>VaR, CVaR, Sharpe Ratio<br/>Precision-Based Metrics]
         OptimizationEngine[Portfolio Optimization<br/>Modern Portfolio Theory<br/>Precise Weight Allocation]
     end
-    
+
     subgraph "Financial Formulas"
         TVMCalculations[TVM-FinanceJS<br/>Time Value of Money<br/>Excel-Compatible Results]
         InterestCalculations[Compound Interest<br/>Decimal-Precise Compounding<br/>Long-term Accuracy]
         NPVCalculations[NPV/IRR Calculations<br/>Investment Analysis<br/>Precision-Critical Results]
     end
-    
+
     subgraph "AI Integration"
         MLPipeline[ML Data Pipeline<br/>Decimal-Consistent Features<br/>Numeric Stability]
         PredictionModels[Financial Predictions<br/>Precision Training Data<br/>Accurate Forecasting]
         TransactionML[Transaction Analysis<br/>Category Detection<br/>Spending Patterns]
     end
-    
+
     DecimalBase --> PortfolioLib
     DecimalBase --> RiskMetrics
     DecimalBase --> OptimizationEngine
@@ -352,11 +352,11 @@ graph TB
     DecimalBase --> MLPipeline
     DecimalBase --> PredictionModels
     DecimalBase --> TransactionML
-    
+
     classDef precision fill:#fff3e0
     classDef analytics fill:#f3e5f5
     classDef ai fill:#e8f5e8
-    
+
     class DecimalBase precision
     class PortfolioLib,RiskMetrics,OptimizationEngine,TVMCalculations,InterestCalculations,NPVCalculations analytics
     class MLPipeline,PredictionModels,TransactionML ai
@@ -371,13 +371,13 @@ graph TB
         InterestComparison[Interest Comparison<br/>Snowball vs Avalanche<br/>ROI Analysis]
         DebtProjections[Debt Projections<br/>Timeline Predictions<br/>Payment Optimization]
     end
-    
+
     subgraph "Investment vs Debt Analysis"
         ROICalculations[ROI Calculations<br/>Investment Returns<br/>vs Debt Interest Savings]
         OpportunityCost[Opportunity Cost<br/>Investment vs Payment<br/>Optimal Allocation]
         TaxConsiderations[Tax Implications<br/>Deduction Analysis<br/>After-tax Comparisons]
     end
-    
+
     DecimalJS[📐 Decimal.js<br/>Precision Foundation] --> DebtSnowball
     DecimalJS --> PaymentSchedule
     DecimalJS --> InterestComparison
@@ -385,11 +385,11 @@ graph TB
     DecimalJS --> ROICalculations
     DecimalJS --> OpportunityCode[OpportunityCode]
     DecimalJS --> TaxConsiderations
-    
+
     classDef precision fill:#fff3e0
     classDef debt fill:#ffebee
     classDef investment fill:#e8f5e8
-    
+
     class DecimalJS precision
     class DebtSnowball,PaymentSchedule,InterestComparison,DebtProjections debt
     class ROICalculations,OpportunityCode,TaxConsiderations investment
@@ -406,35 +406,35 @@ graph TB
         Compression[Gzip Compression<br/>Optimized Library Delivery<br/>Network Efficiency]
         LazyLoading[Lazy Loading<br/>Initialize When Needed<br/>Startup Performance]
     end
-    
+
     subgraph "Runtime Optimization"
         ObjectPooling[Object Pooling<br/>Reuse Decimal Instances<br/>Memory Efficiency]
         Memoization[Calculation Memoization<br/>Cache Common Operations<br/>Speed Optimization]
         BatchOperations[Batch Operations<br/>Reduce Object Creation<br/>Performance Gain]
         ResultCaching[Result Caching<br/>Store Computed Values<br/>Avoid Recalculation]
     end
-    
+
     subgraph "Performance Monitoring"
         BundleAnalysis[Bundle Analysis<br/>Size Tracking<br/>Impact Assessment]
         PerformanceMetrics[Performance Metrics<br/>Calculation Speed<br/>Real-time Monitoring]
         MemoryUsage[Memory Usage<br/>Decimal Object Tracking<br/>Leak Prevention]
         LoadTesting[Load Testing<br/>Stress Testing<br/>Scalability Validation]
     end
-    
+
     TreeShaking --> ObjectPooling
     CodeSplitting --> Memoization
     Compression --> BatchOperations
     LazyLoading --> ResultCaching
-    
+
     ObjectPooling --> BundleAnalysis
     Memoization --> PerformanceMetrics
     BatchOperations --> MemoryUsage
     ResultCaching --> LoadTesting
-    
+
     classDef optimization fill:#e1f5fe
     classDef runtime fill:#f3e5f5
     classDef monitoring fill:#e8f5e8
-    
+
     class TreeShaking,CodeSplitting,Compression,LazyLoading optimization
     class ObjectPooling,Memoization,BatchOperations,ResultCaching runtime
     class BundleAnalysis,PerformanceMetrics,MemoryUsage,LoadTesting monitoring
@@ -460,35 +460,35 @@ graph TB
         ValidationTests[Validation Tests<br/>Input/Output Verification<br/>Edge Case Handling]
         PerformanceTests[Performance Tests<br/>Speed Benchmarks<br/>Memory Usage]
     end
-    
+
     subgraph "Integration Testing Layer"
         ComponentTests[Component Tests<br/>React Integration<br/>Precision Hook Testing]
         GraphQLTests[GraphQL Tests<br/>Database Integration<br/>Type Consistency]
         E2ETests[End-to-End Tests<br/>Full Flow Validation<br/>User Journey Testing]
         DatabaseTests[Database Tests<br/>DECIMAL Operations<br/>Migration Validation]
     end
-    
+
     subgraph "Property Testing Layer"
         MathProperties[Mathematical Properties<br/>Commutative, Associative<br/>Precision Invariants]
         RoundingProperties[Rounding Properties<br/>Banker's Rounding<br/>Consistency Testing]
         ConversionProperties[Conversion Properties<br/>String ↔ Decimal<br/>Lossless Conversion]
         ComparisonProperties[Comparison Properties<br/>Equality, Ordering<br/>Consistent Comparison]
     end
-    
+
     PrecisionTests --> ComponentTests
     FormattingTests --> ComponentTests
     ValidationTests --> GraphQLTests
     PerformanceTests --> E2ETests
-    
+
     ComponentTests --> MathProperties
     GraphQLTests --> RoundingProperties
     E2ETests --> ConversionProperties
     DatabaseTests --> ComparisonProperties
-    
+
     classDef unit fill:#e1f5fe
     classDef integration fill:#f3e5f5
     classDef property fill:#e8f5e8
-    
+
     class PrecisionTests,FormattingTests,ValidationTests,PerformanceTests unit
     class ComponentTests,GraphQLTests,E2ETests,DatabaseTests integration
     class MathProperties,RoundingProperties,ConversionProperties,ComparisonProperties property
@@ -502,25 +502,25 @@ describe('Financial Precision', () => {
     it('should eliminate floating-point errors', () => {
       // Standard JavaScript (FAILS)
       expect(0.1 + 0.2).to.not.equal(0.3); // 0.30000000000000004
-      
+
       // Decimal.js (PASSES)
       const result = new Decimal('0.1').plus('0.2');
       expect(result.toString()).to.equal('0.3');
     });
-    
+
     it('should maintain precision in complex calculations', () => {
       const price = new Decimal('99.99');
       const quantity = new Decimal('3');
       const taxRate = new Decimal('0.08875');
-      
+
       const subtotal = price.mul(quantity);
       const tax = subtotal.mul(taxRate);
       const total = subtotal.plus(tax);
-      
+
       expect(total.toString()).to.equal('326.44'); // Exact result
     });
   });
-  
+
   describe('Currency Formatting', () => {
     it('should format currency with locale support', () => {
       const amount = new Decimal('1234.56');
@@ -528,7 +528,7 @@ describe('Financial Precision', () => {
         symbol: '$',
         precision: 2
       }).format();
-      
+
       expect(formatted).to.equal('$1,234.56');
     });
   });
@@ -541,9 +541,9 @@ describe('AccountBalance Component', () => {
       balance: '1234.5678',
       currency: 'USD'
     };
-    
+
     render(<AccountBalance {...mockAccount} />);
-    
+
     // Should display rounded to 2 decimals but maintain internal precision
     expect(screen.getByText('$1,234.57')).toBeInTheDocument();
   });
@@ -558,10 +558,10 @@ describe('Decimal Math Properties', () => {
       (a, b) => {
         const decA = new Decimal(a.toString());
         const decB = new Decimal(b.toString());
-        
+
         const result1 = decA.plus(decB);
         const result2 = decB.plus(decA);
-        
+
         return result1.equals(result2);
       }
     ));
@@ -579,31 +579,31 @@ graph TB
         ServerValidation[Server-Side Validation<br/>Security Enforcement<br/>Data Integrity]
         DatabaseConstraints[Database Constraints<br/>Schema-Level Protection<br/>Data Consistency]
     end
-    
+
     subgraph "Calculation Verification"
         ChecksumValidation[Checksum Validation<br/>Transaction Verification<br/>Integrity Assurance]
         ReconciliationChecks[Reconciliation Checks<br/>Balance Verification<br/>Accuracy Confirmation]
         AuditTrails[Audit Trails<br/>Calculation History<br/>Compliance Tracking]
     end
-    
+
     subgraph "Error Handling"
         PrecisionErrors[Precision Error Detection<br/>Invalid Input Handling<br/>Graceful Degradation]
         FallbackMechanisms[Fallback Mechanisms<br/>Legacy Calculation Backup<br/>System Resilience]
         ErrorReporting[Error Reporting<br/>Monitoring & Alerting<br/>Issue Detection]
     end
-    
+
     ClientValidation --> ChecksumValidation
     ServerValidation --> ReconciliationChecks
     DatabaseConstraints --> AuditTrails
-    
+
     ChecksumValidation --> PrecisionErrors
     ReconciliationChecks --> FallbackMechanisms
     AuditTrails --> ErrorReporting
-    
+
     classDef validation fill:#fff3e0
     classDef verification fill:#f3e5f5
     classDef error fill:#ffebee
-    
+
     class ClientValidation,ServerValidation,DatabaseConstraints validation
     class ChecksumValidation,ReconciliationChecks,AuditTrails verification
     class PrecisionErrors,FallbackMechanisms,ErrorReporting error
@@ -620,22 +620,22 @@ gantt
     Install Libraries     :a1, 2025-07-27, 1d
     Create Precision Utils:a2, after a1, 1d
     Implement Test Suite  :a3, after a2, 1d
-    
+
     section Database Migration
     Schema Analysis       :b1, 2025-07-27, 1d
     Migration Scripts     :b2, after b1, 1d
     Data Validation       :b3, after b2, 1d
-    
+
     section Frontend Integration
     Precision Hooks       :c1, after a2, 1d
     Component Updates     :c2, after c1, 2d
     Form Integration      :c3, after c2, 1d
-    
+
     section Testing & Validation
     Unit Test Suite       :d1, after a3, 1d
     Integration Tests     :d2, after c3, 1d
     Performance Testing   :d3, after d2, 1d
-    
+
     section Production Ready
     Bundle Optimization   :e1, after d3, 1d
     Documentation         :e2, after e1, 1d
@@ -662,19 +662,19 @@ graph TB
         OptionsValuation[Options Valuation<br/>Black-Scholes Model<br/>Derivatives Pricing]
         PortfolioBacktesting[Portfolio Backtesting<br/>Historical Analysis<br/>Strategy Validation]
     end
-    
+
     subgraph "Phase 3: Professional Features"
         TaxOptimization[Tax Optimization<br/>Harvest Loss Analysis<br/>Tax-Efficient Strategies]
         RegulatoryReporting[Regulatory Reporting<br/>Compliance Automation<br/>Audit-Ready Reports]
         InstitutionalFeatures[Institutional Features<br/>Multi-Entity Support<br/>Complex Structures]
     end
-    
+
     subgraph "Phase 4: AI Integration"
         PredictiveModeling[Predictive Modeling<br/>ML-Driven Insights<br/>Financial Forecasting]
         RiskAssessment[Risk Assessment<br/>Credit Analysis<br/>Investment Scoring]
         AutomatedAdvisory[Automated Advisory<br/>Robo-Advisor Features<br/>Personal Recommendations]
     end
-    
+
     DecimalJS[Decimal.js Foundation] --> MonteCarloSims
     DecimalJS --> OptionsValuation
     DecimalJS --> PortfolioBacktesting
@@ -684,12 +684,12 @@ graph TB
     DecimalJS --> PredictiveModeling
     DecimalJS --> RiskAssessment
     DecimalJS --> AutomatedAdvisory
-    
+
     classDef foundation fill:#fff3e0
     classDef phase2 fill:#e1f5fe
     classDef phase3 fill:#f3e5f5
     classDef phase4 fill:#e8f5e8
-    
+
     class DecimalJS foundation
     class MonteCarloSims,OptionsValuation,PortfolioBacktesting phase2
     class TaxOptimization,RegulatoryReporting,InstitutionalFeatures phase3

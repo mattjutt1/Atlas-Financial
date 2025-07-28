@@ -22,17 +22,17 @@ import type { FinancialSummary, AIInsight, TransactionData } from '@/shared/type
 export default function AtlasCorePlatform() {
   // Modular Monolith Hooks
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
-  const { 
-    calculateNetWorth, 
-    getPortfolioAnalysis, 
+  const {
+    calculateNetWorth,
+    getPortfolioAnalysis,
     isLoading: financialLoading,
-    error: financialError 
+    error: financialError
   } = useFinancialEngine();
-  const { 
-    generateInsights, 
+  const {
+    generateInsights,
     getBrutalHonestyFeedback,
     isLoading: aiLoading,
-    error: aiError 
+    error: aiError
   } = useAIEngine();
 
   // State management for dashboard data
@@ -128,7 +128,7 @@ export default function AtlasCorePlatform() {
           <p className="atlas-error-text">
             {financialError?.message || aiError?.message || 'An unexpected error occurred.'}
           </p>
-          <button 
+          <button
             className="atlas-button atlas-button-primary mt-4"
             onClick={() => window.location.reload()}
           >
@@ -148,9 +148,9 @@ export default function AtlasCorePlatform() {
             Welcome back, {user?.firstName || 'Atlas User'}
           </h1>
           <p className="atlas-text-secondary mt-2">
-            Your financial overview for {new Date().toLocaleDateString('en-US', { 
-              month: 'long', 
-              year: 'numeric' 
+            Your financial overview for {new Date().toLocaleDateString('en-US', {
+              month: 'long',
+              year: 'numeric'
             })}
           </p>
         </div>
@@ -173,7 +173,7 @@ export default function AtlasCorePlatform() {
           <>
             {/* Financial Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <AccountSummary 
+              <AccountSummary
                 summary={financialSummary}
                 loading={financialLoading}
               />
@@ -183,7 +183,7 @@ export default function AtlasCorePlatform() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
               {/* Net Worth Chart */}
               <div className="lg:col-span-2">
-                <NetWorthChart 
+                <NetWorthChart
                   data={financialSummary?.netWorthHistory || []}
                   loading={financialLoading}
                 />
@@ -191,7 +191,7 @@ export default function AtlasCorePlatform() {
 
               {/* AI Insights */}
               <div>
-                <BrutalHonestyInsight 
+                <BrutalHonestyInsight
                   insights={aiInsights}
                   loading={aiLoading}
                 />
@@ -201,13 +201,13 @@ export default function AtlasCorePlatform() {
             {/* Recent Activity */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Recent Transactions */}
-              <RecentTransactions 
+              <RecentTransactions
                 transactions={transactions}
                 loading={financialLoading}
               />
 
               {/* Quick Actions */}
-              <QuickActions 
+              <QuickActions
                 onAction={(action) => {
                   console.log('Quick action:', action);
                   // Handle quick actions (add transaction, run analysis, etc.)

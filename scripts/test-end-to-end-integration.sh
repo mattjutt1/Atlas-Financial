@@ -29,17 +29,17 @@ run_graphql_test() {
     local query="$3"
     local headers="$4"
     local expected_field="$5"
-    
+
     echo -ne "${YELLOW}Testing $test_name...${NC} "
-    
+
     local curl_cmd="curl -s --max-time $TIMEOUT -X POST '$url' -H 'Content-Type: application/json'"
-    
+
     if [ -n "$headers" ]; then
         curl_cmd="$curl_cmd $headers"
     fi
-    
+
     curl_cmd="$curl_cmd -d '$query'"
-    
+
     if response=$(eval "$curl_cmd" 2>/dev/null); then
         if echo "$response" | grep -q '"errors"'; then
             echo -e "${RED}✗ GraphQL Error${NC}"
@@ -69,9 +69,9 @@ echo -e "${BLUE}=================================${NC}"
 check_service() {
     local service_name="$1"
     local url="$2"
-    
+
     echo -ne "${YELLOW}Checking $service_name...${NC} "
-    
+
     if curl -s --max-time 10 "$url" >/dev/null 2>&1; then
         echo -e "${GREEN}✓ Available${NC}"
         return 0
@@ -148,20 +148,20 @@ measure_response_time() {
     local url="$2"
     local query="$3"
     local headers="$4"
-    
+
     echo -ne "${YELLOW}Testing $service_name response time...${NC} "
-    
+
     local curl_cmd="curl -s -w '%{time_total}' --max-time $TIMEOUT -o /dev/null -X POST '$url' -H 'Content-Type: application/json'"
-    
+
     if [ -n "$headers" ]; then
         curl_cmd="$curl_cmd $headers"
     fi
-    
+
     curl_cmd="$curl_cmd -d '$query'"
-    
+
     if time_total=$(eval "$curl_cmd" 2>/dev/null); then
         echo -e "${GREEN}${time_total}s${NC}"
-        
+
         # Check if response time is reasonable (less than 2 seconds)
         if (( $(echo "$time_total < 2.0" | bc -l) )); then
             echo -e "  ${GREEN}✓ Performance acceptable${NC}"
@@ -236,7 +236,7 @@ query UnifiedFinancialData {
     name
     balance
   }
-  
+
   # Financial calculation (via Rust engine)
   finance {
     optimizeDebts(input: {

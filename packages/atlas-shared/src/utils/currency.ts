@@ -86,11 +86,11 @@ export const parseCurrencyAmount = (currencyString: string): number => {
   if (!currencyString || typeof currencyString !== 'string') {
     return 0
   }
-  
+
   // Remove all non-numeric characters except decimal point and minus sign
   const cleaned = currencyString.replace(/[^0-9.-]+/g, '')
   const parsed = parseFloat(cleaned)
-  
+
   return isNaN(parsed) ? 0 : parsed
 }
 
@@ -98,7 +98,7 @@ export const parseCurrencyAmount = (currencyString: string): number => {
  * Get currency symbol for a given currency code
  */
 export const getCurrencySymbol = (
-  currency: string = 'USD', 
+  currency: string = 'USD',
   locale: string = 'en-US'
 ): string => {
   try {
@@ -132,7 +132,7 @@ export const isValidCurrencyCode = (currency: string): boolean => {
   if (!currency || typeof currency !== 'string') {
     return false
   }
-  
+
   // Check if it's a 3-letter currency code
   const currencyRegex = /^[A-Z]{3}$/
   return currencyRegex.test(currency.toUpperCase())
@@ -149,11 +149,11 @@ export const createMoney = (
   if (!isValidCurrencyCode(currency)) {
     throw new Error(`Invalid currency code: ${currency}`)
   }
-  
+
   if (typeof amount !== 'number' || isNaN(amount)) {
     throw new Error(`Invalid amount: ${amount}`)
   }
-  
+
   return {
     amount: Number(amount.toFixed(precision || 2)),
     currency: currency.toUpperCase(),
@@ -168,10 +168,10 @@ export const addMoney = (money1: Money, money2: Money): Money => {
   if (money1.currency !== money2.currency) {
     throw new Error(`Currency mismatch: ${money1.currency} vs ${money2.currency}`)
   }
-  
+
   const precision = Math.max(money1.precision || 2, money2.precision || 2)
   const result = money1.amount + money2.amount
-  
+
   return createMoney(result, money1.currency, precision)
 }
 
@@ -182,10 +182,10 @@ export const subtractMoney = (money1: Money, money2: Money): Money => {
   if (money1.currency !== money2.currency) {
     throw new Error(`Currency mismatch: ${money1.currency} vs ${money2.currency}`)
   }
-  
+
   const precision = Math.max(money1.precision || 2, money2.precision || 2)
   const result = money1.amount - money2.amount
-  
+
   return createMoney(result, money1.currency, precision)
 }
 
@@ -196,7 +196,7 @@ export const multiplyMoney = (money: Money, factor: number): Money => {
   if (typeof factor !== 'number' || isNaN(factor)) {
     throw new Error(`Invalid factor: ${factor}`)
   }
-  
+
   const result = money.amount * factor
   return createMoney(result, money.currency, money.precision)
 }
@@ -208,7 +208,7 @@ export const divideMoney = (money: Money, divisor: number): Money => {
   if (typeof divisor !== 'number' || isNaN(divisor) || divisor === 0) {
     throw new Error(`Invalid divisor: ${divisor}`)
   }
-  
+
   const result = money.amount / divisor
   return createMoney(result, money.currency, money.precision)
 }
@@ -220,7 +220,7 @@ export const compareMoney = (money1: Money, money2: Money): number => {
   if (money1.currency !== money2.currency) {
     throw new Error(`Currency mismatch: ${money1.currency} vs ${money2.currency}`)
   }
-  
+
   if (money1.amount > money2.amount) return 1
   if (money1.amount < money2.amount) return -1
   return 0
@@ -230,7 +230,7 @@ export const compareMoney = (money1: Money, money2: Money): number => {
  * Check if two Money amounts are equal
  */
 export const isEqualMoney = (money1: Money, money2: Money): boolean => {
-  return money1.currency === money2.currency && 
+  return money1.currency === money2.currency &&
          Math.abs(money1.amount - money2.amount) < 0.001 // Account for floating point precision
 }
 
@@ -255,7 +255,7 @@ export const calculatePercentage = (money: Money, percentage: number): Money => 
   if (typeof percentage !== 'number' || isNaN(percentage)) {
     throw new Error(`Invalid percentage: ${percentage}`)
   }
-  
+
   return multiplyMoney(money, percentage / 100)
 }
 
@@ -310,17 +310,17 @@ export const sumMoney = (moneyArray: Money[]): Money => {
   if (moneyArray.length === 0) {
     throw new Error('Cannot sum empty array of Money')
   }
-  
+
   const currency = moneyArray[0].currency
   const precision = Math.max(...moneyArray.map(m => m.precision || 2))
-  
+
   // Validate all currencies match
   for (const money of moneyArray) {
     if (money.currency !== currency) {
       throw new Error(`Currency mismatch in array: expected ${currency}, got ${money.currency}`)
     }
   }
-  
+
   const total = moneyArray.reduce((sum, money) => sum + money.amount, 0)
   return createMoney(total, currency, precision)
 }
@@ -332,8 +332,8 @@ export const minMoney = (moneyArray: Money[]): Money => {
   if (moneyArray.length === 0) {
     throw new Error('Cannot find min of empty array')
   }
-  
-  return moneyArray.reduce((min, current) => 
+
+  return moneyArray.reduce((min, current) =>
     compareMoney(current, min) < 0 ? current : min
   )
 }
@@ -345,8 +345,8 @@ export const maxMoney = (moneyArray: Money[]): Money => {
   if (moneyArray.length === 0) {
     throw new Error('Cannot find max of empty array')
   }
-  
-  return moneyArray.reduce((max, current) => 
+
+  return moneyArray.reduce((max, current) =>
     compareMoney(current, max) > 0 ? current : max
   )
 }
@@ -358,7 +358,7 @@ export const averageMoney = (moneyArray: Money[]): Money => {
   if (moneyArray.length === 0) {
     throw new Error('Cannot calculate average of empty array')
   }
-  
+
   const total = sumMoney(moneyArray)
   return divideMoney(total, moneyArray.length)
 }

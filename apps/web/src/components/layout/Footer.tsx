@@ -43,7 +43,7 @@ export function Footer() {
               </span>
             </div>
             <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-md">
-              The brutally honest personal finance platform that tells you the truth about your money. 
+              The brutally honest personal finance platform that tells you the truth about your money.
               No sugar-coating. No false hope. Just reality.
             </p>
             <div className="flex space-x-4">

@@ -9,10 +9,10 @@ from typing import Dict, Any
 
 def to_camel_case(snake_str: str) -> str:
     """Convert a snake_case string to camelCase.
-    
+
     Args:
         snake_str: A string in snake_case format
-        
+
     Returns:
         The string converted to camelCase
     """
@@ -23,10 +23,10 @@ def to_camel_case(snake_str: str) -> str:
 
 def to_snake_case(camel_str: str) -> str:
     """Convert a camelCase string to snake_case.
-    
+
     Args:
         camel_str: A string in camelCase format
-        
+
     Returns:
         The string converted to snake_case
     """
@@ -37,22 +37,22 @@ def to_snake_case(camel_str: str) -> str:
 
 def convert_dict_keys(data: Dict[str, Any], converter: callable) -> Dict[str, Any]:
     """Convert all keys in a dictionary using the provided converter function.
-    
+
     Args:
         data: Dictionary with keys to convert
         converter: Function to convert the keys (e.g. to_camel_case or to_snake_case)
-        
+
     Returns:
         A new dictionary with converted keys
     """
     if not isinstance(data, dict):
         return data
-        
+
     result = {}
     for key, value in data.items():
         # Convert key
         new_key = converter(key)
-        
+
         # If value is a dict, recursively convert its keys too
         if isinstance(value, dict):
             result[new_key] = convert_dict_keys(value, converter)
@@ -64,5 +64,5 @@ def convert_dict_keys(data: Dict[str, Any], converter: callable) -> Dict[str, An
             ]
         else:
             result[new_key] = value
-            
+
     return result

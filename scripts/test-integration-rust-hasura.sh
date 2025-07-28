@@ -26,9 +26,9 @@ check_service() {
     local service_name="$1"
     local url="$2"
     local expected_status="${3:-200}"
-    
+
     echo -ne "${YELLOW}Checking $service_name...${NC} "
-    
+
     if response=$(curl -s -w "%{http_code}" --max-time $TIMEOUT "$url" 2>/dev/null); then
         status_code="${response: -3}"
         if [ "$status_code" = "$expected_status" ]; then
@@ -50,21 +50,21 @@ test_graphql() {
     local url="$2"
     local query="$3"
     local headers="$4"
-    
+
     echo -ne "${YELLOW}Testing $name...${NC} "
-    
+
     local curl_cmd="curl -s -w '%{http_code}' --max-time $TIMEOUT -X POST '$url' -H 'Content-Type: application/json'"
-    
+
     if [ -n "$headers" ]; then
         curl_cmd="$curl_cmd $headers"
     fi
-    
+
     curl_cmd="$curl_cmd -d '$query'"
-    
+
     if response=$(eval "$curl_cmd" 2>/dev/null); then
         status_code="${response: -3}"
         response_body="${response%???}"
-        
+
         if [ "$status_code" = "200" ]; then
             if echo "$response_body" | grep -q '"errors"'; then
                 echo -e "${YELLOW}⚠ GraphQL Errors${NC}"

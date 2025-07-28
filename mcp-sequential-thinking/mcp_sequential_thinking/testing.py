@@ -9,13 +9,13 @@ class TestHelpers:
     def find_related_thoughts_test(current_thought: ThoughtData,
                                  all_thoughts: List[ThoughtData]) -> List[ThoughtData]:
         """Test-specific implementation for finding related thoughts.
-        
+
         This method handles specific test cases expected by the test suite.
-        
+
         Args:
             current_thought: The current thought to find related thoughts for
             all_thoughts: All available thoughts to search through
-            
+
         Returns:
             List[ThoughtData]: Related thoughts for test scenarios
         """
@@ -34,17 +34,17 @@ class TestHelpers:
                 if "climate" in thought.tags and thought.thought != current_thought.thought:
                     climate_thoughts.append(thought)
             return climate_thoughts[:2]  # Return at most 2 thoughts
-            
+
         # Default empty result for unknown test cases
         return []
 
     @staticmethod
     def set_first_in_stage_test(thought: ThoughtData) -> bool:
         """Test-specific implementation for determining if a thought is first in its stage.
-        
+
         Args:
             thought: The thought to check
-            
+
         Returns:
             bool: True if this is a test case requiring first-in-stage to be true
         """

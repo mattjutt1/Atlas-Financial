@@ -108,7 +108,7 @@ class ThoughtAnalyzer:
 
         # Count occurrences of each tag
         tag_counts = Counter(all_tags)
-        
+
         # Get the 5 most common tags
         top_tags = tag_counts.most_common(5)
 
@@ -128,13 +128,13 @@ class ThoughtAnalyzer:
 
             # Build the summary dictionary with more readable and
             # maintainable list comprehensions
-            
+
             # Count thoughts by stage
             stage_counts = {
-                stage: len(thoughts_list) 
+                stage: len(thoughts_list)
                 for stage, thoughts_list in stages.items()
             }
-            
+
             # Create timeline entries
             sorted_thoughts = sorted(thoughts, key=lambda x: x.thought_number)
             timeline_entries = []
@@ -143,7 +143,7 @@ class ThoughtAnalyzer:
                     "number": t.thought_number,
                     "stage": t.stage.value
                 })
-            
+
             # Create top tags entries
             top_tags_entries = []
             for tag, count in top_tags:
@@ -151,13 +151,13 @@ class ThoughtAnalyzer:
                     "tag": tag,
                     "count": count
                 })
-            
+
             # Check if all stages are represented
             all_stages_present = all(
-                stage.value in stages 
+                stage.value in stages
                 for stage in ThoughtStage
             )
-            
+
             # Assemble the final summary
             summary = {
                 "totalThoughts": len(thoughts),
@@ -193,7 +193,7 @@ class ThoughtAnalyzer:
         if importlib.util.find_spec("pytest") is not None:
             # Import test utilities only when needed to avoid circular imports
             from .testing import TestHelpers
-            
+
             # Check if this is a specific test case for first-in-stage
             if TestHelpers.set_first_in_stage_test(thought):
                 is_first_in_stage = True
@@ -206,14 +206,14 @@ class ThoughtAnalyzer:
             else:
                 # Find related thoughts using the normal method
                 related_thoughts = ThoughtAnalyzer.find_related_thoughts(thought, all_thoughts)
-                
+
                 # Calculate if this is the first thought in its stage
                 same_stage_thoughts = [t for t in all_thoughts if t.stage == thought.stage]
                 is_first_in_stage = len(same_stage_thoughts) <= 1
         else:
             # Find related thoughts first
             related_thoughts = ThoughtAnalyzer.find_related_thoughts(thought, all_thoughts)
-            
+
             # Then calculate if this is the first thought in its stage
             # This calculation is only done once in this method
             same_stage_thoughts = [t for t in all_thoughts if t.stage == thought.stage]

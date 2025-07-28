@@ -50,7 +50,7 @@ mcp-sequential-thinking/
 │   ├── utils.py        # Common utilities and helper functions
 │   ├── logging_conf.py # Centralized logging configuration
 │   └── __init__.py     # Package initialization
-├── tests/              
+├── tests/
 │   ├── test_analysis.py # Tests for analysis functionality
 │   ├── test_models.py   # Tests for data models
 │   ├── test_storage.py  # Tests for persistence layer
@@ -266,6 +266,3 @@ For detailed examples of how to customize and extend the Sequential Thinking ser
 ## License
 
 MIT License
-
-
-

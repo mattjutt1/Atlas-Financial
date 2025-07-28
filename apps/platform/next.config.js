@@ -143,7 +143,7 @@ const nextConfig = {
         source: '/api/financial/:path*',
         destination: 'http://localhost:8080/:path*',
       },
-      // AI Engine API Proxy  
+      // AI Engine API Proxy
       {
         source: '/api/ai/:path*',
         destination: 'http://localhost:8083/:path*',

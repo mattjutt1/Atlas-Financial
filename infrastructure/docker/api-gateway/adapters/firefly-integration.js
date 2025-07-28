@@ -29,7 +29,7 @@ class FireflyIntegrationAdapter {
         'Content-Type': 'application/json',
       }
     });
-    
+
     this.cache = redisClient;
     this.db = pool;
   }
@@ -39,7 +39,7 @@ class FireflyIntegrationAdapter {
    */
   async authenticateFirefly(userId) {
     const cacheKey = `firefly:auth:${userId}`;
-    
+
     // Check cache first
     let token = await this.cache.get(cacheKey);
     if (token) {
@@ -58,10 +58,10 @@ class FireflyIntegrationAdapter {
       }
 
       token = result.rows[0].firefly_token;
-      
+
       // Cache for 1 hour
       await this.cache.setex(cacheKey, 3600, token);
-      
+
       return token;
     } catch (error) {
       console.error('Firefly authentication failed:', error);
@@ -75,7 +75,7 @@ class FireflyIntegrationAdapter {
   async syncAccounts(userId) {
     try {
       const token = await this.authenticateFirefly(userId);
-      
+
       const response = await this.fireflyClient.get('/api/v1/accounts', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -101,19 +101,19 @@ class FireflyIntegrationAdapter {
         // Insert or update account in Atlas database
         await this.db.query(
           `INSERT INTO financial.accounts (
-            user_id, external_id, name, account_type, institution_name, 
+            user_id, external_id, name, account_type, institution_name,
             current_balance, currency, is_active, metadata, updated_at
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-          ON CONFLICT (user_id, external_id) 
-          DO UPDATE SET 
+          ON CONFLICT (user_id, external_id)
+          DO UPDATE SET
             name = EXCLUDED.name,
             current_balance = EXCLUDED.current_balance,
             is_active = EXCLUDED.is_active,
             updated_at = NOW()`,
           [
-            userId, atlasAccount.external_id, atlasAccount.name, 
+            userId, atlasAccount.external_id, atlasAccount.name,
             atlasAccount.account_type, atlasAccount.institution_name,
-            atlasAccount.current_balance, atlasAccount.currency, 
+            atlasAccount.current_balance, atlasAccount.currency,
             atlasAccount.is_active, JSON.stringify(atlasAccount.metadata)
           ]
         );
@@ -136,17 +136,17 @@ class FireflyIntegrationAdapter {
   async syncTransactions(userId, accountId = null, startDate = null) {
     try {
       const token = await this.authenticateFirefly(userId);
-      
+
       let url = '/api/v1/transactions';
       const params = new URLSearchParams();
-      
+
       if (startDate) {
         params.append('start', startDate);
       }
       if (accountId) {
         params.append('accounts', accountId);
       }
-      
+
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
@@ -188,13 +188,13 @@ class FireflyIntegrationAdapter {
             await this.db.query(
               `INSERT INTO financial.transactions (
                 user_id, account_id, external_id, amount, currency, description,
-                transaction_date, category, merchant_name, transaction_type, 
+                transaction_date, category, merchant_name, transaction_type,
                 metadata, created_at
               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
               ON CONFLICT (external_id) DO NOTHING`,
               [
                 userId, atlasTransaction.account_id, atlasTransaction.external_id,
-                atlasTransaction.amount, atlasTransaction.currency, 
+                atlasTransaction.amount, atlasTransaction.currency,
                 atlasTransaction.description, atlasTransaction.transaction_date,
                 atlasTransaction.category, atlasTransaction.merchant_name,
                 atlasTransaction.transaction_type, JSON.stringify(atlasTransaction.metadata)
@@ -221,7 +221,7 @@ class FireflyIntegrationAdapter {
   async createTransaction(userId, transactionData) {
     try {
       const token = await this.authenticateFirefly(userId);
-      
+
       const fireflyTransaction = {
         error_if_duplicate_hash: false,
         apply_rules: true,

@@ -26,7 +26,7 @@ route:
   group_interval: 5m
   repeat_interval: 4h
   receiver: 'atlas-default'
-  
+
   routes:
     # Critical alerts - immediate notification
     - match:
@@ -34,29 +34,29 @@ route:
       receiver: 'atlas-critical'
       group_wait: 10s
       repeat_interval: 1h
-      
+
     # Service-specific routing
     - match:
         service: atlas-core-platform
       receiver: 'atlas-core-team'
-      
+
     - match:
         service: atlas-data-platform
       receiver: 'atlas-data-team'
-      
+
     - match:
         service: atlas-api-gateway
       receiver: 'atlas-api-team'
-      
+
     - match:
         service: atlas-observability
       receiver: 'atlas-ops-team'
-      
+
     # Business logic alerts
     - match:
         component: business-logic
       receiver: 'atlas-business-team'
-      
+
     # Security alerts
     - match:
         alertname: SecurityBreach
@@ -87,14 +87,14 @@ receivers:
         subject: 'CRITICAL: Atlas Financial System Alert'
         body: |
           Critical alert in Atlas Financial system:
-          
+
           {{ range .Alerts }}
           Alert: {{ .Annotations.summary }}
           Service: {{ .Labels.service }}
           Component: {{ .Labels.component }}
           Severity: {{ .Labels.severity }}
           Description: {{ .Annotations.description }}
-          
+
           Time: {{ .StartsAt }}
           {{ if .Labels.runbook_url }}
           Runbook: {{ .Labels.runbook_url }}
@@ -179,7 +179,7 @@ receivers:
         subject: 'Atlas Financial Business Metric Alert'
         body: |
           Business metric alert in Atlas Financial:
-          
+
           {{ range .Alerts }}
           Alert: {{ .Annotations.summary }}
           Metric: {{ .Labels.alertname }}
@@ -195,13 +195,13 @@ receivers:
         subject: 'SECURITY ALERT: Atlas Financial'
         body: |
           SECURITY ALERT in Atlas Financial system:
-          
+
           {{ range .Alerts }}
           Alert: {{ .Annotations.summary }}
           Service: {{ .Labels.service }}
           Severity: {{ .Labels.severity }}
           Description: {{ .Annotations.description }}
-          
+
           Immediate action may be required.
           Time: {{ .StartsAt }}
           {{ end }}

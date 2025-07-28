@@ -13,15 +13,15 @@ async def health_check():
     """Health check endpoint"""
     try:
         services = ServiceRegistry.get_instance()
-        
+
         # Check Hasura connectivity
         hasura_healthy = await services.hasura_client.health_check()
-        
+
         # Check AI model status
         model_loaded = services.insights_generator.is_model_loaded() if services.insights_generator else False
-        
+
         status = "healthy" if hasura_healthy and model_loaded else "degraded"
-        
+
         return HealthResponse(
             status=status,
             version="1.1.0",

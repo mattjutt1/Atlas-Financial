@@ -41,7 +41,7 @@ Completed comprehensive security hardening addressing all critical vulnerabiliti
 ```bash
 # 10 Secure Secret Files
 postgres_password.txt           # 64-char hex
-supertokens_api_key.txt        # 64-char hex  
+supertokens_api_key.txt        # 64-char hex
 hasura_admin_secret.txt        # 64-char hex
 firefly_app_key.txt            # 44-char base64
 jwt_secret_key.txt             # 64-char hex
@@ -109,15 +109,15 @@ Created comprehensive security validation script (`validate-security-hardening.s
 ```typescript
 export function SessionAuth({ children, fallback }: SessionAuthProps) {
   const session = useSessionContext()
-  
+
   if (session.loading) {
     return fallback || <LoadingSpinner />
   }
-  
+
   if (!session.doesSessionExist) {
     return fallback || null
   }
-  
+
   return <>{children}</>
 }
 ```

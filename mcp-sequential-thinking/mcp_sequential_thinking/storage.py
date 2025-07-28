@@ -57,7 +57,7 @@ class ThoughtStorage:
         with self._lock:
             # Use utility functions to prepare and save thoughts
             thoughts_with_ids = prepare_thoughts_for_serialization(self.thought_history)
-        
+
         # Save to file with proper locking
         save_thoughts_to_file(self.current_session_file, thoughts_with_ids, self.lock_file)
 
@@ -108,7 +108,7 @@ class ThoughtStorage:
         with self._lock:
             # Use utility function to prepare thoughts for serialization
             thoughts_with_ids = prepare_thoughts_for_serialization(self.thought_history)
-            
+
             # Create export-specific metadata
             metadata = {
                 "exportedAt": datetime.now().isoformat(),
@@ -120,11 +120,11 @@ class ThoughtStorage:
                     }
                 }
             }
-        
+
         # Convert string path to Path object for compatibility with utility
         file_path_obj = Path(file_path)
         lock_file = file_path_obj.with_suffix('.lock')
-        
+
         # Use utility function to save with proper locking
         save_thoughts_to_file(file_path_obj, thoughts_with_ids, lock_file, metadata)
 
@@ -142,10 +142,10 @@ class ThoughtStorage:
         # Convert string path to Path object for compatibility with utility
         file_path_obj = Path(file_path)
         lock_file = file_path_obj.with_suffix('.lock')
-        
+
         # Use utility function to load thoughts with proper error handling
         thoughts = load_thoughts_from_file(file_path_obj, lock_file)
-        
+
         with self._lock:
             self.thought_history = thoughts
 

@@ -23,7 +23,7 @@ def prepare_thoughts_for_serialization(thoughts: List[ThoughtData]) -> List[Dict
     return [thought.to_dict(include_id=True) for thought in thoughts]
 
 
-def save_thoughts_to_file(file_path: Path, thoughts: List[Dict[str, Any]], 
+def save_thoughts_to_file(file_path: Path, thoughts: List[Dict[str, Any]],
                          lock_file: Path, metadata: Dict[str, Any] = None) -> None:
     """Save thoughts to a file with proper locking.
 
@@ -37,16 +37,16 @@ def save_thoughts_to_file(file_path: Path, thoughts: List[Dict[str, Any]],
         "thoughts": thoughts,
         "lastUpdated": datetime.now().isoformat()
     }
-    
+
     # Add any additional metadata if provided
     if metadata:
         data.update(metadata)
-    
+
     # Use file locking to ensure thread safety when writing
     with portalocker.Lock(lock_file, timeout=10) as _:
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-            
+
     logger.debug(f"Saved {len(thoughts)} thoughts to {file_path}")
 
 
@@ -59,29 +59,29 @@ def load_thoughts_from_file(file_path: Path, lock_file: Path) -> List[ThoughtDat
 
     Returns:
         List[ThoughtData]: Loaded thought data objects
-        
+
     Raises:
         json.JSONDecodeError: If the file is not valid JSON
         KeyError: If the file doesn't contain valid thought data
     """
     if not file_path.exists():
         return []
-        
+
     try:
         # Use file locking and file handling in a single with statement
         # for cleaner resource management
         with portalocker.Lock(lock_file, timeout=10) as _, open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        
+
         # Convert data to ThoughtData objects after file is closed
         thoughts = [
             ThoughtData.from_dict(thought_dict)
             for thought_dict in data.get("thoughts", [])
         ]
-            
+
         logger.debug(f"Loaded {len(thoughts)} thoughts from {file_path}")
         return thoughts
-        
+
     except (json.JSONDecodeError, KeyError) as e:
         # Handle corrupted file
         logger.error(f"Error loading from {file_path}: {e}")

@@ -1,16 +1,16 @@
 # Atlas Financial Modular Monolith Architecture - Knowledge Graph v1.5
 **Comprehensive System Architecture Knowledge Graph**
 
-**Last Updated**: July 27, 2025  
-**Phase**: 2.0 - Modular Monolith Complete  
-**Status**: Production Ready  
+**Last Updated**: July 27, 2025
+**Phase**: 2.0 - Modular Monolith Complete
+**Status**: Production Ready
 
 ## 🏗️ Core Architecture Overview
 
 ### System Evolution
 ```
-Phase 1.0: Microservices (12 services) 
-    ↓ 
+Phase 1.0: Microservices (12 services)
+    ↓
 Phase 2.0: Modular Monolith (4 services)
     ↓
 67% Service Reduction + 50-70% Performance Improvement
@@ -19,7 +19,7 @@ Phase 2.0: Modular Monolith (4 services)
 ### Service Consolidation Map
 ```
 OLD ARCHITECTURE (12 Services):
-├── postgres (5432) 
+├── postgres (5432)
 ├── supertokens (3567)
 ├── firefly (8082)
 ├── hasura (8081)
@@ -162,7 +162,7 @@ OLD: HTTP-based Communication
 User → Web (HTTP) → Rust Engine (HTTP) → Database
 Latency: ~200-300ms per request
 
-NEW: Direct Function Calls  
+NEW: Direct Function Calls
 User → Core Platform → Rust (FFI) → Database
 Latency: ~50-100ms per request
 Improvement: 50-70% reduction
@@ -202,7 +202,7 @@ NEW: Modular Monolith
 
 ### Authentication Chain
 ```
-SuperTokens (embedded) 
+SuperTokens (embedded)
     ↓ generates
 JWT Token
     ↓ validates via
@@ -239,7 +239,7 @@ Environment Variables (_FILE pattern):
 Layer 1: Docker Secrets (Infrastructure)
     ↓
 Layer 2: JWT Authentication (Application)
-    ↓  
+    ↓
 Layer 3: GraphQL Authorization (API)
     ↓
 Layer 4: Row-Level Security (Database)
@@ -256,7 +256,7 @@ Test Categories:
 │   ├── Service health checks
 │   ├── Container connectivity
 │   └── Port accessibility
-├── 🔐 Authentication Tests  
+├── 🔐 Authentication Tests
 │   ├── SuperTokens session flow
 │   ├── JWT token validation
 │   └── Hasura claim verification
@@ -294,7 +294,7 @@ Performance Benchmarks → Report Generation → Cleanup
 Atlas Observability Platform:
 ├── Prometheus (Metrics Collection)
 │   ├── Application metrics
-│   ├── Infrastructure metrics  
+│   ├── Infrastructure metrics
 │   └── Business metrics
 ├── Grafana (Visualization)
 │   ├── Technical dashboards
@@ -339,11 +339,11 @@ Atlas Core Platform:
 
 Atlas Data Platform:
 ├── PostgreSQL: postgres:15-alpine
-├── Redis: redis:7-alpine  
+├── Redis: redis:7-alpine
 ├── Ports: 5432, 6379
 └── Volumes: Persistent storage
 
-Atlas API Gateway: 
+Atlas API Gateway:
 ├── Base: hasura/graphql-engine:v2.42.0
 ├── Ports: 8081
 └── Dependencies: Data Platform, SuperTokens
@@ -436,11 +436,11 @@ This modular monolith architecture represents a **significant evolution** in Atl
 
 The architecture balances **monolithic simplicity** with **microservices flexibility**, creating an optimal foundation for future growth and feature development.
 
-**Status**: ✅ Production Ready  
-**Next Update**: Phase 3.0 Kubernetes deployment  
-**Maintenance**: Quarterly architecture reviews  
+**Status**: ✅ Production Ready
+**Next Update**: Phase 3.0 Kubernetes deployment
+**Maintenance**: Quarterly architecture reviews
 
 ---
-*Knowledge Graph Version*: 1.5  
-*Contributors*: Architecture Team, Performance Team, Security Team  
-*Next Review*: August 15, 2025  
+*Knowledge Graph Version*: 1.5
+*Contributors*: Architecture Team, Performance Team, Security Team
+*Next Review*: August 15, 2025

@@ -18,7 +18,7 @@ interface BrutalHonestyInsightProps {
 
 export function BrutalHonestyInsight({ insights }: BrutalHonestyInsightProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
-  
+
   if (!insights || insights.length === 0) {
     return (
       <div className="card p-6">
@@ -32,7 +32,7 @@ export function BrutalHonestyInsight({ insights }: BrutalHonestyInsightProps) {
             Brutal Honesty AI
           </h3>
         </div>
-        
+
         <div className="text-center py-8">
           <p className="text-gray-500 dark:text-gray-400 mb-4">
             Analyzing your financial data...
@@ -48,7 +48,7 @@ export function BrutalHonestyInsight({ insights }: BrutalHonestyInsightProps) {
   }
 
   const currentInsight = insights[currentIndex]
-  
+
   const getSeverityConfig = (severity: string) => {
     switch (severity) {
       case 'critical':
@@ -97,8 +97,8 @@ export function BrutalHonestyInsight({ insights }: BrutalHonestyInsightProps) {
             Brutal Honesty AI
           </h3>
         </div>
-        
-        <Link 
+
+        <Link
           href="/insights"
           className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
         >
@@ -119,7 +119,7 @@ export function BrutalHonestyInsight({ insights }: BrutalHonestyInsightProps) {
               </h4>
             </div>
           </div>
-          
+
           {insights.length > 1 && (
             <div className="flex items-center gap-2">
               <button
@@ -173,8 +173,8 @@ export function BrutalHonestyInsight({ insights }: BrutalHonestyInsightProps) {
               key={index}
               onClick={() => setCurrentIndex(index)}
               className={`w-2 h-2 rounded-full transition-colors ${
-                index === currentIndex 
-                  ? 'bg-primary-500' 
+                index === currentIndex
+                  ? 'bg-primary-500'
                   : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
               }`}
             />

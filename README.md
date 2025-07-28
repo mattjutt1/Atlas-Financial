@@ -66,7 +66,7 @@ The brutally honest personal finance platform that tells you the truth about you
    ```bash
    # Start complete development environment
    ./scripts/atlas-up.sh
-   
+
    # Or manually with Docker Compose
    docker-compose -f infrastructure/docker/docker-compose.dev.yml up -d
    ```

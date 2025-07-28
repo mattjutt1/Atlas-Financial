@@ -102,8 +102,8 @@ export const GET_ACCOUNTS_SUMMARY = gql`
       ...AccountBasicFields
     }
     accounts_aggregate(
-      where: { 
-        user_id: { _eq: $userId }, 
+      where: {
+        user_id: { _eq: $userId },
         active: { _eq: true },
         account_type: { category: { _eq: "asset" } }
       }
@@ -270,9 +270,9 @@ export const GET_DEBT_STRATEGIES = gql`
 export const GET_DEBT_OPTIMIZATION = gql`
   query GetDebtOptimization($userId: String!, $strategyType: String!) {
     debt_optimization(
-      args: { 
-        user_id: $userId, 
-        strategy_type: $strategyType 
+      args: {
+        user_id: $userId,
+        strategy_type: $strategyType
       }
     ) {
       strategy_type
@@ -303,7 +303,7 @@ export const GET_USER_BUDGETS = gql`
 export const GET_CURRENT_BUDGET = gql`
   query GetCurrentBudget($userId: String!) {
     budgets(
-      where: { 
+      where: {
         user_id: { _eq: $userId },
         start_date: { _lte: "now()" },
         end_date: { _gte: "now()" }
@@ -329,7 +329,7 @@ export const GET_USER_FINANCIAL_GOALS = gql`
 export const GET_ACTIVE_FINANCIAL_GOALS = gql`
   query GetActiveFinancialGoals($userId: String!) {
     financial_goals(
-      where: { 
+      where: {
         user_id: { _eq: $userId },
         status: { _eq: "active" }
       }
@@ -366,7 +366,7 @@ export const GET_INVESTMENT_PERFORMANCE = gql`
     $period: String = "1M"
   ) {
     investment_performance(
-      where: { 
+      where: {
         investment: { user_id: { _eq: $userId } },
         period: { _eq: $period }
       }
@@ -393,7 +393,7 @@ export const GET_USER_INSIGHTS = gql`
     $limit: Int = 10
   ) {
     insights(
-      where: { 
+      where: {
         user_id: { _eq: $userId },
         category: { _in: $categories },
         priority: { _in: $priorities },
@@ -415,7 +415,7 @@ export const GET_FINANCIAL_DASHBOARD = gql`
   query GetFinancialDashboard($userId: String!) {
     # Net worth summary
     accounts_aggregate(
-      where: { 
+      where: {
         user_id: { _eq: $userId },
         active: { _eq: true },
         account_type: { category: { _eq: "asset" } }
@@ -427,7 +427,7 @@ export const GET_FINANCIAL_DASHBOARD = gql`
         }
       }
     }
-    
+
     # Total debt
     debt_accounts_aggregate(where: { user_id: { _eq: $userId } }) {
       aggregate {
@@ -436,7 +436,7 @@ export const GET_FINANCIAL_DASHBOARD = gql`
         }
       }
     }
-    
+
     # Recent transactions
     transactions(
       where: { account: { user_id: { _eq: $userId } } }
@@ -445,10 +445,10 @@ export const GET_FINANCIAL_DASHBOARD = gql`
     ) {
       ...TransactionWithAccount
     }
-    
+
     # Active financial goals
     financial_goals(
-      where: { 
+      where: {
         user_id: { _eq: $userId },
         status: { _eq: "active" }
       }
@@ -457,10 +457,10 @@ export const GET_FINANCIAL_DASHBOARD = gql`
     ) {
       ...FinancialGoalWithProgress
     }
-    
+
     # High priority insights
     insights(
-      where: { 
+      where: {
         user_id: { _eq: $userId },
         priority: { _in: ["high", "critical"] },
         status: { _eq: "active" }
@@ -485,7 +485,7 @@ export const GET_USER_NOTIFICATIONS = gql`
     $offset: Int = 0
   ) {
     notifications(
-      where: { 
+      where: {
         user_id: { _eq: $userId },
         read: { _eq: $unreadOnly ? false : undefined }
       }
@@ -496,7 +496,7 @@ export const GET_USER_NOTIFICATIONS = gql`
       ...NotificationFields
     }
     notifications_aggregate(
-      where: { 
+      where: {
         user_id: { _eq: $userId },
         read: { _eq: false }
       }
@@ -566,7 +566,7 @@ export const GET_SPENDING_ANALYSIS = gql`
     $groupBy: String = "category"
   ) {
     spending_analysis(
-      args: { 
+      args: {
         user_id: $userId,
         start_date: $startDate,
         end_date: $endDate,
@@ -588,7 +588,7 @@ export const GET_NET_WORTH_HISTORY = gql`
     $period: String = "1Y"
   ) {
     net_worth_history(
-      where: { 
+      where: {
         user_id: { _eq: $userId },
         period: { _eq: $period }
       }

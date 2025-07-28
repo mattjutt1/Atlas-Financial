@@ -99,7 +99,7 @@ export function useAuthentication() {
  */
 export function useRole(requiredRole: string) {
   const { user } = useAuthentication()
-  
+
   return {
     hasRole: user?.roles.includes(requiredRole as any) || false,
     roles: user?.roles || [],
@@ -112,10 +112,10 @@ export function useRole(requiredRole: string) {
  */
 export function usePermission(resource: string, action: string) {
   const { user } = useAuthentication()
-  
+
   const hasPermission = user?.permissions.some(
-    permission => 
-      permission.resource === resource && 
+    permission =>
+      permission.resource === resource &&
       permission.action === action
   ) || false
 
@@ -136,7 +136,7 @@ export function useAuthState() {
   // Update last activity on user interaction
   useEffect(() => {
     const updateActivity = () => setLastActivity(new Date())
-    
+
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart']
     events.forEach(event => {
       document.addEventListener(event, updateActivity, true)
@@ -152,11 +152,11 @@ export function useAuthState() {
   // Check for session timeout
   const isSessionExpired = () => {
     if (!auth.isAuthenticated) return false
-    
+
     const timeoutMinutes = 30 // 30 minutes of inactivity
     const timeDiff = new Date().getTime() - lastActivity.getTime()
     const minutesDiff = timeDiff / (1000 * 60)
-    
+
     return minutesDiff > timeoutMinutes
   }
 
@@ -197,7 +197,7 @@ export function useUserProfile() {
 
       const updatedUser = await response.json()
       logger.info('Profile updated successfully', { userId: user.id })
-      
+
       return updatedUser
     } catch (error) {
       logger.error('Failed to update profile', { error, userId: user.id })
@@ -211,8 +211,8 @@ export function useUserProfile() {
     if (!user) return 0
 
     const fields = ['firstName', 'lastName', 'email']
-    const completedFields = fields.filter(field => 
-      user[field as keyof AtlasUser] !== undefined && 
+    const completedFields = fields.filter(field =>
+      user[field as keyof AtlasUser] !== undefined &&
       user[field as keyof AtlasUser] !== ''
     ).length
 

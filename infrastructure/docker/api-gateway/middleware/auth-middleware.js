@@ -28,7 +28,7 @@ class AuthMiddleware {
    */
   extractToken(req) {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader) {
       return null;
     }
@@ -37,7 +37,7 @@ class AuthMiddleware {
     if (authHeader.startsWith('Bearer ')) {
       return authHeader.substring(7);
     }
-    
+
     return authHeader;
   }
 
@@ -78,7 +78,7 @@ class AuthMiddleware {
    */
   async getUserInfo(userId) {
     const cacheKey = `user:${userId}`;
-    
+
     // Check cache first
     let userInfo = await this.cache.get(cacheKey);
     if (userInfo) {
@@ -87,7 +87,7 @@ class AuthMiddleware {
 
     try {
       const result = await this.db.query(
-        `SELECT u.*, array_agg(r.name) as roles 
+        `SELECT u.*, array_agg(r.name) as roles
          FROM auth.users u
          LEFT JOIN auth.user_roles ur ON u.id = ur.user_id
          LEFT JOIN auth.roles r ON ur.role_id = r.id
@@ -115,7 +115,7 @@ class AuthMiddleware {
 
       // Cache for 15 minutes
       await this.cache.setex(cacheKey, 900, JSON.stringify(userInfo));
-      
+
       return userInfo;
 
     } catch (error) {
@@ -143,9 +143,9 @@ class AuthMiddleware {
       );
 
       const userPermissions = result.rows.map(row => row.permission);
-      
+
       // Check if user has all required permissions
-      return requiredPermissions.every(permission => 
+      return requiredPermissions.every(permission =>
         userPermissions.includes(permission)
       );
 
@@ -182,7 +182,7 @@ class AuthMiddleware {
 
         // Verify token
         const tokenPayload = await this.verifyToken(token);
-        
+
         if (!tokenPayload || !tokenPayload.sub) {
           return res.status(401).json({
             error: 'Invalid authentication token',
@@ -243,7 +243,7 @@ class AuthMiddleware {
 
       } catch (error) {
         console.error('Authentication middleware error:', error);
-        
+
         if (error.name === 'JsonWebTokenError') {
           return res.status(401).json({
             error: 'Invalid authentication token',
@@ -280,13 +280,13 @@ class AuthMiddleware {
       try {
         const key = `rate_limit:${keyGenerator(req)}`;
         const current = await this.cache.incr(key);
-        
+
         if (current === 1) {
           await this.cache.expire(key, Math.ceil(windowMs / 1000));
         }
 
         const remaining = Math.max(0, maxRequests - current);
-        
+
         // Add rate limit headers
         res.set({
           'X-RateLimit-Limit': maxRequests,
@@ -324,11 +324,11 @@ class AuthMiddleware {
 
     return (req, res, next) => {
       const origin = req.headers.origin;
-      
+
       if (origins.includes(origin) || origins.includes('*')) {
         res.header('Access-Control-Allow-Origin', origin);
       }
-      
+
       res.header('Access-Control-Allow-Methods', methods.join(', '));
       res.header('Access-Control-Allow-Headers', headers.join(', '));
       res.header('Access-Control-Allow-Credentials', 'true');
@@ -367,10 +367,10 @@ class AuthMiddleware {
   requestLogger() {
     return (req, res, next) => {
       const start = Date.now();
-      
+
       res.on('finish', () => {
         const duration = Date.now() - start;
-        
+
         console.log({
           method: req.method,
           url: req.url,

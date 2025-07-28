@@ -8,12 +8,12 @@ interface CardProps {
   onClick?: () => void
 }
 
-export function Card({ 
-  children, 
-  className = '', 
-  hoverable = false, 
+export function Card({
+  children,
+  className = '',
+  hoverable = false,
   padding = 'md',
-  onClick 
+  onClick
 }: CardProps) {
   const paddingClasses = {
     none: '',
@@ -25,9 +25,9 @@ export function Card({
   const baseClasses = 'card'
   const hoverClasses = hoverable ? 'hover:shadow-md transition-shadow' : ''
   const cursorClasses = onClick ? 'cursor-pointer' : ''
-  
+
   return (
-    <div 
+    <div
       className={`${baseClasses} ${paddingClasses[padding]} ${hoverClasses} ${cursorClasses} ${className}`}
       onClick={onClick}
     >

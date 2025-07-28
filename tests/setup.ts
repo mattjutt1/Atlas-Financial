@@ -36,10 +36,10 @@ expect.extend({
   toHaveFinancialPrecision(received: any) {
     // Check for floating-point precision errors
     const stringValue = received.toString();
-    const hasFloatingPointError = stringValue.includes('0000000') || 
+    const hasFloatingPointError = stringValue.includes('0000000') ||
                                  stringValue.includes('9999999') ||
                                  stringValue.match(/\.\d{15,}/);
-    
+
     if (!hasFloatingPointError) {
       return {
         message: () => `expected ${received} to have floating-point precision errors`,

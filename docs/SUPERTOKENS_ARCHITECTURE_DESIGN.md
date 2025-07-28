@@ -67,7 +67,7 @@ This document outlines the comprehensive SuperTokens authentication architecture
 -- Database: supertokens (separate for PCI-DSS compliance)
 -- Tables managed by SuperTokens Core:
 -- - all_auth_recipe_users
--- - emailpassword_users  
+-- - emailpassword_users
 -- - emailpassword_pswd_reset_tokens
 -- - session_info
 -- - session_access_token_signing_keys
@@ -331,7 +331,7 @@ import "../../../lib/supertokens-backend";
 
 const handleAuth = async (request: NextRequest) => {
   const response = NextResponse.next();
-  
+
   await superTokensNextWrapper(
     async (next) => {
       await middleware()(request, response, next);
@@ -339,7 +339,7 @@ const handleAuth = async (request: NextRequest) => {
     request,
     response
   );
-  
+
   return response;
 };
 
@@ -422,7 +422,7 @@ user:
   delete:
     filter: { user_id: { _eq: "X-Hasura-User-Id" } }
 
-# Anonymous role permissions  
+# Anonymous role permissions
 anonymous:
   select:
     filter: false
@@ -433,7 +433,7 @@ anonymous:
 
 ### Data Separation Strategy
 - **Authentication Data**: Isolated in `supertokens` database
-- **Financial Data**: Separate `firefly` database  
+- **Financial Data**: Separate `firefly` database
 - **Application Data**: Separate `atlas_financial` database
 - **Compliance**: Meets PCI-DSS requirement for data segregation
 
@@ -463,7 +463,7 @@ REDIS_PASSWORD=atlas_redis_password
 ### Phase 1: Infrastructure Setup (1-2 days)
 1. **Update docker-compose.dev.yml**
    - Add SuperTokens core service
-   - Update Hasura JWT configuration  
+   - Update Hasura JWT configuration
    - Add frontend service configuration
 
 2. **Update database initialization**
@@ -519,7 +519,7 @@ REDIS_PASSWORD=atlas_redis_password
 
 3. **Test authentication flows**
    - Sign up flow
-   - Sign in flow  
+   - Sign in flow
    - Session management
    - Protected routes
 
@@ -594,23 +594,23 @@ export class SuperTokensProvider implements AuthProvider {
   async signIn(email: string, password: string): Promise<AuthResult> {
     // SuperTokens implementation
   }
-  
+
   async signUp(email: string, password: string): Promise<AuthResult> {
-    // SuperTokens implementation  
+    // SuperTokens implementation
   }
-  
+
   async signOut(): Promise<void> {
     // SuperTokens implementation
   }
-  
+
   async getSession(): Promise<Session | null> {
     // SuperTokens implementation
   }
-  
+
   async getUser(): Promise<User | null> {
     // SuperTokens implementation
   }
-  
+
   onSessionChange(callback: (session: Session | null) => void): void {
     // SuperTokens implementation
   }
@@ -626,7 +626,7 @@ export class ClerkProvider implements AuthProvider {
   async signIn(email: string, password: string): Promise<AuthResult> {
     // Clerk implementation
   }
-  
+
   // ... other methods with Clerk implementation
 }
 ```
@@ -641,7 +641,7 @@ import { ClerkProvider } from './auth-providers/clerk-provider';
 
 export function getAuthProvider(): AuthProvider {
   const provider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'supertokens';
-  
+
   switch (provider) {
     case 'supertokens':
       return new SuperTokensProvider();
@@ -673,7 +673,7 @@ SUPERTOKENS_API_KEY=your_api_key
 
 ### Performance Targets
 - **Authentication Response Time**: < 200ms
-- **JWT Verification**: < 50ms  
+- **JWT Verification**: < 50ms
 - **Session Validation**: < 30ms
 - **GraphQL Query Authorization**: < 100ms
 
@@ -700,11 +700,11 @@ services:
     environment:
       POSTGRESQL_CONNECTION_URI: ${SUPERTOKENS_DB_URL}
       API_KEYS: ${SUPERTOKENS_API_KEY}
-      
+
   hasura:
     environment:
       HASURA_GRAPHQL_JWT_SECRET: ${HASURA_JWT_SECRET}
-      
+
   web:
     environment:
       SUPERTOKENS_CONNECTION_URI: ${SUPERTOKENS_CONNECTION_URI}
@@ -749,6 +749,6 @@ The architecture is designed to be production-ready, secure, scalable, and migra
 
 ---
 
-*Document Version: 1.0*  
-*Last Updated: 2025-07-26*  
+*Document Version: 1.0*
+*Last Updated: 2025-07-26*
 *Author: Claude Code - Next.js 15 & React 19 Expert*

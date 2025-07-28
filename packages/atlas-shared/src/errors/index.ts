@@ -336,9 +336,9 @@ export class RateLimitError extends AtlasError {
   public readonly retryAfter?: number
 
   constructor(
-    limit: number, 
-    window: string, 
-    retryAfter?: number, 
+    limit: number,
+    window: string,
+    retryAfter?: number,
     metadata: Record<string, unknown> = {}
   ) {
     super(
@@ -504,38 +504,38 @@ export class CurrencyMismatchError extends AtlasError {
  */
 export function handleError(error: unknown, context?: string): AtlasError {
   if (error instanceof AtlasError) {
-    logger.warn('Atlas error occurred', { 
-      error: error.toJSON(), 
-      context 
+    logger.warn('Atlas error occurred', {
+      error: error.toJSON(),
+      context
     })
     return error
   }
 
   if (error instanceof Error) {
-    const atlasError = new InternalError(error.message, { 
+    const atlasError = new InternalError(error.message, {
       originalStack: error.stack,
-      context 
+      context
     })
-    
-    logger.error('Unexpected error converted to AtlasError', { 
+
+    logger.error('Unexpected error converted to AtlasError', {
       error: atlasError.toJSON(),
       originalError: error.message,
-      context 
+      context
     })
-    
+
     return atlasError
   }
 
-  const atlasError = new InternalError('Unknown error occurred', { 
+  const atlasError = new InternalError('Unknown error occurred', {
     originalError: String(error),
-    context 
+    context
   })
-  
-  logger.error('Unknown error converted to AtlasError', { 
+
+  logger.error('Unknown error converted to AtlasError', {
     error: atlasError.toJSON(),
-    context 
+    context
   })
-  
+
   return atlasError
 }
 
@@ -543,7 +543,7 @@ export function handleError(error: unknown, context?: string): AtlasError {
  * Create validation errors from validation library results
  */
 export function createValidationErrors(validationResults: ValidationError[]): ValidationError[] {
-  return validationResults.map(result => 
+  return validationResults.map(result =>
     new ValidationError(result.field, result.message)
   )
 }
@@ -555,7 +555,7 @@ export function isRetryable(error: unknown): boolean {
   if (error instanceof AtlasError) {
     return error.isRetryable
   }
-  
+
   // Default to non-retryable for unknown errors
   return false
 }
@@ -573,7 +573,7 @@ export function getRetryDelay(error: AtlasError, attemptCount: number): number {
   const maxDelay = 30000 // 30 seconds
   const exponentialDelay = baseDelay * Math.pow(2, attemptCount - 1)
   const jitter = Math.random() * 0.1 * exponentialDelay
-  
+
   return Math.min(exponentialDelay + jitter, maxDelay)
 }
 

@@ -24,7 +24,7 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
           Recent Transactions
         </h3>
-        <Link 
+        <Link
           href="/transactions"
           className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
         >
@@ -65,11 +65,11 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
                   </div>
                 </div>
               </div>
-              
+
               <div className="text-right">
                 <p className={`font-semibold ${
                   transaction.amount > 0
-                    ? 'financial-positive' 
+                    ? 'financial-positive'
                     : 'financial-negative'
                 }`}>
                   {transaction.amount > 0 ? '+' : ''}

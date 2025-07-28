@@ -46,7 +46,7 @@ function AuthErrorContent() {
             >
               Try Again
             </Link>
-            
+
             <Link
               href="/"
               className="btn-secondary block w-full py-3"

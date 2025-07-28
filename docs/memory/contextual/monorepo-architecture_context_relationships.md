@@ -1,7 +1,7 @@
 # Contextual Memory: Monorepo Architecture Relationships
 
-**Last Updated**: 2025-07-27  
-**Version**: Atlas Financial v1.2  
+**Last Updated**: 2025-07-27
+**Version**: Atlas Financial v1.2
 **Major Change**: SuperTokens Authentication Integration Complete
 
 ## System Context

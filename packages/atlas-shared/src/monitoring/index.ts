@@ -147,12 +147,12 @@ class Logger implements ILogger {
   error(message: string, metadata?: Record<string, unknown>): void {
     if (!this.shouldLog('error')) return
     const logEntry = this.createLogEntry('error', message, metadata)
-    
+
     // Add stack trace for errors
     if (metadata?.error instanceof Error) {
       logEntry.stack = metadata.error.stack
     }
-    
+
     this.outputLog(logEntry)
   }
 
@@ -277,7 +277,7 @@ export class PerformanceMonitor {
     this.startTimes.delete(operation)
 
     metrics.timer(`performance.${operation}`, duration, tags)
-    
+
     return duration
   }
 
@@ -323,7 +323,7 @@ class AuditLogger {
     }
 
     this.auditLogs.push(auditEvent)
-    
+
     // Log audit events at info level
     globalLogger.info('Audit event', { auditEvent })
 
@@ -411,23 +411,23 @@ export function trackError(
  */
 export function createRequestTracker(requestId: string, userId?: string) {
   const startTime = performance.now()
-  
+
   return {
     logger: createLogger('request', { requestId, userId }),
-    
+
     end: (statusCode: number, metadata?: Record<string, unknown>) => {
       const duration = performance.now() - startTime
-      
+
       metrics.timer('request.duration', duration, {
         status: statusCode.toString(),
         userId: userId || 'anonymous'
       })
-      
+
       metrics.counter('request.total', 1, {
         status: statusCode.toString(),
         userId: userId || 'anonymous'
       })
-      
+
       globalLogger.info('Request completed', {
         requestId,
         userId,
@@ -516,7 +516,7 @@ export const health = new HealthChecker()
  */
 export function initializeMonitoring(config: MonitoringConfig): void {
   setMonitoringConfig(config)
-  
+
   globalLogger.info('Monitoring initialized', {
     config: {
       enabled: config.enabled,
@@ -538,7 +538,7 @@ export function initializeMonitoring(config: MonitoringConfig): void {
       const usage = process.memoryUsage()
       const heapUsedMB = Math.round(usage.heapUsed / 1024 / 1024)
       const heapTotalMB = Math.round(usage.heapTotal / 1024 / 1024)
-      
+
       return {
         status: heapUsedMB > 500 ? 'warn' : 'pass',
         message: `Heap: ${heapUsedMB}MB / ${heapTotalMB}MB`

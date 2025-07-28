@@ -78,11 +78,11 @@ const initializeSuperTokens = () => {
           override: {
             functions: (originalImplementation) => ({
               ...originalImplementation,
-              
+
               // Custom session validation
               getSessionInformation: async function (input) {
                 const sessionInfo = await originalImplementation.getSessionInformation(input);
-                
+
                 // Add custom user data enrichment
                 if (sessionInfo) {
                   try {
@@ -92,7 +92,7 @@ const initializeSuperTokens = () => {
                         'Authorization': `Bearer ${input.accessToken}`,
                       },
                     });
-                    
+
                     if (userResponse.ok) {
                       const userData = await userResponse.json();
                       return {
@@ -104,14 +104,14 @@ const initializeSuperTokens = () => {
                     console.warn('Failed to fetch user profile:', error);
                   }
                 }
-                
+
                 return sessionInfo;
               },
             }),
           },
         }),
       ],
-      
+
       // Custom styling for Atlas branding
       style: `
         [data-supertokens~=container] {
@@ -129,26 +129,26 @@ const initializeSuperTokens = () => {
           --palette-textPrimary: 17, 24, 39;
           --palette-textLink: 59, 130, 246;
         }
-        
+
         [data-supertokens~=button] {
           font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
           font-weight: 500;
           border-radius: 0.375rem;
           transition: all 0.2s ease-in-out;
         }
-        
+
         [data-supertokens~=button]:hover {
           transform: translateY(-1px);
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
-        
+
         [data-supertokens~=input] {
           font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
           border-radius: 0.375rem;
           border: 1px solid rgb(209, 213, 219);
           transition: border-color 0.2s ease-in-out;
         }
-        
+
         [data-supertokens~=input]:focus {
           border-color: rgb(59, 130, 246);
           box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
@@ -172,10 +172,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const loadSession = async () => {
       try {
         const hasSession = await Session.doesSessionExist();
-        
+
         if (hasSession) {
           const sessionInfo = await Session.getSessionInformation();
-          
+
           // Extract user data from session
           const atlasUser: AtlasUser = {
             id: sessionInfo.userId,
@@ -187,7 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             createdAt: sessionInfo.customUserData?.createdAt || new Date().toISOString(),
             lastLoginAt: new Date().toISOString(),
           };
-          
+
           setUser(atlasUser);
           setIsAuthenticated(true);
         }
@@ -221,14 +221,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               createdAt: sessionInfo.customUserData?.createdAt || new Date().toISOString(),
               lastLoginAt: new Date().toISOString(),
             };
-            
+
             setUser(atlasUser);
             setIsAuthenticated(true);
           } catch (error) {
             console.error('Failed to load user data:', error);
           }
         };
-        
+
         loadUserData();
       } else if (event.action === 'SIGN_OUT') {
         setUser(null);
@@ -238,7 +238,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (typeof window !== 'undefined') {
       window.addEventListener('supertokensSessionChange', handleSessionChange);
-      
+
       return () => {
         window.removeEventListener('supertokensSessionChange', handleSessionChange);
       };

@@ -44,8 +44,8 @@ export function AccountCard({ account }: AccountCardProps) {
   const isNegativeBalance = balance < 0
   const accountType = account.account_type?.type || 'Unknown'
   const isLiability = accountType.toLowerCase().includes('liability')
-  const balanceColor = isNegativeBalance 
-    ? 'financial-negative' 
+  const balanceColor = isNegativeBalance
+    ? 'financial-negative'
     : isLiability
     ? 'financial-warning'
     : 'financial-positive'
@@ -62,13 +62,13 @@ export function AccountCard({ account }: AccountCardProps) {
               {accountType}
             </span>
           </div>
-          
+
           {account.iban && (
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
               IBAN: {account.iban}
             </p>
           )}
-          
+
           <div className="flex items-center gap-2">
             <span className={`text-2xl font-bold ${balanceColor}`}>
               {formatCurrency(balance, 'USD')}
@@ -80,7 +80,7 @@ export function AccountCard({ account }: AccountCardProps) {
             )}
           </div>
         </div>
-        
+
         <div className="text-right">
           <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -13,8 +13,8 @@ const logger = createLogger('config')
  */
 export function getEnvironment(): Environment {
   // Check multiple possible environment variables
-  const env = process.env.NODE_ENV || 
-              process.env.ENVIRONMENT || 
+  const env = process.env.NODE_ENV ||
+              process.env.ENVIRONMENT ||
               process.env.APP_ENV ||
               'development'
 
@@ -59,7 +59,7 @@ export function getOptionalEnv(key: string, fallback: string): string {
 export function getBooleanEnv(key: string, fallback: boolean = false): boolean {
   const value = process.env[key]
   if (!value) return fallback
-  
+
   return ['true', '1', 'yes', 'on'].includes(value.toLowerCase())
 }
 
@@ -69,7 +69,7 @@ export function getBooleanEnv(key: string, fallback: boolean = false): boolean {
 export function getNumberEnv(key: string, fallback: number): number {
   const value = process.env[key]
   if (!value) return fallback
-  
+
   const parsed = parseInt(value, 10)
   return isNaN(parsed) ? fallback : parsed
 }
@@ -80,7 +80,7 @@ export function getNumberEnv(key: string, fallback: number): number {
 export function createAuthConfig(environment: Environment): AuthConfig {
   const isProduction = environment === 'production'
   const baseUrl = getOptionalEnv('NEXT_PUBLIC_SUPERTOKENS_API_DOMAIN', 'http://localhost:3000')
-  
+
   return {
     provider: 'supertokens',
     domain: baseUrl,
@@ -99,10 +99,10 @@ export function createAuthConfig(environment: Environment): AuthConfig {
  * Create API configuration based on environment
  */
 export function createApiConfig(environment: Environment): ApiConfig {
-  const baseUrl = environment === 'production' 
+  const baseUrl = environment === 'production'
     ? getRequiredEnv('API_BASE_URL')
     : getOptionalEnv('API_BASE_URL', 'http://localhost:8080')
-    
+
   return {
     baseUrl,
     timeout: getNumberEnv('API_TIMEOUT', 30000), // 30 seconds
@@ -119,7 +119,7 @@ export function createApiConfig(environment: Environment): ApiConfig {
  */
 export function createMonitoringConfig(environment: Environment): MonitoringConfig {
   const isProduction = environment === 'production'
-  
+
   return {
     enabled: getBooleanEnv('MONITORING_ENABLED', isProduction),
     level: getOptionalEnv('LOG_LEVEL', isProduction ? 'info' : 'debug') as any,
@@ -143,34 +143,34 @@ export function createMonitoringConfig(environment: Environment): MonitoringConf
  */
 export function createFeatureFlags(environment: Environment): FeatureFlags {
   const isDevelopment = environment === 'development'
-  
+
   return {
     // Core features
     enablePortfolioAnalysis: getBooleanEnv('FEATURE_PORTFOLIO_ANALYSIS', true),
     enableDebtOptimization: getBooleanEnv('FEATURE_DEBT_OPTIMIZATION', true),
     enableBudgetTracking: getBooleanEnv('FEATURE_BUDGET_TRACKING', true),
     enableInvestmentAdvice: getBooleanEnv('FEATURE_INVESTMENT_ADVICE', false),
-    
+
     // Advanced features
     enableAIInsights: getBooleanEnv('FEATURE_AI_INSIGHTS', false),
     enableRealTimeData: getBooleanEnv('FEATURE_REAL_TIME_DATA', false),
     enableAdvancedReporting: getBooleanEnv('FEATURE_ADVANCED_REPORTING', false),
-    
+
     // Development features
     enableDebugMode: getBooleanEnv('FEATURE_DEBUG_MODE', isDevelopment),
     enableMockData: getBooleanEnv('FEATURE_MOCK_DATA', isDevelopment),
     enablePlayground: getBooleanEnv('FEATURE_PLAYGROUND', isDevelopment),
-    
+
     // Security features
     enableAuditLogging: getBooleanEnv('FEATURE_AUDIT_LOGGING', true),
     enableRateLimiting: getBooleanEnv('FEATURE_RATE_LIMITING', true),
     enableEncryption: getBooleanEnv('FEATURE_ENCRYPTION', true),
-    
+
     // UI features
     enableDarkMode: getBooleanEnv('FEATURE_DARK_MODE', true),
     enableAccessibility: getBooleanEnv('FEATURE_ACCESSIBILITY', true),
     enableResponsiveDesign: getBooleanEnv('FEATURE_RESPONSIVE_DESIGN', true),
-    
+
     // Integration features
     enableFireflyIntegration: getBooleanEnv('FEATURE_FIREFLY_INTEGRATION', true),
     enablePlaidIntegration: getBooleanEnv('FEATURE_PLAID_INTEGRATION', false),
@@ -183,9 +183,9 @@ export function createFeatureFlags(environment: Environment): FeatureFlags {
  */
 export function createConfig(environment?: Environment): AppConfig {
   const env = environment || getEnvironment()
-  
+
   logger.info('Creating configuration', { environment: env })
-  
+
   const config: AppConfig = {
     environment: env,
     api: createApiConfig(env),
@@ -193,7 +193,7 @@ export function createConfig(environment?: Environment): AppConfig {
     monitoring: createMonitoringConfig(env),
     features: createFeatureFlags(env)
   }
-  
+
   // Add database config for backend services
   if (typeof window === 'undefined') {
     config.database = {
@@ -206,7 +206,7 @@ export function createConfig(environment?: Environment): AppConfig {
         directory: getOptionalEnv('DATABASE_MIGRATIONS_DIR', './migrations')
       }
     }
-    
+
     config.redis = {
       url: getOptionalEnv('REDIS_URL', 'redis://localhost:6379'),
       poolSize: getNumberEnv('REDIS_POOL_SIZE', 10),
@@ -215,17 +215,17 @@ export function createConfig(environment?: Environment): AppConfig {
       enabled: getBooleanEnv('REDIS_ENABLED', true)
     }
   }
-  
+
   // Validate configuration
   validateConfig(config)
-  
-  logger.info('Configuration created successfully', { 
+
+  logger.info('Configuration created successfully', {
     environment: env,
     hasDatabase: !!config.database,
     hasRedis: !!config.redis,
     featuresEnabled: Object.keys(config.features).filter(key => config.features[key]).length
   })
-  
+
   return config
 }
 
@@ -234,46 +234,46 @@ export function createConfig(environment?: Environment): AppConfig {
  */
 function validateConfig(config: AppConfig): void {
   const errors: string[] = []
-  
+
   // Validate URLs
   try {
     new URL(config.api.baseUrl)
   } catch {
     errors.push('Invalid API base URL')
   }
-  
+
   try {
     new URL(config.auth.apiDomain)
   } catch {
     errors.push('Invalid auth API domain')
   }
-  
+
   try {
     new URL(config.auth.websiteDomain)
   } catch {
     errors.push('Invalid auth website domain')
   }
-  
+
   // Validate timeouts are reasonable
   if (config.api.timeout < 1000 || config.api.timeout > 300000) {
     errors.push('API timeout should be between 1s and 5m')
   }
-  
+
   // Validate production requirements
   if (config.environment === 'production') {
     if (!config.auth.cookieSecure) {
       errors.push('Cookies must be secure in production')
     }
-    
+
     if (config.features.enableDebugMode) {
       errors.push('Debug mode should be disabled in production')
     }
-    
+
     if (config.features.enableMockData) {
       errors.push('Mock data should be disabled in production')
     }
   }
-  
+
   if (errors.length > 0) {
     throw new Error(`Configuration validation failed: ${errors.join(', ')}`)
   }
@@ -287,22 +287,22 @@ export const CONFIG_CONSTANTS = {
   JWT_MIN_SECRET_LENGTH: 32,
   JWT_DEFAULT_EXPIRY: 3600, // 1 hour
   JWT_REFRESH_THRESHOLD: 300, // 5 minutes before expiry
-  
+
   // API
   API_MAX_TIMEOUT: 300000, // 5 minutes
   API_DEFAULT_TIMEOUT: 30000, // 30 seconds
   API_MAX_RETRIES: 5,
-  
+
   // Security
   PASSWORD_MIN_LENGTH: 8,
   SESSION_TIMEOUT: 1800, // 30 minutes
   RATE_LIMIT_WINDOW: 60000, // 1 minute
-  
+
   // Performance
   DEFAULT_PAGE_SIZE: 50,
   MAX_PAGE_SIZE: 1000,
   CACHE_DEFAULT_TTL: 3600, // 1 hour
-  
+
   // File uploads
   MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
   ALLOWED_FILE_TYPES: ['pdf', 'png', 'jpg', 'jpeg', 'csv', 'xlsx']
@@ -339,32 +339,32 @@ export const CONFIG_PRESETS = {
  */
 export function getServiceConfig(serviceName: string, environment?: Environment): AppConfig {
   const config = createConfig(environment)
-  
+
   // Service-specific overrides
   switch (serviceName) {
     case 'rust-financial-engine':
       config.api.timeout = 60000 // Longer timeout for complex calculations
       config.features.enableAIInsights = true
       break
-      
+
     case 'ai-engine':
       config.api.timeout = 120000 // Even longer for AI operations
       config.features.enableAIInsights = true
       config.features.enableRealTimeData = false
       break
-      
+
     case 'web-app':
     case 'platform-app':
       config.features.enableResponsiveDesign = true
       config.features.enableAccessibility = true
       break
-      
+
     case 'hasura':
       config.api.timeout = 10000 // Fast GraphQL operations
       config.features.enableRealTimeData = true
       break
   }
-  
+
   return config
 }
 

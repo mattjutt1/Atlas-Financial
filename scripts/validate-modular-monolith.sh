@@ -31,11 +31,11 @@ echo ""
 run_test() {
     local test_name="$1"
     local test_command="$2"
-    
+
     ((TESTS_TOTAL++))
-    
+
     echo -n "  ├─ $test_name... "
-    
+
     if eval "$test_command" >/dev/null 2>&1; then
         echo -e "${GREEN}✅${NC}"
         ((TESTS_PASSED++))
@@ -52,14 +52,14 @@ run_test_with_output() {
     local test_name="$1"
     local test_command="$2"
     local expected_output="$3"
-    
+
     ((TESTS_TOTAL++))
-    
+
     echo -n "  ├─ $test_name... "
-    
+
     local output
     output=$(eval "$test_command" 2>/dev/null || echo "ERROR")
-    
+
     if [[ "$output" == *"$expected_output"* ]]; then
         echo -e "${GREEN}✅${NC}"
         ((TESTS_PASSED++))
@@ -77,14 +77,14 @@ test_http_endpoint() {
     local url="$2"
     local expected_status="$3"
     local timeout="${4:-10}"
-    
+
     ((TESTS_TOTAL++))
-    
+
     echo -n "  ├─ $name... "
-    
+
     local status
     status=$(curl -s -o /dev/null -w "%{http_code}" --max-time "$timeout" "$url" 2>/dev/null || echo "000")
-    
+
     if [[ "$status" == "$expected_status" ]]; then
         echo -e "${GREEN}✅ ($status)${NC}"
         ((TESTS_PASSED++))

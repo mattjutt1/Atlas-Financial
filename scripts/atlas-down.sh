@@ -33,18 +33,18 @@ print_banner() {
 
 main() {
     print_banner
-    
+
     log_info "Stopping Atlas Financial services..."
-    
+
     # Use docker compose (newer) or docker-compose (legacy)
     if docker compose version &> /dev/null; then
         COMPOSE_CMD="docker compose"
     else
         COMPOSE_CMD="docker-compose"
     fi
-    
+
     $COMPOSE_CMD -f "$COMPOSE_FILE" down
-    
+
     log_success "Atlas Financial has been stopped"
     log_info "Data volumes are preserved. Use ./scripts/atlas-reset.sh to remove all data."
 }

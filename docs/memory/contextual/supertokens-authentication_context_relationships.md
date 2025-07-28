@@ -9,7 +9,7 @@ SuperTokens integration in Atlas Financial embodies the **"Self-Hosted First"** 
 ### Core Service Design Philosophy
 **Context**: SuperTokens Core provides a self-hosted authentication backend that eliminates external dependencies while maintaining modern security standards.
 
-**Design Rationale**: 
+**Design Rationale**:
 - **PCI-DSS 4.0 Compliance**: Isolated authentication database prevents financial data exposure
 - **Data Sovereignty**: Complete control over user credentials and session data
 - **Performance Optimization**: Local JWT generation and validation eliminates network latency
@@ -48,7 +48,7 @@ PostgreSQL Instance
 
 **Context**: This isolation pattern ensures that authentication data cannot be compromised through financial data access, meeting PCI-DSS 4.0 requirements for sensitive data segregation.
 
-**Relationship Impact**: 
+**Relationship Impact**:
 - No cross-database joins between authentication and financial data
 - Independent backup and recovery strategies
 - Separate access controls and permissions
@@ -399,6 +399,6 @@ The contextual relationships established through this migration create a solid f
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: 2025-07-27  
+**Document Version**: 1.0
+**Last Updated**: 2025-07-27
 **Implementation Status**: Complete and Production Ready

@@ -17,7 +17,7 @@ for endpoint in "${ENDPOINTS[@]}"; do
     response=$(curl -s -w "HTTP_%{http_code}" "$endpoint" 2>/dev/null)
     http_code=$(echo "$response" | grep -o "HTTP_[0-9]*" | cut -d_ -f2)
     content=$(echo "$response" | sed 's/HTTP_[0-9]*$//')
-    
+
     echo "  Status: $http_code"
     if [ "$http_code" = "200" ]; then
         echo "  ✓ Success!"
@@ -49,7 +49,7 @@ if [ -n "$ADMIN_TOKEN" ]; then
     echo "Checking realm settings..."
     REALM_INFO=$(curl -s -H "Authorization: Bearer $ADMIN_TOKEN" \
         "http://localhost:8080/admin/realms/atlas")
-    
+
     echo "Realm enabled: $(echo "$REALM_INFO" | grep -o '"enabled":[^,]*')"
     echo "Realm realm: $(echo "$REALM_INFO" | grep -o '"realm":"[^"]*"')"
 fi

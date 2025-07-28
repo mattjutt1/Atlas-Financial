@@ -49,7 +49,7 @@ export default function Auth() {
               Your Brutal Honesty Personal Finance Platform
             </p>
           </div>
-          
+
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
             <AuthPage />
           </div>

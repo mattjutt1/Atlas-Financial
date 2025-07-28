@@ -37,7 +37,7 @@
             analyzePortfolioRisk(portfolioId: String!): PortfolioRiskAnalysis
             calculateTimeValue(input: TimeValueInput!): TimeValueResult
           }
-          
+
           type Mutation {
             createPortfolio(input: CreatePortfolioInput!): Portfolio
             updatePortfolio(portfolioId: String!, input: UpdatePortfolioInput!): Portfolio

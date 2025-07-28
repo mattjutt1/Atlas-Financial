@@ -1,13 +1,13 @@
 # Frontend Architecture Context & Relationships - Atlas Financial v1.2
 
-**Updated**: 2025-07-27  
-**Context**: Next.js 15 Frontend with SuperTokens Authentication  
-**Related Systems**: Docker Infrastructure, AI Engine, SuperTokens Authentication, GraphQL API  
+**Updated**: 2025-07-27
+**Context**: Next.js 15 Frontend with SuperTokens Authentication
+**Related Systems**: Docker Infrastructure, AI Engine, SuperTokens Authentication, GraphQL API
 
 ## System Relationships
 
 ### 1. Infrastructure Dependencies (UPDATED July 27, 2025)
-**Relationship**: Frontend → Docker Infrastructure  
+**Relationship**: Frontend → Docker Infrastructure
 **Context**: The Next.js 15 frontend depends on the orchestrated Docker services:
 - **SuperTokens Core** (Port 3567): Self-hosted authentication service
 - **Hasura** (Port 8081): GraphQL API gateway with JWT verification
@@ -15,7 +15,7 @@
 - **Frontend** (Port 3000): Next.js development server with SuperTokens SDK
 - **Redis** (Port 6379): Session caching and performance optimization
 
-**Integration Pattern** (UPDATED): 
+**Integration Pattern** (UPDATED):
 ```
 Frontend (SuperTokens React SDK) ↔ SuperTokens Core (Authentication)
 Frontend (Apollo + JWT) ↔ Hasura (GraphQL with JWT verification)
@@ -24,7 +24,7 @@ Frontend (Session Management) ↔ Redis (Performance caching)
 ```
 
 ### 2. Authentication Flow (UPDATED July 27, 2025)
-**Relationship**: Frontend → SuperTokens → Hasura  
+**Relationship**: Frontend → SuperTokens → Hasura
 **Context**: SuperTokens-powered authentication chain:
 1. User visits application and redirected to `/auth` if unauthenticated
 2. SuperTokens React SDK handles authentication UI and flows
@@ -41,7 +41,7 @@ Frontend (Session Management) ↔ Redis (Performance caching)
 - Built-in CSRF protection and secure cookie handling
 
 ### 3. Data Flow Architecture
-**Relationship**: Frontend → Apollo Client → Hasura → Database  
+**Relationship**: Frontend → Apollo Client → Hasura → Database
 **Context**: GraphQL-first data layer:
 - **Queries**: Account, transaction, budget data fetching
 - **Mutations**: CRUD operations for financial entities
@@ -49,8 +49,8 @@ Frontend (Session Management) ↔ Redis (Performance caching)
 - **Caching**: Optimistic updates and offline-first approach
 
 ### 4. AI Integration Pattern
-**Relationship**: Frontend → AI Engine → Brutal Honesty Insights  
-**Context**: 
+**Relationship**: Frontend → AI Engine → Brutal Honesty Insights
+**Context**:
 - Frontend requests financial analysis from AI Engine
 - AI Engine processes user financial data
 - Returns brutal honesty insights with severity levels
@@ -283,7 +283,7 @@ The Next.js 15 frontend with SuperTokens React SDK creates a secure, scalable, a
 
 Key achievements:
 - ✅ Complete SuperTokens React SDK integration
-- ✅ Self-hosted authentication with data sovereignty  
+- ✅ Self-hosted authentication with data sovereignty
 - ✅ PCI-DSS 4.0 compliant architecture
 - ✅ Sub-200ms authentication response times
 - ✅ Seamless session management and security

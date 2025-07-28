@@ -32,7 +32,7 @@ RUN cargo install wasm-pack
 RUN wasm-pack build --target nodejs --out-dir ../wasm-bindings
 
 # =============================================================================
-# Stage 2: Python AI Engine Builder  
+# Stage 2: Python AI Engine Builder
 # =============================================================================
 FROM python:3.11-alpine AS python-builder
 
@@ -162,7 +162,7 @@ curl -f http://localhost:3000/api/health || exit 1
 # Check Rust engine integration
 curl -f http://localhost:3000/api/financial/health || exit 1
 
-# Check AI engine integration  
+# Check AI engine integration
 curl -f http://localhost:3000/api/ai/health || exit 1
 
 # Check database connectivity

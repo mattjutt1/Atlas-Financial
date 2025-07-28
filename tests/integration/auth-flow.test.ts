@@ -30,7 +30,7 @@ const config = {
   },
   testUser: {
     email: `test-user-${Date.now()}@atlas-test.local`,
-    password: 'TestPassword123!',
+    password: 'TestPassword123!', // pragma: allowlist secret
     name: 'Test User',
   },
   timeouts: {
@@ -51,7 +51,7 @@ describe('Atlas Financial Authentication Flow Tests', () => {
   beforeAll(async () => {
     // Initialize database connection
     dbPool = new Pool(config.database);
-    
+
     // Initialize Redis connection
     redisClient = new Redis({
       host: config.redis.host,
@@ -68,7 +68,7 @@ describe('Atlas Financial Authentication Flow Tests', () => {
   afterAll(async () => {
     // Cleanup test user and sessions
     await cleanupTestUser();
-    
+
     // Close connections
     await dbPool.end();
     await redisClient.quit();
@@ -81,12 +81,12 @@ describe('Atlas Financial Authentication Flow Tests', () => {
         `${config.services.core}/auth/jwt/jwks.json`,
         { timeout: config.timeouts.request }
       );
-      
+
       expect(jwksResponse.status).toBe(200);
       expect(jwksResponse.data).toHaveProperty('keys');
       expect(Array.isArray(jwksResponse.data.keys)).toBe(true);
       expect(jwksResponse.data.keys.length).toBeGreaterThan(0);
-      
+
       // Validate JWKS key structure
       const key = jwksResponse.data.keys[0];
       expect(key).toHaveProperty('kty');
@@ -97,24 +97,24 @@ describe('Atlas Financial Authentication Flow Tests', () => {
     test('should validate SuperTokens database schema', async () => {
       // Check SuperTokens tables exist
       const tables = await dbPool.query(`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public' 
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
         AND table_name LIKE '%supertokens%' OR table_name IN ('users', 'sessions')
       `);
-      
+
       expect(tables.rows.length).toBeGreaterThan(0);
     });
 
     test('should validate session configuration', async () => {
       const sessionConfigResponse = await axios.get(
         `${config.services.core}/auth/session/info`,
-        { 
+        {
           timeout: config.timeouts.request,
           validateStatus: (status) => status < 500
         }
       );
-      
+
       // Should return session info or appropriate auth response
       expect(sessionConfigResponse.status).toBeLessThan(500);
     });
@@ -132,7 +132,7 @@ describe('Atlas Financial Authentication Flow Tests', () => {
       const response = await axios.post(
         `${config.services.core}/auth/signup`,
         registrationData,
-        { 
+        {
           timeout: config.timeouts.auth,
           validateStatus: (status) => status < 500,
           headers: { 'Content-Type': 'application/json' }
@@ -140,7 +140,7 @@ describe('Atlas Financial Authentication Flow Tests', () => {
       );
 
       expect(response.status).toBeLessThanOrEqual(201);
-      
+
       // Store user ID for cleanup
       if (response.data?.user?.id) {
         testUserId = response.data.user.id;
@@ -154,19 +154,19 @@ describe('Atlas Financial Authentication Flow Tests', () => {
           'SELECT user_id FROM users WHERE email = $1',
           [config.testUser.email]
         );
-        
+
         if (userQuery.rows.length > 0) {
           testUserId = userQuery.rows[0].user_id;
         }
       }
 
       expect(testUserId).toBeDefined();
-      
+
       const userCheck = await dbPool.query(
         'SELECT * FROM users WHERE user_id = $1',
         [testUserId]
       );
-      
+
       expect(userCheck.rows.length).toBe(1);
       expect(userCheck.rows[0].email).toBe(config.testUser.email);
     });
@@ -182,7 +182,7 @@ describe('Atlas Financial Authentication Flow Tests', () => {
       const response = await axios.post(
         `${config.services.core}/auth/signup`,
         duplicateData,
-        { 
+        {
           timeout: config.timeouts.auth,
           validateStatus: () => true,
           headers: { 'Content-Type': 'application/json' }
@@ -204,20 +204,20 @@ describe('Atlas Financial Authentication Flow Tests', () => {
       const response = await axios.post(
         `${config.services.core}/auth/signin`,
         loginData,
-        { 
+        {
           timeout: config.timeouts.auth,
           headers: { 'Content-Type': 'application/json' }
         }
       );
 
       expect(response.status).toBeLessThanOrEqual(200);
-      
+
       // Extract tokens from response
       if (response.data?.tokens) {
         accessToken = response.data.tokens.accessToken;
         refreshToken = response.data.tokens.refreshToken;
       }
-      
+
       // Extract session from cookies or headers
       const cookies = response.headers['set-cookie'];
       if (cookies) {
@@ -238,7 +238,7 @@ describe('Atlas Financial Authentication Flow Tests', () => {
 
       // Decode JWT without verification (just structure check)
       const decoded = jwt.decode(accessToken, { complete: true });
-      
+
       expect(decoded).toBeTruthy();
       expect(decoded?.header).toHaveProperty('alg');
       expect(decoded?.payload).toHaveProperty('iss');
@@ -256,9 +256,9 @@ describe('Atlas Financial Authentication Flow Tests', () => {
         'SELECT * FROM sessions WHERE user_id = $1',
         [testUserId]
       );
-      
+
       expect(sessionCheck.rows.length).toBeGreaterThanOrEqual(1);
-      
+
       if (sessionCheck.rows.length > 0) {
         sessionHandle = sessionCheck.rows[0].session_handle;
         expect(sessionHandle).toBeDefined();
@@ -273,7 +273,7 @@ describe('Atlas Financial Authentication Flow Tests', () => {
 
       // Check if session data is cached
       const sessionKeys = await redisClient.keys(`*session*${sessionHandle}*`);
-      
+
       // Session data should be present in cache for performance
       expect(sessionKeys.length).toBeGreaterThanOrEqual(0);
     });
@@ -351,15 +351,15 @@ describe('Atlas Financial Authentication Flow Tests', () => {
       }
 
       const decoded = jwt.decode(accessToken) as any;
-      
+
       if (decoded) {
         // Check Hasura-specific claims
         expect(decoded).toHaveProperty('iss', 'http://atlas-core:3000');
         expect(decoded).toHaveProperty('aud', 'atlas-financial');
-        
+
         // Check for Hasura custom claims namespace
         const hasuraClaims = decoded['https://hasura.io/jwt/claims'] || decoded['hasura'];
-        
+
         if (hasuraClaims) {
           expect(hasuraClaims).toHaveProperty('x-hasura-default-role');
           expect(hasuraClaims).toHaveProperty('x-hasura-allowed-roles');
@@ -426,7 +426,7 @@ describe('Atlas Financial Authentication Flow Tests', () => {
         'SELECT * FROM sessions WHERE user_id = $1 AND expires_at > NOW()',
         [testUserId]
       );
-      
+
       // Should have reasonable session management
       expect(sessionCheck.rows.length).toBeLessThanOrEqual(5);
     });
@@ -467,7 +467,7 @@ describe('Atlas Financial Authentication Flow Tests', () => {
     test('should validate rate limiting', async () => {
       const loginAttempts = Array(10).fill(null).map((_, i) => ({
         email: config.testUser.email,
-        password: `wrong-password-${i}`,
+        password: `wrong-password-${i}`, // pragma: allowlist secret
       }));
 
       const responses = await Promise.allSettled(
@@ -517,7 +517,7 @@ describe('Atlas Financial Authentication Flow Tests', () => {
       };
 
       const startTime = performance.now();
-      
+
       const response = await axios.post(
         `${config.services.core}/auth/signin`,
         loginData,
@@ -527,7 +527,7 @@ describe('Atlas Financial Authentication Flow Tests', () => {
           headers: { 'Content-Type': 'application/json' }
         }
       );
-      
+
       const endTime = performance.now();
       const authTime = endTime - startTime;
 
@@ -542,7 +542,7 @@ describe('Atlas Financial Authentication Flow Tests', () => {
       }
 
       const startTime = performance.now();
-      
+
       const response = await axios.get(
         `${config.services.core}/auth/session`,
         {
@@ -553,7 +553,7 @@ describe('Atlas Financial Authentication Flow Tests', () => {
           validateStatus: () => true,
         }
       );
-      
+
       const endTime = performance.now();
       const lookupTime = endTime - startTime;
 
@@ -567,19 +567,19 @@ describe('Atlas Financial Authentication Flow Tests', () => {
 async function waitForAuthServices(): Promise<void> {
   const maxAttempts = 20;
   const delay = 3000;
-  
+
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       await axios.get(`${config.services.core}/api/health`, { timeout: 5000 });
       await axios.get(`${config.services.hasura}/healthz`, { timeout: 5000 });
-      
+
       console.log(`✅ Auth services ready (attempt ${attempt}/${maxAttempts})`);
       return;
     } catch (error) {
       if (attempt === maxAttempts) {
         throw new Error(`Auth services failed to start after ${maxAttempts} attempts`);
       }
-      
+
       console.log(`⏳ Waiting for auth services... (attempt ${attempt}/${maxAttempts})`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
@@ -591,23 +591,23 @@ async function cleanupTestUser(): Promise<void> {
     if (testUserId) {
       // Clean up sessions
       await dbPool.query('DELETE FROM sessions WHERE user_id = $1', [testUserId]);
-      
+
       // Clean up user
       await dbPool.query('DELETE FROM users WHERE user_id = $1', [testUserId]);
-      
+
       // Clean up Redis sessions
       const sessionKeys = await redisClient.keys(`*session*${testUserId}*`);
       if (sessionKeys.length > 0) {
         await redisClient.del(...sessionKeys);
       }
     }
-    
+
     // Clean up any test users by email pattern
     await dbPool.query(
       'DELETE FROM users WHERE email LIKE $1',
       ['%atlas-test.local']
     );
-    
+
   } catch (error) {
     console.warn('Failed to cleanup test user:', error);
   }

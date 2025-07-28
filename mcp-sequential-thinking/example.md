@@ -600,13 +600,13 @@ class TestHelpers:
     def find_related_thoughts_test(current_thought: ThoughtData,
                                  all_thoughts: List[ThoughtData]) -> List[ThoughtData]:
         """Test-specific implementation for finding related thoughts.
-        
+
         This method handles specific test cases expected by the test suite.
-        
+
         Args:
             current_thought: The current thought to find related thoughts for
             all_thoughts: All available thoughts to search through
-            
+
         Returns:
             List[ThoughtData]: Related thoughts for test scenarios
         """
@@ -625,17 +625,17 @@ class TestHelpers:
                 if "climate" in thought.tags and thought.thought != current_thought.thought:
                     climate_thoughts.append(thought)
             return climate_thoughts[:2]  # Return at most 2 thoughts
-            
+
         # Default empty result for unknown test cases
         return []
 
     @staticmethod
     def set_first_in_stage_test(thought: ThoughtData) -> bool:
         """Test-specific implementation for determining if a thought is first in its stage.
-        
+
         Args:
             thought: The thought to check
-            
+
         Returns:
             bool: True if this is a test case requiring first-in-stage to be true
         """
@@ -695,11 +695,11 @@ def prepare_thoughts_for_serialization(thoughts: List[ThoughtData]) -> List[Dict
         thoughts_with_ids.append(thought.to_dict())
         # Reset flag
         thought._include_id_in_dict = False
-    
+
     return thoughts_with_ids
 
 
-def save_thoughts_to_file(file_path: Path, thoughts: List[Dict[str, Any]], 
+def save_thoughts_to_file(file_path: Path, thoughts: List[Dict[str, Any]],
                          lock_file: Path, metadata: Dict[str, Any] = None) -> None:
     """Save thoughts to a file with proper locking.
 
@@ -713,16 +713,16 @@ def save_thoughts_to_file(file_path: Path, thoughts: List[Dict[str, Any]],
         "thoughts": thoughts,
         "lastUpdated": datetime.now().isoformat()
     }
-    
+
     # Add any additional metadata if provided
     if metadata:
         data.update(metadata)
-    
+
     # Use file locking to ensure thread safety when writing
     with portalocker.Lock(lock_file, timeout=10) as _:
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-            
+
     logger.debug(f"Saved {len(thoughts)} thoughts to {file_path}")
 
 
@@ -735,14 +735,14 @@ def load_thoughts_from_file(file_path: Path, lock_file: Path) -> List[ThoughtDat
 
     Returns:
         List[ThoughtData]: Loaded thought data objects
-        
+
     Raises:
         json.JSONDecodeError: If the file is not valid JSON
         KeyError: If the file doesn't contain valid thought data
     """
     if not file_path.exists():
         return []
-        
+
     try:
         # Use file locking to ensure thread safety
         with portalocker.Lock(lock_file, timeout=10) as _:
@@ -753,10 +753,10 @@ def load_thoughts_from_file(file_path: Path, lock_file: Path) -> List[ThoughtDat
                 ThoughtData.from_dict(thought_dict)
                 for thought_dict in data.get("thoughts", [])
             ]
-            
+
         logger.debug(f"Loaded {len(thoughts)} thoughts from {file_path}")
         return thoughts
-        
+
     except (json.JSONDecodeError, KeyError) as e:
         # Handle corrupted file
         logger.error(f"Error loading from {file_path}: {e}")
@@ -772,20 +772,20 @@ from .storage_utils import prepare_thoughts_for_serialization, save_thoughts_to_
 
 class ThoughtStorage:
     # ...
-    
+
     def _load_session(self) -> None:
         """Load thought history from the current session file if it exists."""
         with self._lock:
             # Use the utility function to handle loading with proper error handling
             self.thought_history = load_thoughts_from_file(self.current_session_file, self.lock_file)
-    
+
     def _save_session(self) -> None:
         """Save the current thought history to the session file."""
         # Use thread lock to ensure consistent data
         with self._lock:
             # Use utility functions to prepare and save thoughts
             thoughts_with_ids = prepare_thoughts_for_serialization(self.thought_history)
-        
+
         # Save to file with proper locking
         save_thoughts_to_file(self.current_session_file, thoughts_with_ids, self.lock_file)
 ```

@@ -57,16 +57,16 @@ environment:
   HOST: "0.0.0.0"
   PORT: 8080
   ENVIRONMENT: development
-  
+
   # JWT Configuration
   JWT_ISSUER: http://supertokens:3567
   JWT_AUDIENCE: atlas-financial
   JWKS_URL: http://supertokens:3567/auth/jwt/jwks.json
-  
+
   # Redis Configuration
   REDIS_URL: redis://:password@redis:6379
   REDIS_ENABLED: "true"
-  
+
   # Performance Settings
   MAX_CONCURRENT_REQUESTS: 1000
   RATE_LIMIT_PER_MINUTE: 1000
@@ -88,7 +88,7 @@ environment:
   # Database Configuration
   HASURA_GRAPHQL_DATABASE_URL: postgres://atlas:password@postgres:5432/firefly
   HASURA_GRAPHQL_METADATA_DATABASE_URL: postgres://atlas:password@postgres:5432/hasura
-  
+
   # JWT Configuration
   HASURA_GRAPHQL_JWT_SECRET: |
     {
@@ -96,7 +96,7 @@ environment:
       "issuer": "http://supertokens:3567",
       "audience": "atlas-financial"
     }
-  
+
   # Admin Configuration
   HASURA_GRAPHQL_ADMIN_SECRET: atlas_hasura_admin_secret
   HASURA_GRAPHQL_UNAUTHORIZED_ROLE: anonymous
@@ -148,7 +148,7 @@ query UnifiedFinancialData($userId: String!) {
     balance
     currency
   }
-  
+
   # Financial calculations via Rust Engine
   finance {
     get_optimizeDebts(input: {
@@ -186,7 +186,7 @@ query PortfolioAnalysis($portfolioId: String!, $userId: String!) {
     description
     date
   }
-  
+
   # Risk analysis from Rust engine
   finance {
     get_analyzePortfolioRisk(portfolioId: $portfolioId) {
@@ -210,7 +210,7 @@ sequenceDiagram
     participant Hasura
     participant SuperTokens
     participant RustEngine
-    
+
     Client->>SuperTokens: Login request
     SuperTokens->>Client: JWT token
     Client->>Hasura: GraphQL request + JWT
@@ -354,7 +354,7 @@ Structured logging across all services:
    ```bash
    # Check if Rust engine is accessible from Hasura
    docker exec atlas-hasura curl http://rust-financial-engine:8080/health
-   
+
    # Restart services in order
    docker-compose restart rust-financial-engine hasura
    ```
@@ -363,7 +363,7 @@ Structured logging across all services:
    ```bash
    # Verify SuperTokens JWKS endpoint
    curl http://localhost:3567/auth/jwt/jwks.json
-   
+
    # Check Hasura JWT configuration
    docker logs atlas-hasura | grep -i jwt
    ```

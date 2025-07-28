@@ -21,11 +21,11 @@ export const formatDate = (
 ): string => {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date
-    
+
     if (!isValid(dateObj)) {
       throw new Error('Invalid date')
     }
-    
+
     return format(dateObj, pattern, options)
   } catch (error) {
     return 'Invalid Date'
@@ -48,11 +48,11 @@ export const formatDateTime = (
 export const formatDateISO = (date: string | Date): string => {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date
-    
+
     if (!isValid(dateObj)) {
       throw new Error('Invalid date')
     }
-    
+
     return dateObj.toISOString()
   } catch (error) {
     throw new Error(`Invalid date: ${date}`)
@@ -71,11 +71,11 @@ export const formatRelativeTime = (
 ): string => {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date
-    
+
     if (!isValid(dateObj)) {
       throw new Error('Invalid date')
     }
-    
+
     return formatDistanceToNow(dateObj, { addSuffix: true, ...options })
   } catch (error) {
     return 'Invalid Date'
@@ -118,7 +118,7 @@ export const isToday = (date: string | Date): boolean => {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date
     const today = new Date()
-    
+
     return dateObj.toDateString() === today.toDateString()
   } catch (error) {
     return false
@@ -132,7 +132,7 @@ export const isYesterday = (date: string | Date): boolean => {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date
     const yesterday = addDays(new Date(), -1)
-    
+
     return dateObj.toDateString() === yesterday.toDateString()
   } catch (error) {
     return false
@@ -147,7 +147,7 @@ export const isThisWeek = (date: string | Date): boolean => {
     const dateObj = typeof date === 'string' ? parseISO(date) : date
     const today = new Date()
     const weekAgo = addDays(today, -7)
-    
+
     return isWithinInterval(dateObj, { start: weekAgo, end: today })
   } catch (error) {
     return false
@@ -161,8 +161,8 @@ export const isThisMonth = (date: string | Date): boolean => {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date
     const today = new Date()
-    
-    return dateObj.getMonth() === today.getMonth() && 
+
+    return dateObj.getMonth() === today.getMonth() &&
            dateObj.getFullYear() === today.getFullYear()
   } catch (error) {
     return false
@@ -176,7 +176,7 @@ export const isThisYear = (date: string | Date): boolean => {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date
     const today = new Date()
-    
+
     return dateObj.getFullYear() === today.getFullYear()
   } catch (error) {
     return false
@@ -190,7 +190,7 @@ export const getDaysBetween = (startDate: string | Date, endDate: string | Date)
   try {
     const start = typeof startDate === 'string' ? parseISO(startDate) : startDate
     const end = typeof endDate === 'string' ? parseISO(endDate) : endDate
-    
+
     return differenceInDays(end, start)
   } catch (error) {
     return 0
@@ -221,11 +221,11 @@ export const parseDate = (dateString: string): Date | null => {
     // Try ISO format first
     let parsed = parseISO(dateString)
     if (isValid(parsed)) return parsed
-    
+
     // Try standard Date constructor
     parsed = new Date(dateString)
     if (isValid(parsed)) return parsed
-    
+
     // Try common formats
     const commonFormats = [
       'yyyy-MM-dd',
@@ -234,7 +234,7 @@ export const parseDate = (dateString: string): Date | null => {
       'yyyy-MM-dd HH:mm:ss',
       'MM/dd/yyyy HH:mm:ss'
     ]
-    
+
     for (const formatString of commonFormats) {
       try {
         // This would require date-fns parse function with format
@@ -244,7 +244,7 @@ export const parseDate = (dateString: string): Date | null => {
         continue
       }
     }
-    
+
     return null
   } catch (error) {
     return null
@@ -270,14 +270,14 @@ export const getAge = (birthDate: string | Date): number => {
   try {
     const birth = typeof birthDate === 'string' ? parseISO(birthDate) : birthDate
     const today = new Date()
-    
+
     let age = today.getFullYear() - birth.getFullYear()
     const monthDiff = today.getMonth() - birth.getMonth()
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
       age--
     }
-    
+
     return age
   } catch (error) {
     return 0
@@ -292,7 +292,7 @@ export const getFiscalYear = (date: string | Date, fiscalYearStart: number = 4):
     const dateObj = typeof date === 'string' ? parseISO(date) : date
     const year = dateObj.getFullYear()
     const month = dateObj.getMonth() + 1 // JavaScript months are 0-indexed
-    
+
     return month >= fiscalYearStart ? year : year - 1
   } catch (error) {
     return new Date().getFullYear()
@@ -306,7 +306,7 @@ export const getQuarter = (date: string | Date): number => {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date
     const month = dateObj.getMonth() + 1
-    
+
     return Math.ceil(month / 3)
   } catch (error) {
     return 1
@@ -320,7 +320,7 @@ export const isBusinessDay = (date: string | Date): boolean => {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date
     const dayOfWeek = dateObj.getDay()
-    
+
     return dayOfWeek >= 1 && dayOfWeek <= 5 // Monday to Friday
   } catch (error) {
     return false
@@ -333,11 +333,11 @@ export const isBusinessDay = (date: string | Date): boolean => {
 export const getNextBusinessDay = (date: string | Date): Date => {
   try {
     let nextDay = typeof date === 'string' ? parseISO(date) : new Date(date)
-    
+
     do {
       nextDay = addDays(nextDay, 1)
     } while (!isBusinessDay(nextDay))
-    
+
     return nextDay
   } catch (error) {
     return new Date()
@@ -351,19 +351,19 @@ export const formatDuration = (seconds: number): string => {
   if (seconds < 60) {
     return `${Math.round(seconds)}s`
   }
-  
+
   if (seconds < 3600) {
     const minutes = Math.floor(seconds / 60)
     const remainingSeconds = Math.round(seconds % 60)
     return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`
   }
-  
+
   if (seconds < 86400) {
     const hours = Math.floor(seconds / 3600)
     const remainingMinutes = Math.floor((seconds % 3600) / 60)
     return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`
   }
-  
+
   const days = Math.floor(seconds / 86400)
   const remainingHours = Math.floor((seconds % 86400) / 3600)
   return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`
@@ -403,7 +403,7 @@ export const formatInTimezone = (
 ): string => {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date
-    
+
     return new Intl.DateTimeFormat('en-CA', {
       timeZone: timezone,
       year: 'numeric',

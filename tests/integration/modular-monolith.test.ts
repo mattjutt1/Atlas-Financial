@@ -51,7 +51,7 @@ describe('Atlas Financial Modular Monolith Integration Tests', () => {
   beforeAll(async () => {
     // Initialize database connection
     dbPool = new Pool(config.database);
-    
+
     // Initialize Redis connection
     redisClient = new Redis({
       host: config.redis.host,
@@ -70,7 +70,7 @@ describe('Atlas Financial Modular Monolith Integration Tests', () => {
     if (testUser?.id) {
       await cleanupTestUser(testUser.id);
     }
-    
+
     // Close connections
     await dbPool.end();
     await redisClient.quit();
@@ -93,11 +93,11 @@ describe('Atlas Financial Modular Monolith Integration Tests', () => {
 
     test('should validate service consolidation benefits', async () => {
       const startTime = performance.now();
-      
+
       // Test inter-service communication latency
       const coreResponse = await axios.get(`${config.services.core}/api/health`);
       const hasuraResponse = await axios.get(`${config.services.hasura}/healthz`);
-      
+
       const endTime = performance.now();
       const totalLatency = endTime - startTime;
 
@@ -110,7 +110,7 @@ describe('Atlas Financial Modular Monolith Integration Tests', () => {
   describe('2. Atlas Data Platform Validation', () => {
     test('should validate PostgreSQL multi-database setup', async () => {
       const databases = ['atlas_core', 'hasura_metadata', 'supertokens', 'observability'];
-      
+
       for (const dbName of databases) {
         const result = await dbPool.query(
           'SELECT datname FROM pg_database WHERE datname = $1',
@@ -123,10 +123,10 @@ describe('Atlas Financial Modular Monolith Integration Tests', () => {
     test('should validate database schemas and tables', async () => {
       // Check core schemas exist
       const schemas = await dbPool.query(
-        `SELECT schema_name FROM information_schema.schemata 
+        `SELECT schema_name FROM information_schema.schemata
          WHERE schema_name IN ('auth', 'financial', 'ai', 'audit')`
       );
-      
+
       expect(schemas.rows.length).toBeGreaterThanOrEqual(2);
     });
 
@@ -138,18 +138,18 @@ describe('Atlas Financial Modular Monolith Integration Tests', () => {
       await redisClient.set('test:session:123', 'test-value', 'EX', 60);
       const value = await redisClient.get('test:session:123');
       expect(value).toBe('test-value');
-      
+
       await redisClient.del('test:session:123');
     });
 
     test('should validate database performance', async () => {
       const startTime = performance.now();
-      
+
       await dbPool.query('SELECT 1 as test');
-      
+
       const endTime = performance.now();
       const queryTime = endTime - startTime;
-      
+
       expect(queryTime).toBeLessThan(config.performance.maxDbQueryTime);
     });
   });
@@ -168,7 +168,7 @@ describe('Atlas Financial Modular Monolith Integration Tests', () => {
           timeout: config.timeouts.request,
           validateStatus: (status) => status < 500, // Allow 4xx for auth endpoints
         });
-        
+
         expect(response.status).toBeLessThan(500);
       }
     });
@@ -179,7 +179,7 @@ describe('Atlas Financial Modular Monolith Integration Tests', () => {
         `${config.services.core}/auth/jwt/jwks.json`,
         { timeout: config.timeouts.request }
       );
-      
+
       expect(configResponse.status).toBe(200);
       expect(configResponse.data).toHaveProperty('keys');
       expect(Array.isArray(configResponse.data.keys)).toBe(true);
@@ -191,7 +191,7 @@ describe('Atlas Financial Modular Monolith Integration Tests', () => {
         `${config.services.core}/api/financial/health`,
         { timeout: config.timeouts.request }
       );
-      
+
       expect(rustHealthResponse.status).toBe(200);
     });
 
@@ -201,7 +201,7 @@ describe('Atlas Financial Modular Monolith Integration Tests', () => {
         `${config.services.core}/api/ai/health`,
         { timeout: config.timeouts.request }
       );
-      
+
       expect(aiHealthResponse.status).toBe(200);
     });
   });
@@ -276,7 +276,7 @@ describe('Atlas Financial Modular Monolith Integration Tests', () => {
       const targetsResponse = await axios.get(`${config.services.prometheus}/api/v1/targets`);
       expect(targetsResponse.status).toBe(200);
       expect(targetsResponse.data.status).toBe('success');
-      
+
       const activeTargets = targetsResponse.data.data.activeTargets;
       expect(activeTargets.length).toBeGreaterThan(0);
     });
@@ -289,7 +289,7 @@ describe('Atlas Financial Modular Monolith Integration Tests', () => {
     test('should validate custom business metrics', async () => {
       const coreMetricsResponse = await axios.get(`${config.services.core}/api/metrics`);
       expect(coreMetricsResponse.status).toBe(200);
-      
+
       // Should contain Atlas-specific metrics
       expect(coreMetricsResponse.data).toMatch(/atlas_/);
     });
@@ -300,14 +300,14 @@ describe('Atlas Financial Modular Monolith Integration Tests', () => {
       // Check that sensitive endpoints don't expose secrets
       const response = await axios.get(`${config.services.core}/api/health`);
       const responseText = JSON.stringify(response.data).toLowerCase();
-      
+
       // Should not contain common secret patterns
       expect(responseText).not.toMatch(/password|secret|key|token/);
     });
 
     test('should validate CORS configuration', async () => {
       const response = await axios.options(`${config.services.core}/api/health`);
-      
+
       // Should have proper CORS headers
       expect(response.headers['access-control-allow-origin']).toBeDefined();
     });
@@ -328,15 +328,15 @@ describe('Atlas Financial Modular Monolith Integration Tests', () => {
 
       for (const endpoint of endpoints) {
         const startTime = performance.now();
-        
+
         await axios.get(`${config.services.core}${endpoint}`, {
           timeout: config.timeouts.request,
           validateStatus: () => true,
         });
-        
+
         const endTime = performance.now();
         const responseTime = endTime - startTime;
-        
+
         expect(responseTime).toBeLessThan(config.performance.maxResponseTime);
       }
     });
@@ -344,17 +344,17 @@ describe('Atlas Financial Modular Monolith Integration Tests', () => {
     test('should validate cache performance', async () => {
       const key = `test:performance:${Date.now()}`;
       const value = 'performance-test-value';
-      
+
       const startTime = performance.now();
       await redisClient.set(key, value);
       const cachedValue = await redisClient.get(key);
       const endTime = performance.now();
-      
+
       const cacheTime = endTime - startTime;
-      
+
       expect(cachedValue).toBe(value);
       expect(cacheTime).toBeLessThan(config.performance.maxCacheTime);
-      
+
       await redisClient.del(key);
     });
 
@@ -362,12 +362,12 @@ describe('Atlas Financial Modular Monolith Integration Tests', () => {
       // This would be more comprehensive with actual memory monitoring
       const healthResponse = await axios.get(`${config.services.core}/api/health`);
       expect(healthResponse.status).toBe(200);
-      
+
       // Verify the service is responsive (indicating good memory management)
       const startTime = performance.now();
       const secondResponse = await axios.get(`${config.services.core}/api/health`);
       const endTime = performance.now();
-      
+
       expect(secondResponse.status).toBe(200);
       expect(endTime - startTime).toBeLessThan(1000); // Should be fast on second call
     });
@@ -378,21 +378,21 @@ describe('Atlas Financial Modular Monolith Integration Tests', () => {
 async function waitForServices(): Promise<void> {
   const maxAttempts = 20;
   const delay = 3000;
-  
+
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const services = Object.entries(config.services);
       const healthChecks = await Promise.all(
         services.map(([name, url]) => checkServiceHealth(name, url))
       );
-      
+
       console.log(`✅ All services ready (attempt ${attempt}/${maxAttempts})`);
       return;
     } catch (error) {
       if (attempt === maxAttempts) {
         throw new Error(`Services failed to start after ${maxAttempts} attempts`);
       }
-      
+
       console.log(`⏳ Waiting for services... (attempt ${attempt}/${maxAttempts})`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
@@ -400,15 +400,15 @@ async function waitForServices(): Promise<void> {
 }
 
 async function checkServiceHealth(name: string, url: string): Promise<void> {
-  const healthEndpoint = name === 'hasura' ? `${url}/healthz` : 
+  const healthEndpoint = name === 'hasura' ? `${url}/healthz` :
                         name === 'grafana' ? `${url}/api/health` :
                         name === 'prometheus' ? `${url}/-/healthy` :
                         `${url}/api/health`;
-  
+
   const response = await axios.get(healthEndpoint, {
     timeout: config.timeouts.health,
   });
-  
+
   if (response.status !== 200) {
     throw new Error(`${name} health check failed: ${response.status}`);
   }
@@ -418,7 +418,7 @@ async function cleanupTestUser(userId: string): Promise<void> {
   try {
     // Clean up test user from database
     await dbPool.query('DELETE FROM auth.users WHERE id = $1', [userId]);
-    
+
     // Clean up any test sessions from Redis
     const keys = await redisClient.keys(`session:${userId}:*`);
     if (keys.length > 0) {

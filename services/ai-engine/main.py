@@ -48,30 +48,30 @@ rules_engine: FinancialRulesEngine = None
 async def lifespan(app: FastAPI):
     """Application lifespan management"""
     global hasura_client, insights_generator, rules_engine
-    
+
     logger.info("Starting Atlas Financial AI Engine", version="1.1.0")
-    
+
     try:
         # Initialize services
         hasura_client = HasuraClient(
             endpoint=settings.hasura_endpoint,
             admin_secret=settings.hasura_admin_secret
         )
-        
+
         rules_engine = FinancialRulesEngine()
-        
+
         insights_generator = InsightsGenerator(
             model_path=settings.ai_model_path,
             rules_engine=rules_engine
         )
-        
+
         # Load AI model
         await insights_generator.initialize()
-        
+
         logger.info("AI Engine initialized successfully")
-        
+
         yield
-        
+
     except Exception as e:
         logger.error("Failed to initialize AI Engine", error=str(e))
         raise
@@ -104,12 +104,12 @@ async def health_check():
     try:
         # Check Hasura connectivity
         hasura_healthy = await hasura_client.health_check()
-        
+
         # Check AI model status
         model_loaded = insights_generator.is_model_loaded() if insights_generator else False
-        
+
         status = "healthy" if hasura_healthy and model_loaded else "degraded"
-        
+
         return HealthResponse(
             status=status,
             version="1.1.0",
@@ -129,16 +129,16 @@ async def generate_insights(
 ) -> InsightResponse:
     """Generate financial insights for a user"""
     logger.info("Generating insights", user_id=request.user_id, insight_type=request.insight_type)
-    
+
     try:
         # Generate insights using AI engine
         insights = await insights_generator.generate_insights(request)
-        
+
         # Store insights back to database in background
         background_tasks.add_task(store_insights, request.user_id, insights)
-        
+
         return insights
-        
+
     except Exception as e:
         logger.error("Failed to generate insights", user_id=request.user_id, error=str(e))
         raise HTTPException(status_code=500, detail="Failed to generate insights")
@@ -147,16 +147,16 @@ async def generate_insights(
 async def budget_check(user_id: str) -> Dict[str, Any]:
     """Check budget against 75/15/10 rule"""
     logger.info("Running budget check", user_id=user_id)
-    
+
     try:
         # Get user's financial data
         financial_data = await hasura_client.get_user_financial_data(user_id)
-        
+
         # Apply 75/15/10 rule
         budget_analysis = rules_engine.apply_75_15_10_rule(financial_data)
-        
+
         return budget_analysis
-        
+
     except Exception as e:
         logger.error("Budget check failed", user_id=user_id, error=str(e))
         raise HTTPException(status_code=500, detail="Budget check failed")
@@ -165,16 +165,16 @@ async def budget_check(user_id: str) -> Dict[str, Any]:
 async def debt_snowball_analysis(user_id: str) -> Dict[str, Any]:
     """Generate debt snowball payoff plan"""
     logger.info("Generating debt snowball analysis", user_id=user_id)
-    
+
     try:
         # Get user's debt data
         debt_data = await hasura_client.get_user_debt_data(user_id)
-        
+
         # Apply Ramsey debt snowball method
         snowball_plan = rules_engine.calculate_debt_snowball(debt_data)
-        
+
         return snowball_plan
-        
+
     except Exception as e:
         logger.error("Debt snowball analysis failed", user_id=user_id, error=str(e))
         raise HTTPException(status_code=500, detail="Debt analysis failed")
@@ -183,16 +183,16 @@ async def debt_snowball_analysis(user_id: str) -> Dict[str, Any]:
 async def portfolio_analysis(user_id: str) -> Dict[str, Any]:
     """Analyze investment portfolio using Dalio's All-Weather principles"""
     logger.info("Running portfolio analysis", user_id=user_id)
-    
+
     try:
         # Get user's investment data
         portfolio_data = await hasura_client.get_user_portfolio_data(user_id)
-        
+
         # Apply All-Weather portfolio analysis
         portfolio_analysis = rules_engine.analyze_all_weather_portfolio(portfolio_data)
-        
+
         return portfolio_analysis
-        
+
     except Exception as e:
         logger.error("Portfolio analysis failed", user_id=user_id, error=str(e))
         raise HTTPException(status_code=500, detail="Portfolio analysis failed")
@@ -203,7 +203,7 @@ async def model_status() -> Dict[str, Any]:
     try:
         if not insights_generator:
             return {"status": "not_initialized"}
-        
+
         return {
             "status": "loaded" if insights_generator.is_model_loaded() else "not_loaded",
             "model_name": settings.ai_model_name,

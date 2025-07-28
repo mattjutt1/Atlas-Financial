@@ -36,15 +36,15 @@ logger = structlog.get_logger()
 async def lifespan(app: FastAPI):
     """Application lifespan management"""
     logger.info("Starting Atlas Financial AI Engine", version="1.1.0")
-    
+
     try:
         # Initialize service registry
         services = ServiceRegistry.get_instance()
         await services.initialize(settings)
-        
+
         logger.info("AI Engine initialized successfully")
         yield
-        
+
     except Exception as e:
         logger.error("Failed to initialize AI Engine", error=str(e))
         raise

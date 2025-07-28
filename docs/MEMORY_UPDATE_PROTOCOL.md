@@ -6,7 +6,7 @@
 For **EVERY** action, decision, file creation, command execution, or configuration change, I MUST:
 
 1. **Update Static Memory** (within 30 seconds of action)
-2. **Update Contextual Memory** (within 60 seconds of action) 
+2. **Update Contextual Memory** (within 60 seconds of action)
 3. **Update Knowledge Graph** (within 90 seconds of action)
 
 ### Update Triggers
@@ -89,7 +89,7 @@ Every memory file MUST reference related files:
 
 ### Memory File Naming Standards
 - **Static**: Date-based sequence for chronological tracking
-- **Contextual**: Component-based for relationship mapping  
+- **Contextual**: Component-based for relationship mapping
 - **Knowledge Graph**: Version-based for architecture evolution
 
 ### Validation Checklist (Every Step)

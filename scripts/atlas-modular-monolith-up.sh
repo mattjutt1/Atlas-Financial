@@ -35,31 +35,31 @@ print_service_info() {
 # Function to check prerequisites
 check_prerequisites() {
     echo -e "${YELLOW}📋 Checking prerequisites...${NC}"
-    
+
     # Check Docker
     if ! command -v docker &> /dev/null; then
         echo -e "${RED}❌ Docker is not installed${NC}"
         exit 1
     fi
-    
+
     # Check Docker Compose
     if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
         echo -e "${RED}❌ Docker Compose is not installed${NC}"
         exit 1
     fi
-    
+
     # Check if secrets directory exists
     if [ ! -d "$DOCKER_DIR/config/secrets" ]; then
         echo -e "${YELLOW}⚠️  Creating secrets directory...${NC}"
         mkdir -p "$DOCKER_DIR/config/secrets"
     fi
-    
+
     # Check if compose file exists
     if [ ! -f "$COMPOSE_FILE" ]; then
         echo -e "${RED}❌ Docker compose file not found: $COMPOSE_FILE${NC}"
         exit 1
     fi
-    
+
     echo -e "${GREEN}✅ Prerequisites check passed${NC}"
     echo ""
 }
@@ -67,9 +67,9 @@ check_prerequisites() {
 # Function to generate secrets if they don't exist
 generate_secrets() {
     echo -e "${YELLOW}🔐 Checking secrets...${NC}"
-    
+
     SECRETS_DIR="$DOCKER_DIR/config/secrets"
-    
+
     # List of required secrets
     secrets=(
         "postgres_password"
@@ -82,11 +82,11 @@ generate_secrets() {
         "rust_database_url"
         "ai_engine_secret"
     )
-    
+
     for secret in "${secrets[@]}"; do
         if [ ! -f "$SECRETS_DIR/${secret}.txt" ]; then
             echo -e "${YELLOW}🔧 Generating ${secret}...${NC}"
-            
+
             case $secret in
                 "postgres_password")
                     echo "atlas_dev_password_$(openssl rand -hex 8)" > "$SECRETS_DIR/${secret}.txt"
@@ -119,11 +119,11 @@ generate_secrets() {
                     echo "ai_secret_$(openssl rand -hex 16)" > "$SECRETS_DIR/${secret}.txt"
                     ;;
             esac
-            
+
             chmod 600 "$SECRETS_DIR/${secret}.txt"
         fi
     done
-    
+
     echo -e "${GREEN}✅ Secrets configuration complete${NC}"
     echo ""
 }
@@ -131,18 +131,18 @@ generate_secrets() {
 # Function to build images if needed
 build_images() {
     echo -e "${YELLOW}🔨 Building Atlas Core Platform...${NC}"
-    
+
     # Check if platform directory exists
     if [ ! -d "$PROJECT_ROOT/apps/platform" ]; then
         echo -e "${YELLOW}⚠️  Platform directory not found, creating basic structure...${NC}"
         mkdir -p "$PROJECT_ROOT/apps/platform"
-        
+
         # Copy web app as base for now
         if [ -d "$PROJECT_ROOT/apps/web" ]; then
             cp -r "$PROJECT_ROOT/apps/web"/* "$PROJECT_ROOT/apps/platform/"
         fi
     fi
-    
+
     echo -e "${GREEN}✅ Build preparation complete${NC}"
     echo ""
 }
@@ -150,16 +150,16 @@ build_images() {
 # Function to start services
 start_services() {
     echo -e "${YELLOW}🚀 Starting Atlas Financial Modular Monolith...${NC}"
-    
+
     # Set environment variables
     export POSTGRES_PASSWORD=$(cat "$DOCKER_DIR/config/secrets/postgres_password.txt")
     export REDIS_PASSWORD=$(cat "$DOCKER_DIR/config/secrets/redis_password.txt")
-    export GRAFANA_ADMIN_PASSWORD="admin_dev_password"
-    
+    export GRAFANA_ADMIN_PASSWORD="admin_dev_password" # pragma: allowlist secret
+
     # Start services in order
     echo -e "${BLUE}📊 Starting Data Platform...${NC}"
     docker-compose -f "$COMPOSE_FILE" up -d atlas-data-postgres atlas-data-redis
-    
+
     # Wait for data platform to be ready
     echo -e "${YELLOW}⏳ Waiting for data platform to be ready...${NC}"
     for i in {1..30}; do
@@ -168,25 +168,25 @@ start_services() {
             echo -e "${GREEN}✅ Data platform is ready${NC}"
             break
         fi
-        
+
         if [ $i -eq 30 ]; then
             echo -e "${RED}❌ Data platform failed to start${NC}"
             exit 1
         fi
-        
+
         echo -e "${YELLOW}⏳ Waiting... ($i/30)${NC}"
         sleep 2
     done
-    
+
     echo -e "${BLUE}🌐 Starting API Gateway...${NC}"
     docker-compose -f "$COMPOSE_FILE" up -d atlas-api-gateway
-    
+
     echo -e "${BLUE}🔍 Starting Observability Platform...${NC}"
     docker-compose -f "$COMPOSE_FILE" up -d atlas-observability
-    
+
     echo -e "${BLUE}🎯 Starting Core Platform...${NC}"
     docker-compose -f "$COMPOSE_FILE" up -d atlas-core
-    
+
     echo ""
     echo -e "${GREEN}🎉 Atlas Financial Modular Monolith is starting up!${NC}"
     echo ""
@@ -197,7 +197,7 @@ show_status() {
     echo -e "${BLUE}📊 Service Status:${NC}"
     docker-compose -f "$COMPOSE_FILE" ps
     echo ""
-    
+
     echo -e "${BLUE}🌐 Service URLs:${NC}"
     echo -e "  🎯 Atlas Core Platform:    http://localhost:3000"
     echo -e "  🔍 Prometheus:             http://localhost:9090"
@@ -205,12 +205,12 @@ show_status() {
     echo -e "  🌐 Hasura Console:         http://localhost:8081/console"
     echo -e "  📈 Core Metrics:           http://localhost:3000/api/metrics"
     echo ""
-    
+
     echo -e "${BLUE}🔐 Admin Credentials:${NC}"
     echo -e "  Grafana:    admin / admin_dev_password"
     echo -e "  Hasura:     Admin Secret in secrets/hasura_admin_secret.txt"
     echo ""
-    
+
     echo -e "${YELLOW}📊 Architecture Consolidation Summary:${NC}"
     echo -e "  ✅ Reduced from 12 services to 4 services (67% reduction)"
     echo -e "  ✅ Single deployment unit (Atlas Core Platform)"
@@ -223,29 +223,29 @@ show_status() {
 # Function to monitor startup
 monitor_startup() {
     echo -e "${YELLOW}⏳ Monitoring service startup...${NC}"
-    
+
     # Wait for all services to be healthy
     local max_attempts=60
     local attempt=1
-    
+
     while [ $attempt -le $max_attempts ]; do
         local all_healthy=true
-        
+
         # Check each service
         if ! docker-compose -f "$COMPOSE_FILE" ps --services | xargs -I {} sh -c 'docker-compose -f "$0" ps "$1" | tail -n +3 | grep -q "Up.*healthy"' "$COMPOSE_FILE" {}; then
             all_healthy=false
         fi
-        
+
         if $all_healthy; then
             echo -e "${GREEN}✅ All services are healthy!${NC}"
             break
         fi
-        
+
         if [ $attempt -eq $max_attempts ]; then
             echo -e "${YELLOW}⚠️  Some services may still be starting up...${NC}"
             break
         fi
-        
+
         echo -e "${YELLOW}⏳ Waiting for services to become healthy... ($attempt/$max_attempts)${NC}"
         sleep 3
         ((attempt++))
@@ -261,7 +261,7 @@ main() {
     start_services
     monitor_startup
     show_status
-    
+
     echo -e "${GREEN}🚀 Atlas Financial Modular Monolith is ready!${NC}"
     echo -e "${BLUE}📚 For logs: docker-compose -f $COMPOSE_FILE logs -f${NC}"
     echo -e "${BLUE}🛑 To stop: docker-compose -f $COMPOSE_FILE down${NC}"

@@ -160,16 +160,16 @@ including risk tolerance, target returns, and constraints.
 input OptimizePortfolioInput {
   """Portfolio ID to optimize"""
   portfolioId: ID!
-  
+
   """Risk tolerance level (CONSERVATIVE, MODERATE, AGGRESSIVE)"""
   riskTolerance: RiskTolerance!
-  
+
   """Target annual return percentage (e.g., 8.0 for 8%)"""
   targetReturn: Percentage
-  
+
   """Maximum allocation percentage for any single asset"""
   maxAssetAllocation: Percentage
-  
+
   """Rebalancing constraints and preferences"""
   constraints: RebalancingConstraints
 }
@@ -180,14 +180,14 @@ input OptimizePortfolioInput {
 ```markdown
 # ADR-XXX: [Decision Title]
 
-**Status**: [Proposed | Accepted | Rejected | Superseded]  
-**Date**: YYYY-MM-DD  
-**Deciders**: [List of decision makers]  
+**Status**: [Proposed | Accepted | Rejected | Superseded]
+**Date**: YYYY-MM-DD
+**Deciders**: [List of decision makers]
 
 ## Context
 
-Describe the forces at play, including technological, political, social, and 
-project local. These forces are probably in tension, and should be called out 
+Describe the forces at play, including technological, political, social, and
+project local. These forces are probably in tension, and should be called out
 as such.
 
 ## Decision
@@ -263,7 +263,7 @@ How this decision aligns with our quality standards and requirements.
 ```
 feat(financial-engine): implement debt snowball algorithm
 
-Add comprehensive debt snowball calculation with psychological 
+Add comprehensive debt snowball calculation with psychological
 motivation scoring and payment scheduling optimization.
 
 - Implements smallest-balance-first prioritization
@@ -300,10 +300,10 @@ Closes #123
 pub enum FinancialError {
     #[error("Currency mismatch: {expected} vs {actual}")]
     CurrencyMismatch { expected: Currency, actual: Currency },
-    
+
     #[error("Invalid decimal precision: {value}")]
     InvalidPrecision { value: String },
-    
+
     #[error("Calculation overflow in {operation}")]
     CalculationOverflow { operation: String },
 }

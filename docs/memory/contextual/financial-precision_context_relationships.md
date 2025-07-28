@@ -1,9 +1,9 @@
 # Financial Precision Context & Relationships - Atlas Financial v1.3
 
-**Context Type**: Financial Precision Architecture (Rust Implementation)  
-**Last Updated**: 2025-07-27  
-**Phase**: 1.6 Rust Financial Engine Complete  
-**System Integration Level**: Core Infrastructure + High-Performance API  
+**Context Type**: Financial Precision Architecture (Rust Implementation)
+**Last Updated**: 2025-07-27
+**Phase**: 1.6 Rust Financial Engine Complete
+**System Integration Level**: Core Infrastructure + High-Performance API
 
 ## Context Overview
 
@@ -88,7 +88,7 @@ impl DatabaseAdapter {
         .bind(account_id)
         .fetch_one(&self.pool)
         .await?;
-        
+
         Money::new(row.0, Currency::USD)
     }
 }
@@ -214,7 +214,7 @@ fn test_exact_decimal_precision() {
     let amount1 = Money::new(dec!(0.1), Currency::USD).unwrap();
     let amount2 = Money::new(dec!(0.2), Currency::USD).unwrap();
     let result = amount1.add(&amount2).unwrap();
-    
+
     assert_eq!(result.amount(), dec!(0.3)); // Exact, no floating-point errors
 }
 

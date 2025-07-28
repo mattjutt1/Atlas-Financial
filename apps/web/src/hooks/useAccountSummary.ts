@@ -10,7 +10,7 @@ export function useAccountSummary({ accounts }: UseAccountSummaryProps) {
     const totalBalance = accounts
       .filter(account => account.account_type?.type && !account.account_type.type.toLowerCase().includes('liability'))
       .reduce((sum, account) => sum + (account.virtual_balance || 0), 0)
-      
+
     const totalDebt = Math.abs(accounts
       .filter(account => account.account_type?.type && account.account_type.type.toLowerCase().includes('liability'))
       .reduce((sum, account) => sum + (account.virtual_balance || 0), 0))

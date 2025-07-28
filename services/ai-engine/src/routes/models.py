@@ -13,10 +13,10 @@ async def model_status() -> Dict[str, Any]:
     """Get AI model status and information"""
     try:
         services = ServiceRegistry.get_instance()
-        
+
         if not services.insights_generator:
             return {"status": "not_initialized"}
-        
+
         return {
             "status": "loaded" if services.insights_generator.is_model_loaded() else "not_loaded",
             "model_name": services.config.ai_model_name,

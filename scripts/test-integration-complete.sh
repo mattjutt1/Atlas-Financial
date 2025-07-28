@@ -37,43 +37,43 @@ print_header() {
 # Function to check prerequisites
 check_prerequisites() {
     print_header "Checking Prerequisites"
-    
+
     # Check Docker
     if ! command -v docker &> /dev/null; then
         echo -e "${RED}❌ Docker is not installed${NC}"
         exit 1
     fi
-    
+
     # Check Docker Compose
     if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
         echo -e "${RED}❌ Docker Compose is not installed${NC}"
         exit 1
     fi
-    
+
     # Check Node.js
     if ! command -v node &> /dev/null; then
         echo -e "${RED}❌ Node.js is not installed${NC}"
         exit 1
     fi
-    
+
     # Check npm
     if ! command -v npm &> /dev/null; then
         echo -e "${RED}❌ npm is not installed${NC}"
         exit 1
     fi
-    
+
     # Check test dependencies
     if [ ! -f "$PROJECT_ROOT/package.json" ]; then
         echo -e "${RED}❌ package.json not found${NC}"
         exit 1
     fi
-    
+
     # Check compose file
     if [ ! -f "$COMPOSE_FILE" ]; then
         echo -e "${RED}❌ Docker compose file not found: $COMPOSE_FILE${NC}"
         exit 1
     fi
-    
+
     echo -e "${GREEN}✅ All prerequisites satisfied${NC}"
     echo ""
 }
@@ -81,20 +81,20 @@ check_prerequisites() {
 # Function to setup test environment
 setup_test_environment() {
     print_header "Setting up Test Environment"
-    
+
     # Create test results directory
     mkdir -p "$TEST_RESULTS_DIR"
-    
+
     # Install test dependencies
     echo -e "${YELLOW}📦 Installing test dependencies...${NC}"
     cd "$PROJECT_ROOT"
     npm install --no-audit --no-fund
-    
+
     # Set environment variables for testing
     export NODE_ENV=test
     export POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-$(cat "$DOCKER_DIR/config/secrets/postgres_password.txt" 2>/dev/null || echo "atlas_dev_password")}
     export REDIS_PASSWORD=${REDIS_PASSWORD:-$(cat "$DOCKER_DIR/config/secrets/redis_password.txt" 2>/dev/null || echo "redis_dev_password")}
-    
+
     echo -e "${GREEN}✅ Test environment setup complete${NC}"
     echo ""
 }
@@ -102,27 +102,27 @@ setup_test_environment() {
 # Function to start services
 start_services() {
     print_header "Starting Atlas Financial Services"
-    
+
     echo -e "${YELLOW}🚀 Starting modular monolith services...${NC}"
-    
+
     # Start services using the startup script
     "$SCRIPT_DIR/atlas-modular-monolith-up.sh"
-    
+
     # Wait for services to be fully ready
     echo -e "${YELLOW}⏳ Waiting for services to stabilize...${NC}"
     sleep 30
-    
+
     # Verify all services are running
     local running_services
     running_services=$(docker-compose -f "$COMPOSE_FILE" ps --services --filter "status=running" | wc -l)
-    
+
     if [ "$running_services" -lt "$SERVICES_EXPECTED" ]; then
         echo -e "${RED}❌ Not all services are running ($running_services/$SERVICES_EXPECTED)${NC}"
         echo -e "${YELLOW}Service status:${NC}"
         docker-compose -f "$COMPOSE_FILE" ps
         exit 1
     fi
-    
+
     echo -e "${GREEN}✅ All services are running${NC}"
     echo ""
 }
@@ -133,13 +133,13 @@ run_test_suite() {
     local test_file="$2"
     local description="$3"
     local timeout="${4:-300000}"
-    
+
     echo -e "${BLUE}🧪 Running $suite_name${NC}"
     echo -e "${BLUE}   $description${NC}"
-    
+
     local start_time=$(date +%s)
     local result=0
-    
+
     # Run the test suite
     if timeout $((timeout / 1000)) npm test "tests/integration/$test_file" -- --verbose --detectOpenHandles --forceExit 2>&1 | tee "$TEST_RESULTS_DIR/${test_file%.ts}.log"; then
         echo -e "${GREEN}   ✅ $suite_name completed successfully${NC}"
@@ -147,24 +147,24 @@ run_test_suite() {
         echo -e "${RED}   ❌ $suite_name failed${NC}"
         result=1
     fi
-    
+
     local end_time=$(date +%s)
     local duration=$((end_time - start_time))
-    
+
     echo -e "${YELLOW}   ⏱️  Duration: ${duration}s${NC}"
     echo ""
-    
+
     return $result
 }
 
 # Function to run all integration tests
 run_integration_tests() {
     print_header "Running Integration Test Suites"
-    
+
     local total_tests=0
     local passed_tests=0
     local failed_tests=0
-    
+
     # Test suite definitions
     declare -a test_suites=(
         "Modular Monolith Architecture|modular-monolith.test.ts|4-service architecture validation|300"
@@ -175,40 +175,40 @@ run_integration_tests() {
         "Cache and Session Management|cache-session.test.ts|Redis caching and session performance|180"
         "End-to-End User Workflows|end-to-end-workflow.test.ts|Complete user journeys and business flows|600"
     )
-    
+
     # Run each test suite
     for suite_info in "${test_suites[@]}"; do
         IFS='|' read -r name file description timeout <<< "$suite_info"
-        
+
         ((total_tests++))
-        
+
         if run_test_suite "$name" "$file" "$description" "${timeout}000"; then
             ((passed_tests++))
         else
             ((failed_tests++))
         fi
     done
-    
+
     echo -e "${BLUE}📊 Integration Test Summary${NC}"
     echo -e "   Total Suites: $total_tests"
     echo -e "   Passed: ${GREEN}$passed_tests${NC}"
     echo -e "   Failed: ${RED}$failed_tests${NC}"
     echo ""
-    
+
     return $failed_tests
 }
 
 # Function to run performance benchmarks
 run_performance_benchmarks() {
     print_header "Running Performance Benchmarks"
-    
+
     echo -e "${YELLOW}⚡ Testing modular monolith performance improvements...${NC}"
-    
+
     # Test 1: Response time benchmark
     echo -e "${YELLOW}   📊 Response Time Benchmark${NC}"
     local total_time=0
     local iterations=10
-    
+
     for i in $(seq 1 $iterations); do
         local start_time=$(date +%s%3N)
         if curl -s -o /dev/null http://localhost:3000/api/health; then
@@ -217,10 +217,10 @@ run_performance_benchmarks() {
             total_time=$((total_time + response_time))
         fi
     done
-    
+
     local avg_response_time=$((total_time / iterations))
     echo -e "${GREEN}      Average Response Time: ${avg_response_time}ms${NC}"
-    
+
     # Test 2: Database query performance
     echo -e "${YELLOW}   📊 Database Performance Benchmark${NC}"
     local db_start_time=$(date +%s%3N)
@@ -229,7 +229,7 @@ run_performance_benchmarks() {
         local db_response_time=$((db_end_time - db_start_time))
         echo -e "${GREEN}      Database Response Time: ${db_response_time}ms${NC}"
     fi
-    
+
     # Test 3: Cache performance
     echo -e "${YELLOW}   📊 Cache Performance Benchmark${NC}"
     local cache_start_time=$(date +%s%3N)
@@ -238,7 +238,7 @@ run_performance_benchmarks() {
         local cache_response_time=$((cache_end_time - cache_start_time))
         echo -e "${GREEN}      Cache Response Time: ${cache_response_time}ms${NC}"
     fi
-    
+
     # Performance summary
     echo -e "${BLUE}📊 Performance Summary${NC}"
     echo -e "   🏗️  Architecture: 4-Service Modular Monolith"
@@ -252,7 +252,7 @@ run_performance_benchmarks() {
 # Function to run architecture validation
 validate_architecture() {
     print_header "Validating Modular Monolith Architecture"
-    
+
     # Run the existing validation script
     if "$SCRIPT_DIR/validate-modular-monolith.sh"; then
         echo -e "${GREEN}✅ Architecture validation passed${NC}"
@@ -266,9 +266,9 @@ validate_architecture() {
 # Function to generate comprehensive report
 generate_report() {
     print_header "Generating Test Report"
-    
+
     local report_file="$TEST_RESULTS_DIR/integration-test-summary-$(date +%Y%m%d-%H%M%S).md"
-    
+
     cat > "$report_file" << EOF
 # Atlas Financial Integration Test Report
 
@@ -337,7 +337,7 @@ EOF
     if [ -f "$TEST_RESULTS_DIR/modular-monolith.test.log" ] && grep -q "failed" "$TEST_RESULTS_DIR/modular-monolith.test.log"; then
         ((critical_failures++))
     fi
-    
+
     if [ $critical_failures -eq 0 ]; then
         echo "✅ **READY FOR PRODUCTION DEPLOYMENT**" >> "$report_file"
     else
@@ -365,13 +365,13 @@ EOF
 # Function to cleanup
 cleanup() {
     print_header "Cleaning up Test Environment"
-    
+
     # Kill any hanging test processes
     pkill -f "npm test" 2>/dev/null || true
-    
+
     # Clean up test data (if needed)
     # Note: Services are left running for potential manual inspection
-    
+
     echo -e "${GREEN}✅ Cleanup completed${NC}"
     echo ""
 }
@@ -380,43 +380,43 @@ cleanup() {
 main() {
     local start_time=$(date +%s)
     local exit_code=0
-    
+
     # Setup trap for cleanup
     trap cleanup EXIT
-    
+
     # Execute test pipeline
     check_prerequisites
     setup_test_environment
     start_services
-    
+
     # Run validation and tests
     if ! validate_architecture; then
         exit_code=1
     fi
-    
+
     if ! run_integration_tests; then
         exit_code=1
     fi
-    
+
     run_performance_benchmarks
     generate_report
-    
+
     # Final summary
     local end_time=$(date +%s)
     local total_duration=$((end_time - start_time))
-    
+
     echo -e "${BLUE}🎉 Atlas Financial Integration Test Suite Complete${NC}"
     echo -e "${BLUE}📊 Total Duration: ${total_duration}s${NC}"
     echo -e "${BLUE}📁 Results: $TEST_RESULTS_DIR/${NC}"
     echo ""
-    
+
     if [ $exit_code -eq 0 ]; then
         echo -e "${GREEN}🚀 Modular monolith architecture validated successfully!${NC}"
         echo -e "${GREEN}✅ Ready for production deployment consideration${NC}"
     else
         echo -e "${RED}❌ Some tests failed - review results before deployment${NC}"
     fi
-    
+
     exit $exit_code
 }
 

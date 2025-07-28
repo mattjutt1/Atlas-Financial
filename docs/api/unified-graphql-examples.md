@@ -38,7 +38,7 @@ query AccountDebtAnalysis($userId: String!) {
     created_at
     updated_at
   }
-  
+
   # Get optimized debt strategy from Rust engine
   finance {
     get_optimizeDebts(input: {
@@ -100,7 +100,7 @@ query PortfolioAnalysisWithHistory($portfolioId: String!, $userId: String!) {
       account_type
     }
   }
-  
+
   # Get portfolio risk analysis from Rust engine
   finance {
     get_analyzePortfolioRisk(portfolioId: $portfolioId) {
@@ -168,7 +168,7 @@ mutation CreateAccountAndPortfolio($userId: String!) {
     balance
     currency
   }
-  
+
   # Create portfolio in Rust engine
   finance {
     execute_createPortfolio(input: {
@@ -219,7 +219,7 @@ mutation UpdatePortfolioWithTransaction(
     description
     date
   }
-  
+
   # Update portfolio in Rust engine
   finance {
     execute_updatePortfolio(
@@ -288,7 +288,7 @@ query FinancialSummary($userId: String!) {
       currency
     }
   }
-  
+
   # Transaction summaries
   transactions_aggregate(
     where: {
@@ -306,7 +306,7 @@ query FinancialSummary($userId: String!) {
       count
     }
   }
-  
+
   # Financial calculations
   finance {
     get_calculateNetWorth(userId: $userId) {
@@ -338,7 +338,7 @@ query FinancialPlan($userId: String!) {
       financial_goals
     }
   }
-  
+
   # Get comprehensive financial analysis
   finance {
     get_createFinancialPlan(input: {

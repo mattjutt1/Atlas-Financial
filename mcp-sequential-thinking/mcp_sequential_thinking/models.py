@@ -107,27 +107,27 @@ class ThoughtData(BaseModel):
 
         # Get all model fields, excluding internal properties
         data = self.model_dump()
-        
+
         # Handle special conversions
         data["stage"] = self.stage.value
-        
+
         if not include_id:
             # Remove ID for external representations
             data.pop("id", None)
         else:
             # Convert ID to string for JSON serialization
             data["id"] = str(data["id"])
-        
+
         # Convert snake_case keys to camelCase for API consistency
         result = {}
         for key, value in data.items():
             if key == "stage":
                 # Stage is already handled above
                 continue
-                
+
             camel_key = to_camel_case(key)
             result[camel_key] = value
-        
+
         # Ensure these fields are always present with camelCase naming
         result["thought"] = self.thought
         result["thoughtNumber"] = self.thought_number
@@ -138,7 +138,7 @@ class ThoughtData(BaseModel):
         result["axiomsUsed"] = self.axioms_used
         result["assumptionsChallenged"] = self.assumptions_challenged
         result["timestamp"] = self.timestamp
-        
+
         return result
 
     @classmethod
@@ -152,7 +152,7 @@ class ThoughtData(BaseModel):
             ThoughtData: A new ThoughtData instance
         """
         from .utils import to_snake_case
-        
+
         # Convert any camelCase keys to snake_case
         snake_data = {}
         mappings = {
@@ -162,21 +162,21 @@ class ThoughtData(BaseModel):
             "axiomsUsed": "axioms_used",
             "assumptionsChallenged": "assumptions_challenged"
         }
-        
+
         # Process known direct mappings
         for camel_key, snake_key in mappings.items():
             if camel_key in data:
                 snake_data[snake_key] = data[camel_key]
-        
+
         # Copy fields that don't need conversion
         for key in ["thought", "tags", "timestamp"]:
             if key in data:
                 snake_data[key] = data[key]
-                
+
         # Handle special fields
         if "stage" in data:
             snake_data["stage"] = ThoughtStage.from_string(data["stage"])
-            
+
         # Set default values for missing fields
         snake_data.setdefault("tags", [])
         snake_data.setdefault("axioms_used", data.get("axiomsUsed", []))

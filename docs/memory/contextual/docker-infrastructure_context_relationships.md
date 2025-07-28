@@ -64,7 +64,7 @@ supertokens:
 - `user_roles`: Role-based access control
 - `role_permissions`: Permission mappings
 
-**Security Isolation Context**: 
+**Security Isolation Context**:
 - Authentication data completely isolated from financial data
 - Meets PCI-DSS 4.0 requirements for sensitive data segregation
 - No cross-database queries between `supertokens` and `firefly` databases
@@ -306,7 +306,7 @@ User Input → Local Next.js → Local Hasura → Local PostgreSQL → Local Fir
 **Mobile Support**: Progressive Web App or React Native development
 
 ### Performance and Resource Context (Live System)
-**System Performance**: 
+**System Performance**:
 - Complete startup: ~3 minutes
 - GraphQL queries: <100ms average
 - Frontend page load: 2.2 seconds

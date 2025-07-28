@@ -1,9 +1,9 @@
 # Static Memory: Docker Compose Setup
 
-**Date**: 2025-01-25  
-**Phase**: Phase 0 - Project Bootstrap  
-**Action**: Docker Compose Configuration Setup  
-**Status**: Completed  
+**Date**: 2025-01-25
+**Phase**: Phase 0 - Project Bootstrap
+**Action**: Docker Compose Configuration Setup
+**Status**: Completed
 
 ## What Was Done
 
@@ -30,7 +30,7 @@
 **Purpose**: Template for all environment variables needed across services
 **Sections**:
 - Database configuration
-- Keycloak configuration  
+- Keycloak configuration
 - Firefly III configuration
 - Hasura configuration
 - Grafana configuration
@@ -109,7 +109,7 @@ GF_AUTH_GENERIC_OAUTH_AUTH_URL: http://localhost:8080/realms/atlas/protocol/open
 - **Related Contextual**: `docs/memory/contextual/docker-infrastructure_context_relationships.md`
 - **Current Knowledge Graph**: `docs/memory/knowledge-graph/system-architecture_v1.1.md`
 - **PRD Reference**: Section 2.2-2.5 (Core Ledger, AI Engine, Auth, Observability)
-- **Source Documentation**: 
+- **Source Documentation**:
   - Firefly III: https://github.com/firefly-iii/firefly-iii
   - Hasura Docker: https://hasura.io/docs/latest/getting-started/docker-simple/
   - Keycloak Docker: https://www.keycloak.org/getting-started/getting-started-docker

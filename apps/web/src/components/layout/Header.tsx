@@ -5,9 +5,9 @@ import { useAuthentication } from '@/hooks/useAuthentication'
 import { signOut } from 'supertokens-auth-react/recipe/emailpassword'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { 
-  Bars3Icon, 
-  XMarkIcon, 
+import {
+  Bars3Icon,
+  XMarkIcon,
   UserCircleIcon,
   BellIcon,
   MoonIcon,

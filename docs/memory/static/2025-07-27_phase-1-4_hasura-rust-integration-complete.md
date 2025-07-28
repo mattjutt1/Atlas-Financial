@@ -72,7 +72,7 @@ query UnifiedFinancialData($userId: String!) {
   accounts(where: {user_id: {_eq: $userId}}) {
     id, name, balance, currency
   }
-  
+
   # Financial calculations via Rust Engine
   finance {
     optimizeDebts(input: {
@@ -128,7 +128,7 @@ query PortfolioAnalysis($portfolioId: ID!) {
   portfolio(id: $portfolioId) {
     assets { symbol, quantity, current_price }
   }
-  
+
   # Calculate optimization recommendations
   finance {
     optimizePortfolio(input: {
@@ -155,15 +155,15 @@ query DebtStrategy($userId: String!) {
   debts(where: {user_id: {_eq: $userId}}) {
     balance, interest_rate, minimum_payment
   }
-  
+
   # Optimization strategies comparison
   finance {
     snowballStrategy: optimizeDebts(input: {
       debts: $debts, strategy: SNOWBALL
     }) { totalInterestPaid { amount } }
-    
+
     avalancheStrategy: optimizeDebts(input: {
-      debts: $debts, strategy: AVALANCHE  
+      debts: $debts, strategy: AVALANCHE
     }) { totalInterestPaid { amount } }
   }
 }
@@ -282,7 +282,7 @@ query RiskAssessment($portfolioId: ID!) {
 ### Service Health Validation
 ```bash
 ✅ PostgreSQL: Healthy (5 databases operational)
-✅ SuperTokens: Healthy (JWT issuing functional)  
+✅ SuperTokens: Healthy (JWT issuing functional)
 ✅ Redis: Healthy (caching operational)
 ✅ Hasura: Healthy (GraphQL endpoint responsive)
 ✅ Rust Financial Engine: Healthy (calculations operational)
@@ -308,7 +308,7 @@ query RiskAssessment($portfolioId: ID!) {
 - **Authentication** integration with SuperTokens
 - **Real-time Updates** via GraphQL subscriptions
 
-### 2. AI Enhancement Integration  
+### 2. AI Enhancement Integration
 **Foundation Prepared**:
 - **Precise Financial Data** pipeline from Rust calculations
 - **GraphQL Data Layer** for AI training data

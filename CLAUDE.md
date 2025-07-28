@@ -45,7 +45,7 @@ detect-secrets scan --baseline .secrets.baseline
 
 ### 🎯 Modular Monolith Services (Production-Ready)
 1. **Atlas Core Platform** (Port 3000) - Unified Next.js + Rust + AI + Auth
-2. **Atlas Data Platform** (Ports 5432, 6379) - PostgreSQL + Redis consolidated  
+2. **Atlas Data Platform** (Ports 5432, 6379) - PostgreSQL + Redis consolidated
 3. **Atlas API Gateway** (Port 8081) - Hasura + external integrations
 4. **Atlas Observability** (Ports 9090, 3001) - Prometheus + Grafana monitoring
 

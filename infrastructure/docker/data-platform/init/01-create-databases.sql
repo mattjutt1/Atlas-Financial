@@ -2,38 +2,38 @@
 -- Consolidated database creation for modular monolith architecture
 
 -- Create databases for the 4-service architecture
-CREATE DATABASE IF NOT EXISTS atlas_core 
-    WITH OWNER = atlas 
-    ENCODING = 'UTF8' 
-    LC_COLLATE = 'en_US.utf8' 
+CREATE DATABASE IF NOT EXISTS atlas_core
+    WITH OWNER = atlas
+    ENCODING = 'UTF8'
+    LC_COLLATE = 'en_US.utf8'
     LC_CTYPE = 'en_US.utf8'
     CONNECTION LIMIT = 100;
 
-CREATE DATABASE IF NOT EXISTS hasura_metadata 
-    WITH OWNER = atlas 
-    ENCODING = 'UTF8' 
-    LC_COLLATE = 'en_US.utf8' 
+CREATE DATABASE IF NOT EXISTS hasura_metadata
+    WITH OWNER = atlas
+    ENCODING = 'UTF8'
+    LC_COLLATE = 'en_US.utf8'
     LC_CTYPE = 'en_US.utf8'
     CONNECTION LIMIT = 50;
 
-CREATE DATABASE IF NOT EXISTS supertokens 
-    WITH OWNER = atlas 
-    ENCODING = 'UTF8' 
-    LC_COLLATE = 'en_US.utf8' 
+CREATE DATABASE IF NOT EXISTS supertokens
+    WITH OWNER = atlas
+    ENCODING = 'UTF8'
+    LC_COLLATE = 'en_US.utf8'
     LC_CTYPE = 'en_US.utf8'
     CONNECTION LIMIT = 50;
 
-CREATE DATABASE IF NOT EXISTS observability 
-    WITH OWNER = atlas 
-    ENCODING = 'UTF8' 
-    LC_COLLATE = 'en_US.utf8' 
+CREATE DATABASE IF NOT EXISTS observability
+    WITH OWNER = atlas
+    ENCODING = 'UTF8'
+    LC_COLLATE = 'en_US.utf8'
     LC_CTYPE = 'en_US.utf8'
     CONNECTION LIMIT = 30;
 
-CREATE DATABASE IF NOT EXISTS cache_metadata 
-    WITH OWNER = atlas 
-    ENCODING = 'UTF8' 
-    LC_COLLATE = 'en_US.utf8' 
+CREATE DATABASE IF NOT EXISTS cache_metadata
+    WITH OWNER = atlas
+    ENCODING = 'UTF8'
+    LC_COLLATE = 'en_US.utf8'
     LC_CTYPE = 'en_US.utf8'
     CONNECTION LIMIT = 20;
 

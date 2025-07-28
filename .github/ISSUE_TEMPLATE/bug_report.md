@@ -39,9 +39,9 @@ A clear description of what actually happened.
 - [ ] This affects portfolio/debt algorithms
 
 If checked, please provide:
-- **Expected calculation result**: 
-- **Actual calculation result**: 
-- **Input values used**: 
+- **Expected calculation result**:
+- **Actual calculation result**:
+- **Input values used**:
 
 ## 🖥️ Environment
 - **OS**: [e.g. Ubuntu 20.04, macOS 12.0, Windows 10]

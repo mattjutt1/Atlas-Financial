@@ -25,7 +25,7 @@ ADMIN_TOKEN=$(curl -s -X POST "http://localhost:8080/realms/master/protocol/open
 
 if [ -n "$ADMIN_TOKEN" ]; then
     echo "✓ Successfully obtained admin token"
-    
+
     # Test 3: List realms
     echo
     echo "3. Listing available realms..."
@@ -35,22 +35,22 @@ if [ -n "$ADMIN_TOKEN" ]; then
         while read realm; do
             echo "  - $realm"
         done
-    
+
     # Test 4: Check Atlas realm specifically
     echo
     echo "4. Checking Atlas realm configuration..."
     ATLAS_REALM=$(curl -s -H "Authorization: Bearer $ADMIN_TOKEN" \
         "http://localhost:8080/admin/realms/atlas" 2>/dev/null)
-    
+
     if echo "$ATLAS_REALM" | grep -q '"realm":"atlas"'; then
         echo "✓ Atlas realm exists"
-        
+
         # Test 5: Check atlas-web client
         echo
         echo "5. Checking atlas-web client configuration..."
         CLIENT_INFO=$(curl -s -H "Authorization: Bearer $ADMIN_TOKEN" \
             "http://localhost:8080/admin/realms/atlas/clients?clientId=atlas-web")
-        
+
         if echo "$CLIENT_INFO" | grep -q '"clientId":"atlas-web"'; then
             echo "✓ atlas-web client exists"
             echo "Client details:"
@@ -66,13 +66,13 @@ if [ -n "$ADMIN_TOKEN" ]; then
                     echo "  - $client"
                 done
         fi
-        
+
         # Test 6: Check for testuser
         echo
         echo "6. Checking for testuser in Atlas realm..."
         USER_INFO=$(curl -s -H "Authorization: Bearer $ADMIN_TOKEN" \
             "http://localhost:8080/admin/realms/atlas/users?username=testuser")
-        
+
         if echo "$USER_INFO" | grep -q '"username":"testuser"'; then
             echo "✓ testuser exists in Atlas realm"
             echo "$USER_INFO" | grep -o '"enabled":[^,]*' | head -1
@@ -86,11 +86,11 @@ if [ -n "$ADMIN_TOKEN" ]; then
                     echo "  - $user"
                 done
         fi
-        
+
     else
         echo "✗ Atlas realm not found"
     fi
-    
+
 else
     echo "✗ Failed to obtain admin token"
     echo "Response from token endpoint:"

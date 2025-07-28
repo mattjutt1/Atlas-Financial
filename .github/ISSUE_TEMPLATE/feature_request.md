@@ -33,10 +33,10 @@ Describe the solution you'd like to see implemented.
 - [ ] This feature affects portfolio/debt algorithms
 
 If checked, please specify:
-- **Calculation requirements**: 
-- **Precision needs**: 
-- **Currency support**: 
-- **Performance targets**: 
+- **Calculation requirements**:
+- **Precision needs**:
+- **Currency support**:
+- **Performance targets**:
 
 ## 🔧 Technical Considerations
 ### Architecture Impact
@@ -75,9 +75,9 @@ Describe any alternative solutions or features you've considered.
 
 ## 📊 Success Metrics
 How will we measure the success of this feature?
-- **User engagement**: 
-- **Performance metrics**: 
-- **Business impact**: 
+- **User engagement**:
+- **Performance metrics**:
+- **Business impact**:
 
 ## 🗓️ Priority Level
 - [ ] Critical (blocks other work, user-requested)

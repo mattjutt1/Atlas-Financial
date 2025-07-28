@@ -43,41 +43,41 @@ services:
       NODE_ENV: development
       HOST: "0.0.0.0"
       PORT: 3000
-      
+
       # Database Connections (via secrets)
       DATABASE_URL_FILE: /run/secrets/rust_database_url
       POSTGRES_CONNECTION_URI_FILE: /run/secrets/postgres_connection_uri
-      
+
       # Authentication Configuration (embedded SuperTokens)
       SUPERTOKENS_API_KEY_FILE: /run/secrets/supertokens_api_key
       JWT_SECRET_FILE: /run/secrets/jwt_secret_key
       SUPERTOKENS_CONNECTION_URI: postgres://atlas:${POSTGRES_PASSWORD}@atlas-data-postgres:5432/supertokens
-      
+
       # Cache Configuration
       REDIS_URL: redis://atlas-data-redis:6379
       REDIS_PASSWORD_FILE: /run/secrets/redis_password
-      
+
       # API Gateway Integration
       HASURA_GRAPHQL_URL: http://atlas-api-gateway:8081/v1/graphql
       HASURA_ADMIN_SECRET_FILE: /run/secrets/hasura_admin_secret
-      
+
       # AI Engine Configuration (embedded)
       AI_ENGINE_SECRET_FILE: /run/secrets/ai_engine_secret
       AI_MODEL_PATH: /app/models
-      
+
       # Rust Financial Engine Configuration (embedded FFI)
       RUST_ENGINE_MODE: embedded
       RUST_LOG: info
-      
+
       # Security Configuration
       CORS_ORIGIN: http://localhost:3000
       SECURE_COOKIES: "false"  # true in production
       HTTPS_ONLY: "false"      # true in production
-      
+
       # Observability
       METRICS_ENABLED: "true"
       PROMETHEUS_PORT: 9091
-      
+
     secrets:
       - postgres_connection_uri
       - supertokens_api_key
@@ -86,11 +86,11 @@ services:
       - rust_database_url
       - hasura_admin_secret
       - ai_engine_secret
-      
+
     ports:
       - "3000:3000"      # Main application
       - "9091:9091"      # Metrics endpoint
-      
+
     depends_on:
       atlas-data-postgres:
         condition: service_healthy
@@ -98,10 +98,10 @@ services:
         condition: service_healthy
       atlas-api-gateway:
         condition: service_healthy
-        
+
     networks:
       - atlas-network
-      
+
     volumes:
       # Development hot-reload
       - ../../apps/platform:/app
@@ -112,7 +112,7 @@ services:
       - ai_cache:/app/cache
       # Rust Engine Libraries
       - rust_libs:/app/rust
-      
+
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
       interval: 30s
@@ -132,16 +132,16 @@ services:
       POSTGRES_USER: atlas
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       POSTGRES_MULTIPLE_DATABASES: atlas_core,hasura_metadata,supertokens,observability,cache_metadata
-      
+
     secrets:
       - postgres_password
-      
+
     ports:
       - "5432:5432"      # PostgreSQL
-      
+
     networks:
       - atlas-network
-      
+
     volumes:
       # PostgreSQL Data
       - postgres_data:/var/lib/postgresql/data
@@ -149,7 +149,7 @@ services:
       - ./data-platform/init:/docker-entrypoint-initdb.d/data-platform:ro
       # Backup and Recovery
       - ./data-platform/backup:/backup
-          
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U atlas -d atlas_financial"]
       interval: 30s
@@ -190,12 +190,12 @@ services:
       # Database Configuration
       HASURA_GRAPHQL_DATABASE_URL_FILE: /run/secrets/hasura_database_url
       HASURA_GRAPHQL_METADATA_DATABASE_URL: postgres://atlas:${POSTGRES_PASSWORD}@atlas-data-postgres:5432/hasura_metadata
-      
+
       # Security Configuration (Production-Ready)
       HASURA_GRAPHQL_ADMIN_SECRET_FILE: /run/secrets/hasura_admin_secret
       HASURA_GRAPHQL_ENABLE_CONSOLE: "false"  # Security: Disabled in production
       HASURA_GRAPHQL_DEV_MODE: "false"        # Security: Disabled
-      
+
       # JWT Authentication (unified with Core Platform)
       HASURA_GRAPHQL_JWT_SECRET: |
         {
@@ -203,46 +203,46 @@ services:
           "issuer": "http://atlas-core:3000",
           "audience": "atlas-financial"
         }
-        
+
       # Security Hardening
       HASURA_GRAPHQL_ENABLE_ALLOWLIST: "true"
       HASURA_GRAPHQL_QUERY_COMPLEXITY_LIMIT: 1000
       HASURA_GRAPHQL_MAX_ROWS: 10000
       HASURA_GRAPHQL_ENABLE_INTROSPECTION: "false"
-      
+
       # External Integration Configuration
       FIREFLY_INTEGRATION_ENABLED: "true"
       FIREFLY_API_URL: http://atlas-core:3000/integrations/firefly
-      
+
       # Rate Limiting and Protection
       HASURA_GRAPHQL_RATE_LIMIT_ENABLED: "true"
       HASURA_GRAPHQL_RATE_LIMIT_MAX_REQS_PER_MIN: 1000
-      
+
       # Logging and Monitoring
       HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
-      
+
     secrets:
       - hasura_database_url
       - hasura_admin_secret
-      
+
     ports:
       - "8081:8080"      # GraphQL API
-      
+
     depends_on:
       atlas-data-postgres:
         condition: service_healthy
       atlas-data-redis:
         condition: service_healthy
-        
+
     networks:
       - atlas-network
-      
+
     volumes:
       # Hasura Metadata and Configuration
       - ../../services/hasura/metadata:/hasura-metadata:ro
       - ./api-gateway/actions:/hasura-actions:ro
       - ./api-gateway/adapters:/hasura-adapters:ro
-      
+
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/healthz || exit 1"]
       interval: 30s
@@ -266,26 +266,26 @@ services:
       - '--web.enable-lifecycle'
       - '--web.enable-admin-api'
       - '--log.level=info'
-      
+
     environment:
       # Monitoring Configuration
       PROMETHEUS_SCRAPE_INTERVAL: 15s
       PROMETHEUS_EVALUATION_INTERVAL: 15s
-      
+
       # Grafana Sidecar Configuration
       GRAFANA_ENABLED: "true"
       GRAFANA_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin_dev_password}
       GRAFANA_DATABASE_URL: postgres://atlas:${POSTGRES_PASSWORD}@atlas-data-postgres:5432/observability
-      
+
       # Alert Manager Configuration
       ALERTMANAGER_ENABLED: "true"
       ALERTMANAGER_WEBHOOK_URL: http://atlas-core:3000/api/alerts
-      
+
     ports:
       - "9090:9090"      # Prometheus
       - "3001:3001"      # Grafana (sidecar)
       - "9093:9093"      # AlertManager (sidecar)
-      
+
     depends_on:
       atlas-core:
         condition: service_healthy
@@ -293,10 +293,10 @@ services:
         condition: service_healthy
       atlas-api-gateway:
         condition: service_healthy
-        
+
     networks:
       - atlas-network
-      
+
     volumes:
       # Prometheus Configuration
       - ./prometheus/config:/etc/prometheus:ro
@@ -307,7 +307,7 @@ services:
       - grafana_data:/var/lib/grafana
       # Alert Manager Configuration
       - ./observability/alertmanager:/etc/alertmanager:ro
-      
+
     # Grafana sidecar for unified observability
     sidecars:
       grafana:
@@ -324,7 +324,7 @@ services:
         volumes:
           - grafana_data:/var/lib/grafana
           - ./grafana/provisioning:/etc/grafana/provisioning:ro
-          
+
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy && curl -f http://localhost:3001/api/health"]
       interval: 30s
@@ -352,7 +352,7 @@ volumes:
   redis_data:
     driver: local
     name: atlas-redis-data
-    
+
   # Core Platform Volumes
   ai_models:
     driver: local
@@ -363,7 +363,7 @@ volumes:
   rust_libs:
     driver: local
     name: atlas-rust-libs
-    
+
   # Observability Platform Volumes
   prometheus_data:
     driver: local

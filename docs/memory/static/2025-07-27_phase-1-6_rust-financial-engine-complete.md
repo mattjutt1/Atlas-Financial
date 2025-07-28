@@ -306,7 +306,7 @@ fn test_debt_snowball_prioritization() {
     let debts = create_test_debts();
     let calculator = SnowballCalculator::new(extra_payment);
     let priority_order = calculator.get_priority_order(&debts);
-    
+
     // Should prioritize lowest balance first
     assert_eq!(priority_order[0].1, "Personal Loan"); // $2000
     assert_eq!(priority_order[1].1, "Credit Card");   // $5000
@@ -316,7 +316,7 @@ fn test_debt_snowball_prioritization() {
 fn test_portfolio_risk_metrics() {
     let analyzer = RiskAnalyzer::new();
     let metrics = analyzer.calculate_risk_metrics(&portfolio, &returns, None)?;
-    
+
     assert!(metrics.volatility > Decimal::ZERO);
     assert!(metrics.value_at_risk_95.amount() > Decimal::ZERO);
 }

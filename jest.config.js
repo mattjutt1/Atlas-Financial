@@ -3,7 +3,7 @@ module.exports = {
   // Test Environment
   testEnvironment: 'node',
   preset: 'ts-jest',
-  
+
   // Coverage Configuration
   collectCoverage: true,
   coverageDirectory: 'coverage',
@@ -44,7 +44,7 @@ module.exports = {
     '**/__tests__/**/*.(ts|tsx|js)',
     '**/*.(test|spec).(ts|tsx|js)'
   ],
-  
+
   // Module Resolution
   moduleNameMapping: {
     '^@/(.*)$': '<rootDir>/src/$1',
@@ -54,10 +54,10 @@ module.exports = {
 
   // Setup Files
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-  
+
   // Test Timeout
   testTimeout: 30000,
-  
+
   // Globals
   globals: {
     'ts-jest': {
@@ -70,13 +70,13 @@ module.exports = {
   transform: {
     '^.+\\.tsx?$': 'ts-jest'
   },
-  
+
   // Module File Extensions
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-  
+
   // Verbose Output
   verbose: true,
-  
+
   // Test Projects for Different Components
   projects: [
     {

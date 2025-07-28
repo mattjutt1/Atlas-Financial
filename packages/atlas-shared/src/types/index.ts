@@ -20,9 +20,9 @@ export interface AtlasUser {
   metadata?: Record<string, unknown>
 }
 
-export type UserRole = 
+export type UserRole =
   | 'admin'
-  | 'user' 
+  | 'user'
   | 'premium'
   | 'advisor'
   | 'analyst'

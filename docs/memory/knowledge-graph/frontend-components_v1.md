@@ -1,8 +1,8 @@
 # Frontend Components Knowledge Graph - Atlas Financial v1.1
 
-**Version**: 1.1  
-**Updated**: 2025-01-25  
-**Scope**: Refactored Next.js Frontend Component Architecture with Quality Improvements  
+**Version**: 1.1
+**Updated**: 2025-01-25
+**Scope**: Refactored Next.js Frontend Component Architecture with Quality Improvements
 
 ## Component Hierarchy Graph
 

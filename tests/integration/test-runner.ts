@@ -191,7 +191,7 @@ class IntegrationTestRunner {
       console.log('');
       console.log('✅ Integration test suite completed');
       console.log(`📊 Results: ${this.report.summary.totalPassed}/${this.report.summary.totalTests} tests passed`);
-      
+
       if (this.report.summary.criticalFailures > 0) {
         console.log(`🚨 Critical failures: ${this.report.summary.criticalFailures}`);
       }
@@ -231,9 +231,9 @@ class IntegrationTestRunner {
 
   private async checkDockerServices(): Promise<void> {
     try {
-      const output = execSync('docker-compose -f infrastructure/docker/docker-compose.modular-monolith.yml ps', 
+      const output = execSync('docker-compose -f infrastructure/docker/docker-compose.modular-monolith.yml ps',
         { encoding: 'utf8' });
-      
+
       const runningServices = output.split('\n').filter(line => line.includes('Up')).length;
       if (runningServices < 4) {
         throw new Error(`Only ${runningServices} services running, expected 4`);
@@ -257,14 +257,14 @@ class IntegrationTestRunner {
 
   private async checkNetworkConnectivity(): Promise<void> {
     const axios = require('axios');
-    
+
     const serviceChecks = Object.entries(config.services).map(async ([name, url]) => {
       try {
         const healthEndpoint = name === 'hasura' ? `${url}/healthz` :
                               name === 'grafana' ? `${url}/api/health` :
                               name === 'prometheus' ? `${url}/-/healthy` :
                               `${url}/api/health`;
-        
+
         await axios.get(healthEndpoint, { timeout: 5000 });
       } catch (error) {
         throw new Error(`Service ${name} not accessible at ${url}`);
@@ -280,7 +280,7 @@ class IntegrationTestRunner {
       const lines = output.split('\n');
       const dataLine = lines[1];
       const usagePercent = parseInt(dataLine.split(/\s+/)[4].replace('%', ''));
-      
+
       if (usagePercent > 90) {
         throw new Error(`Disk usage too high: ${usagePercent}%`);
       }
@@ -320,7 +320,7 @@ class IntegrationTestRunner {
 
       // Parse test results
       const result = this.parseTestOutput(output, errorOutput, suite.name, duration);
-      
+
       if (suite.critical && result.failed > 0) {
         this.report.summary.criticalFailures++;
       }
@@ -335,7 +335,7 @@ class IntegrationTestRunner {
 
     } catch (error) {
       console.log(`   ❌ Suite execution failed: ${error}`);
-      
+
       const failedResult: TestResult = {
         suite: suite.name,
         passed: 0,
@@ -347,7 +347,7 @@ class IntegrationTestRunner {
       };
 
       this.testResults.push(failedResult);
-      
+
       if (suite.critical) {
         this.report.summary.criticalFailures++;
       }
@@ -527,7 +527,7 @@ class IntegrationTestRunner {
 
   private async saveReports(): Promise<void> {
     const outputDir = config.reporting.outputDir;
-    
+
     // Ensure output directory exists
     if (!existsSync(outputDir)) {
       execSync(`mkdir -p ${outputDir}`);
@@ -650,18 +650,18 @@ class IntegrationTestRunner {
     for (const result of this.report.results) {
       const suiteTests = result.passed + result.failed + result.skipped;
       xml += `  <testsuite name="${result.suite}" tests="${suiteTests}" failures="${result.failed}" time="${result.duration / 1000}">\n`;
-      
+
       // Add individual test cases (simplified)
       for (let i = 0; i < result.passed; i++) {
         xml += `    <testcase name="test-${i + 1}" time="0.1"/>\n`;
       }
-      
+
       for (let i = 0; i < result.failed; i++) {
         xml += `    <testcase name="failed-test-${i + 1}" time="0.1">\n`;
         xml += `      <failure message="Test failed"/>\n`;
         xml += `    </testcase>\n`;
       }
-      
+
       xml += `  </testsuite>\n`;
     }
 
@@ -672,8 +672,8 @@ class IntegrationTestRunner {
   private generateMarkdownReport(): string {
     return `# Atlas Financial Integration Test Results
 
-**Generated:** ${this.report.timestamp}  
-**Architecture:** ${this.report.architecture}  
+**Generated:** ${this.report.timestamp}
+**Architecture:** ${this.report.architecture}
 **Environment:** ${this.report.environment}
 
 ## Summary
@@ -708,7 +708,7 @@ class IntegrationTestRunner {
 
 | Suite | Passed | Failed | Duration | Coverage |
 |-------|--------|--------|----------|----------|
-${this.report.results.map(result => 
+${this.report.results.map(result =>
   `| ${result.suite} | ${result.passed} | ${result.failed} | ${Math.round(result.duration)}ms | ${result.coverage ? Math.round(result.coverage) + '%' : 'N/A'} |`
 ).join('\n')}
 
@@ -720,8 +720,8 @@ ${this.report.recommendations.map(rec => `- ${rec}`).join('\n')}
 
 ## Deployment Readiness
 
-${this.report.summary.criticalFailures === 0 && this.report.summary.totalPassed / this.report.summary.totalTests > 0.9 
-  ? '✅ **READY FOR PRODUCTION DEPLOYMENT**' 
+${this.report.summary.criticalFailures === 0 && this.report.summary.totalPassed / this.report.summary.totalTests > 0.9
+  ? '✅ **READY FOR PRODUCTION DEPLOYMENT**'
   : '❌ **NOT READY - Address critical issues first**'
 }
 `;
@@ -734,7 +734,7 @@ export { IntegrationTestRunner, TestReport };
 // CLI execution
 if (require.main === module) {
   const runner = new IntegrationTestRunner();
-  
+
   runner.runAllTests()
     .then((report) => {
       if (report.summary.criticalFailures > 0) {
