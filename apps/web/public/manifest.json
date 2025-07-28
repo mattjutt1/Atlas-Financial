@@ -1,11 +1,33 @@
 {
-  "name": "Atlas Financial",
+  "name": "Atlas Financial - Personal Finance",
   "short_name": "Atlas",
-  "description": "Brutal honesty personal finance platform",
+  "description": "Brutal honesty personal finance platform that tells you the truth about your money",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#ffffff",
   "theme_color": "#0ea5e9",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-US",
+  "dir": "ltr",
+  "categories": ["finance", "productivity", "business"],
+  "screenshots": [
+    {
+      "src": "/screenshots/mobile-dashboard-light.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Dashboard view on mobile"
+    },
+    {
+      "src": "/screenshots/desktop-dashboard-light.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Dashboard view on desktop"
+    }
+  ],
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
@@ -15,12 +37,100 @@
     {
       "src": "/android-chrome-512x512.png",
       "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-384x384.png",
+      "sizes": "384x384",
       "type": "image/png"
     }
   ],
-  "orientation": "portrait",
-  "scope": "/",
-  "lang": "en",
-  "categories": ["finance", "productivity"],
-  "dir": "ltr"
+  "shortcuts": [
+    {
+      "name": "View Accounts",
+      "short_name": "Accounts",
+      "description": "Check your account balances",
+      "url": "/accounts",
+      "icons": [
+        {
+          "src": "/shortcut-accounts.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Add Transaction",
+      "short_name": "Add",
+      "description": "Record a new transaction",
+      "url": "/transactions/add",
+      "icons": [
+        {
+          "src": "/shortcut-add.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Budget Review",
+      "short_name": "Budget",
+      "description": "Review your budget status",
+      "url": "/budget",
+      "icons": [
+        {
+          "src": "/shortcut-budget.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "handle_links": "preferred",
+  "protocol_handlers": [
+    {
+      "protocol": "web+atlas",
+      "url": "/link?url=%s"
+    }
+  ]
 }

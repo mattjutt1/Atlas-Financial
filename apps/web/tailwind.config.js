@@ -7,6 +7,15 @@ module.exports = {
   ],
   darkMode: 'class',
   theme: {
+    // Mobile-first responsive breakpoints
+    screens: {
+      'xs': '475px',
+      'sm': '640px',
+      'md': '768px',
+      'lg': '1024px',
+      'xl': '1280px',
+      '2xl': '1536px',
+    },
     extend: {
       colors: {
         // Atlas Financial Brand Colors
@@ -84,11 +93,39 @@ module.exports = {
         '18': '4.5rem',
         '88': '22rem',
         '128': '32rem',
+        // Safe area insets for mobile devices
+        'safe-area-inset-top': 'env(safe-area-inset-top)',
+        'safe-area-inset-right': 'env(safe-area-inset-right)',
+        'safe-area-inset-bottom': 'env(safe-area-inset-bottom)',
+        'safe-area-inset-left': 'env(safe-area-inset-left)',
+      },
+      padding: {
+        'safe-area-inset-top': 'env(safe-area-inset-top)',
+        'safe-area-inset-right': 'env(safe-area-inset-right)',
+        'safe-area-inset-bottom': 'env(safe-area-inset-bottom)',
+        'safe-area-inset-left': 'env(safe-area-inset-left)',
+      },
+      margin: {
+        'safe-area-inset-top': 'env(safe-area-inset-top)',
+        'safe-area-inset-right': 'env(safe-area-inset-right)',
+        'safe-area-inset-bottom': 'env(safe-area-inset-bottom)',
+        'safe-area-inset-left': 'env(safe-area-inset-left)',
+      },
+      minHeight: {
+        'touch-target': '44px', // Minimum touch target size
+        'screen-mobile': '100vh',
+        'screen-mobile-safe': 'calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
+      },
+      minWidth: {
+        'touch-target': '44px', // Minimum touch target size
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',
         'slide-up': 'slideUp 0.3s ease-out',
+        'slide-down': 'slideDown 0.3s ease-out',
         'pulse-slow': 'pulse 3s infinite',
+        'bounce-gentle': 'bounceGentle 0.6s ease-in-out',
+        'shake': 'shake 0.5s ease-in-out',
       },
       keyframes: {
         fadeIn: {
@@ -99,6 +136,36 @@ module.exports = {
           '0%': { transform: 'translateY(10px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
+        slideDown: {
+          '0%': { transform: 'translateY(-10px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        bounceGentle: {
+          '0%, 20%, 53%, 80%, 100%': { transform: 'translateY(0)' },
+          '40%, 43%': { transform: 'translateY(-8px)' },
+          '70%': { transform: 'translateY(-4px)' },
+          '90%': { transform: 'translateY(-2px)' },
+        },
+        shake: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-2px)' },
+          '20%, 40%, 60%, 80%': { transform: 'translateX(2px)' },
+        },
+      },
+      // Mobile-specific utilities
+      backdropBlur: {
+        xs: '2px',
+      },
+      backdropSaturate: {
+        25: '.25',
+        75: '.75',
+      },
+      // Financial data display optimizations
+      letterSpacing: {
+        'financial': '0.02em', // Slightly tighter spacing for numbers
+      },
+      lineHeight: {
+        'financial': '1.2', // Tighter line height for financial amounts
       },
     },
   },
@@ -106,5 +173,56 @@ module.exports = {
     require('@tailwindcss/forms'),
     require('@tailwindcss/typography'),
     require('@tailwindcss/aspect-ratio'),
+    // Custom plugin for mobile utilities
+    function({ addUtilities, theme }) {
+      const newUtilities = {
+        // Touch manipulation
+        '.touch-manipulation': {
+          'touch-action': 'manipulation',
+        },
+        '.touch-pan-x': {
+          'touch-action': 'pan-x',
+        },
+        '.touch-pan-y': {
+          'touch-action': 'pan-y',
+        },
+        '.touch-none': {
+          'touch-action': 'none',
+        },
+        // Safe area utilities
+        '.pb-safe-area-inset-bottom': {
+          'padding-bottom': 'env(safe-area-inset-bottom)',
+        },
+        '.pt-safe-area-inset-top': {
+          'padding-top': 'env(safe-area-inset-top)',
+        },
+        '.pl-safe-area-inset-left': {
+          'padding-left': 'env(safe-area-inset-left)',
+        },
+        '.pr-safe-area-inset-right': {
+          'padding-right': 'env(safe-area-inset-right)',
+        },
+        // Financial text utilities
+        '.text-financial': {
+          'font-variant-numeric': 'tabular-nums',
+          'letter-spacing': theme('letterSpacing.financial'),
+          'line-height': theme('lineHeight.financial'),
+        },
+        // Mobile viewport utilities
+        '.min-h-screen-mobile': {
+          'min-height': '100vh',
+          'min-height': '100dvh', // Dynamic viewport height for mobile
+        },
+        // Scrollbar hide
+        '.scrollbar-hide': {
+          '-ms-overflow-style': 'none', /* IE and Edge */
+          'scrollbar-width': 'none', /* Firefox */
+          '&::-webkit-scrollbar': {
+            display: 'none', /* Chrome, Safari, Opera */
+          },
+        },
+      }
+      addUtilities(newUtilities)
+    }
   ],
 }

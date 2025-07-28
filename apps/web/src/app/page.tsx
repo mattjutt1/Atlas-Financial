@@ -1,10 +1,12 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { AccountCard } from '@/components/dashboard/AccountCard'
 import { NetWorthChart } from '@/components/dashboard/NetWorthChart'
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions'
 import { BrutalHonestyInsight } from '@/components/dashboard/BrutalHonestyInsight'
 import { LoadingSpinner, Card } from '@/components/common'
+import { MobileDashboard } from '@/components/mobile/MobileDashboard'
 import { SessionAuth } from '@/components/auth/AuthWrapper'
 import { useSessionContext } from 'supertokens-auth-react/recipe/session'
 import { useFinancialData } from '@/hooks'
@@ -12,44 +14,44 @@ import { mockNetWorthData, mockInsights } from '@/lib/fixtures'
 
 function LandingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="container mx-auto px-4 py-16">
+    <div className="min-h-screen-mobile bg-gradient-to-br from-primary-50 to-primary-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="container mx-auto px-4 py-8 sm:py-16">
         <div className="text-center">
-          <h1 className="text-6xl font-bold text-gray-900 dark:text-white mb-6">
+          <h1 className="text-4xl sm:text-6xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
             Atlas Financial
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
+          <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 mb-6 sm:mb-8 max-w-2xl mx-auto px-4">
             The brutally honest personal finance platform that tells you the truth about your money.
             No sugar-coating. No false hope. Just reality.
           </p>
           <div className="space-y-4">
-            <div className="inline-block px-6 py-3 bg-primary-600 text-white rounded-lg font-medium">
+            <div className="inline-block px-6 py-3 bg-primary-600 text-white rounded-lg font-medium touch-manipulation">
               Please sign in to access your dashboard
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Atlas Financial v1.1 - Next.js 15 + React 19
+              Atlas Financial v1.6 - Mobile-First Design
             </p>
           </div>
         </div>
 
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-          <Card className="text-center">
+        <div className="mt-12 sm:mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8 max-w-4xl mx-auto px-4">
+          <Card className="text-center p-4 sm:p-6">
             <h3 className="text-lg font-semibold mb-2">Brutal Honesty</h3>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
               Get the unfiltered truth about your financial situation
             </p>
           </Card>
 
-          <Card className="text-center">
-            <h3 className="text-lg font-semibold mb-2">Real-time Insights</h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              AI-powered analysis of your spending patterns and financial health
+          <Card className="text-center p-4 sm:p-6">
+            <h3 className="text-lg font-semibold mb-2">Mobile-First</h3>
+            <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
+              Optimized for mobile with touch gestures and responsive design
             </p>
           </Card>
 
-          <Card className="text-center">
+          <Card className="text-center p-4 sm:p-6 sm:col-span-2 lg:col-span-1">
             <h3 className="text-lg font-semibold mb-2">Action-Oriented</h3>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
               Concrete steps to improve your financial future
             </p>
           </Card>
@@ -62,11 +64,49 @@ function LandingPage() {
 function Dashboard() {
   const session = useSessionContext()
   const { accounts, transactions, loading: dataLoading, error } = useFinancialData()
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768) // md breakpoint
+    }
+
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   if (dataLoading) {
     return <LoadingSpinner fullScreen />
   }
 
+  // Use mobile-optimized dashboard on small screens
+  if (isMobile) {
+    return (
+      <MobileDashboard
+        userId={session.userId}
+        onAccountTap={(account) => {
+          // Navigate to account detail
+          console.log('Account tapped:', account)
+        }}
+        onTransactionTap={(transaction) => {
+          // Navigate to transaction detail
+          console.log('Transaction tapped:', transaction)
+        }}
+        onViewAllAccounts={() => {
+          // Navigate to accounts page
+          window.location.href = '/accounts'
+        }}
+        onViewAllTransactions={() => {
+          // Navigate to transactions page
+          window.location.href = '/transactions'
+        }}
+      />
+    )
+  }
+
+  // Desktop dashboard layout
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
