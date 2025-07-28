@@ -41,7 +41,7 @@ fi
 # Check required secret files exist
 SECRET_FILES=(
     "postgres_password.txt"
-    "supertokens_api_key.txt" 
+    "supertokens_api_key.txt"
     "hasura_admin_secret.txt"
     "firefly_app_key.txt"
     "jwt_secret_key.txt"
@@ -188,7 +188,7 @@ if [ -f "services/hasura/metadata/allow_list.yaml" ]; then
     else
         check_result 1 "Allow list missing user queries"
     fi
-    
+
     if grep -q "GetUserAccounts" services/hasura/metadata/allow_list.yaml; then
         check_result 0 "Allow list contains account queries"
     else

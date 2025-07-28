@@ -31,7 +31,7 @@ function LandingPage() {
             </p>
           </div>
         </div>
-        
+
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
           <Card className="text-center">
             <h3 className="text-lg font-semibold mb-2">Brutal Honesty</h3>
@@ -39,14 +39,14 @@ function LandingPage() {
               Get the unfiltered truth about your financial situation
             </p>
           </Card>
-          
+
           <Card className="text-center">
             <h3 className="text-lg font-semibold mb-2">Real-time Insights</h3>
             <p className="text-gray-600 dark:text-gray-400">
               AI-powered analysis of your spending patterns and financial health
             </p>
           </Card>
-          
+
           <Card className="text-center">
             <h3 className="text-lg font-semibold mb-2">Action-Oriented</h3>
             <p className="text-gray-600 dark:text-gray-400">

@@ -1,0 +1,227 @@
+# Atlas Financial Core Platform - Modular Monolith Dockerfile
+# Multi-stage build for Next.js + Rust + Python AI Engine + SuperTokens
+
+# =============================================================================
+# Stage 1: Rust Financial Engine Builder
+# =============================================================================
+FROM rust:1.75-alpine AS rust-builder
+
+# Install system dependencies for Rust compilation
+RUN apk add --no-cache \
+    musl-dev \
+    pkgconfig \
+    openssl-dev \
+    openssl-libs-static \
+    libressl-dev
+
+# Set up Rust environment
+WORKDIR /rust-engine
+
+# Copy Rust source
+COPY rust-engine/Cargo.toml rust-engine/Cargo.lock ./
+COPY rust-engine/src ./src
+COPY rust-engine/crates ./crates
+COPY rust-engine/benches ./benches
+
+# Build Rust engine as static library and FFI bindings
+RUN cargo build --release --target x86_64-unknown-linux-musl
+RUN cargo build --release --lib --crate-type cdylib
+
+# Create FFI bindings for Node.js integration
+RUN cargo install wasm-pack
+RUN wasm-pack build --target nodejs --out-dir ../wasm-bindings
+
+# =============================================================================
+# Stage 2: Python AI Engine Builder  
+# =============================================================================
+FROM python:3.11-alpine AS python-builder
+
+# Install Python build dependencies
+RUN apk add --no-cache \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    openssl-dev \
+    python3-dev \
+    py3-pip
+
+# Set up Python environment
+WORKDIR /ai-engine
+
+# Copy Python requirements and install dependencies
+COPY ai-engine/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy AI engine source
+COPY ai-engine/src ./src
+COPY ai-engine/models ./models
+COPY ai-engine/scripts ./scripts
+
+# Build Python wheel for embedding
+RUN pip install build
+RUN python -m build --wheel
+
+# Install PyO3 for Rust-Python integration
+RUN pip install maturin pyo3
+
+# =============================================================================
+# Stage 3: Node.js Base with System Dependencies
+# =============================================================================
+FROM node:18-alpine AS node-base
+
+# Install system dependencies for the modular monolith
+RUN apk add --no-cache \
+    python3 \
+    py3-pip \
+    curl \
+    ca-certificates \
+    dumb-init \
+    su-exec \
+    postgresql-client \
+    redis \
+    openssl
+
+# Create application user for security
+RUN addgroup -g 1001 -S atlas && \
+    adduser -S atlas -u 1001 -G atlas
+
+# Set up working directory
+WORKDIR /app
+RUN chown atlas:atlas /app
+
+# =============================================================================
+# Stage 4: Dependencies Installation
+# =============================================================================
+FROM node-base AS deps-installer
+
+# Copy package files
+COPY --chown=atlas:atlas package.json package-lock.json ./
+
+# Install Node.js dependencies
+USER atlas
+RUN npm ci --only=production --frozen-lockfile && \
+    npm cache clean --force
+
+# =============================================================================
+# Stage 5: Application Builder
+# =============================================================================
+FROM node-base AS app-builder
+
+# Copy dependencies from previous stage
+COPY --from=deps-installer --chown=atlas:atlas /app/node_modules ./node_modules
+
+# Copy application source
+COPY --chown=atlas:atlas . .
+
+# Copy Rust engine artifacts
+COPY --from=rust-builder --chown=atlas:atlas /rust-engine/target/x86_64-unknown-linux-musl/release/libfinancial_core.* ./rust-engine/lib/
+COPY --from=rust-builder --chown=atlas:atlas /wasm-bindings ./rust-engine/wasm/
+
+# Copy Python AI engine artifacts
+COPY --from=python-builder --chown=atlas:atlas /ai-engine/dist/*.whl ./ai-engine/
+COPY --from=python-builder --chown=atlas:atlas /ai-engine/src ./ai-engine/src/
+COPY --from=python-builder --chown=atlas:atlas /ai-engine/models ./ai-engine/models/
+
+# Install Python AI engine
+USER root
+RUN pip3 install ./ai-engine/*.whl
+USER atlas
+
+# Build Next.js application with integrated engines
+RUN npm run build
+
+# =============================================================================
+# Stage 6: Production Runtime
+# =============================================================================
+FROM node-base AS production
+
+# Copy built application
+COPY --from=app-builder --chown=atlas:atlas /app/.next/standalone ./
+COPY --from=app-builder --chown=atlas:atlas /app/.next/static ./.next/static
+COPY --from=app-builder --chown=atlas:atlas /app/public ./public
+
+# Copy engine binaries
+COPY --from=app-builder --chown=atlas:atlas /app/rust-engine ./rust-engine
+COPY --from=app-builder --chown=atlas:atlas /app/ai-engine ./ai-engine
+
+# Copy Python dependencies
+COPY --from=python-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+
+# Create directories for runtime data
+RUN mkdir -p /app/data /app/logs /app/cache /app/models && \
+    chown -R atlas:atlas /app
+
+# Health check script
+COPY --chown=atlas:atlas <<EOF /app/healthcheck.sh
+#!/bin/sh
+set -e
+
+# Check main application
+curl -f http://localhost:3000/api/health || exit 1
+
+# Check Rust engine integration
+curl -f http://localhost:3000/api/financial/health || exit 1
+
+# Check AI engine integration  
+curl -f http://localhost:3000/api/ai/health || exit 1
+
+# Check database connectivity
+if ! pg_isready -h \${DATABASE_HOST:-localhost} -p 5432 -U \${DATABASE_USER:-atlas}; then
+    echo "Database not ready"
+    exit 1
+fi
+
+# Check Redis connectivity
+if ! redis-cli -h \${REDIS_HOST:-localhost} -p 6379 ping; then
+    echo "Redis not ready"
+    exit 1
+fi
+
+echo "All health checks passed"
+EOF
+
+RUN chmod +x /app/healthcheck.sh
+
+# Environment variables
+ENV NODE_ENV=production \
+    PORT=3000 \
+    HOSTNAME="0.0.0.0" \
+    NEXT_TELEMETRY_DISABLED=1 \
+    ATLAS_ENGINE_MODE=embedded \
+    RUST_LOG=info \
+    PYTHONPATH=/app/ai-engine/src
+
+# Security: Drop privileges
+USER atlas
+
+# Expose ports
+EXPOSE 3000 9091
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD /app/healthcheck.sh
+
+# Use dumb-init for proper signal handling
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
+# Start the modular monolith
+CMD ["node", "server.js"]
+
+# =============================================================================
+# Build Arguments and Labels
+# =============================================================================
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION=2.0.0
+
+LABEL \
+    org.opencontainers.image.title="Atlas Financial Core Platform" \
+    org.opencontainers.image.description="Modular Monolith: Next.js + Rust + AI + SuperTokens" \
+    org.opencontainers.image.vendor="Atlas Financial" \
+    org.opencontainers.image.version=$VERSION \
+    org.opencontainers.image.created=$BUILD_DATE \
+    org.opencontainers.image.revision=$VCS_REF \
+    org.opencontainers.image.licenses="PROPRIETARY" \
+    atlas.service="core-platform" \
+    atlas.architecture="modular-monolith" \
+    atlas.components="nextjs,rust,python,supertokens"

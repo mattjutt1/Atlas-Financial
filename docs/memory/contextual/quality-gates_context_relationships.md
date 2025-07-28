@@ -9,19 +9,19 @@ graph TB
     PreCommit --> Frontend[Next.js Frontend]
     PreCommit --> Infrastructure[K8s Infrastructure]
     PreCommit --> Security[Secret Detection]
-    
+
     RustEngine --> CargoFmt[Cargo Format]
     RustEngine --> Clippy[Clippy Linting]
     RustEngine --> Compilation[Build Verification]
-    
+
     Frontend --> ESLint[ESLint Rules]
     Frontend --> Prettier[Code Formatting]
     Frontend --> TypeScript[Type Checking]
-    
+
     Infrastructure --> YAML[YAML Validation]
     Infrastructure --> Dockerfile[Hadolint Security]
     Infrastructure --> K8sManifests[Kubernetes Validation]
-    
+
     Security --> DetectSecrets[Secret Detection]
     Security --> PragmaAllowlist[False Positive Management]
     Security --> Baseline[Secrets Baseline]

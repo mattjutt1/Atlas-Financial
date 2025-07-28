@@ -13,12 +13,12 @@ function AccountsContent() {
   const [filterType, setFilterType] = useState<string>('all')
   const { totalBalance, totalDebt, netWorth } = useAccountSummary({ accounts: mockAccounts as any })
 
-  const filteredAccounts = filterType === 'all' 
-    ? mockAccounts 
+  const filteredAccounts = filterType === 'all'
+    ? mockAccounts
     : mockAccounts.filter(account => account.type === filterType)
 
   const accountTypes = ['all', 'checking', 'savings', 'credit', 'investment']
-  
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
@@ -31,7 +31,7 @@ function AccountsContent() {
             Manage all your financial accounts in one place
           </p>
         </div>
-        
+
         <button className="btn-primary flex items-center gap-2">
           <PlusIcon className="w-5 h-5" />
           Add Account
@@ -48,7 +48,7 @@ function AccountsContent() {
             {formatCurrency(totalBalance)}
           </p>
         </Card>
-        
+
         <Card>
           <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
             Total Debt
@@ -57,7 +57,7 @@ function AccountsContent() {
             {formatCurrency(totalDebt)}
           </p>
         </Card>
-        
+
         <Card>
           <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
             Net Worth
@@ -91,7 +91,7 @@ function AccountsContent() {
             ))}
           </div>
         </div>
-        
+
         <div className="text-sm text-gray-500 dark:text-gray-400">
           {filteredAccounts.length} account{filteredAccounts.length !== 1 ? 's' : ''}
         </div>
@@ -115,7 +115,7 @@ function AccountsContent() {
             No accounts found
           </h3>
           <p className="text-gray-500 dark:text-gray-400 mb-6">
-            {filterType === 'all' 
+            {filterType === 'all'
               ? 'Get started by connecting your first account'
               : `No ${filterType} accounts found. Try a different filter.`
             }

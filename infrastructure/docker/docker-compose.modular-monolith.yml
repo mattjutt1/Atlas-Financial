@@ -1,0 +1,399 @@
+version: '3.8'
+
+# Atlas Financial Modular Monolith Architecture (Phase 2)
+# Consolidation from 12 services to 4 services
+# Maintains bank-grade security with reduced operational complexity
+
+# Docker Compose Secrets - Bank-Grade Security Maintained
+secrets:
+  postgres_password:
+    file: ./config/secrets/postgres_password.txt
+  postgres_connection_uri:
+    file: ./config/secrets/postgres_connection_uri.txt
+  supertokens_api_key:
+    file: ./config/secrets/supertokens_api_key.txt
+  hasura_admin_secret:
+    file: ./config/secrets/hasura_admin_secret.txt
+  hasura_database_url:
+    file: ./config/secrets/hasura_database_url.txt
+  jwt_secret_key:
+    file: ./config/secrets/jwt_secret_key.txt
+  redis_password:
+    file: ./config/secrets/redis_password.txt
+  rust_database_url:
+    file: ./config/secrets/rust_database_url.txt
+  ai_engine_secret:
+    file: ./config/secrets/ai_engine_secret.txt
+
+services:
+  # SERVICE 1: Atlas Core Platform (Unified Monolith)
+  # Consolidates: Next.js Web + Rust Financial Engine + AI Engine + SuperTokens
+  # Port: 3000 (single entry point)
+  atlas-core:
+    build:
+      context: ../../apps/platform
+      dockerfile: Dockerfile.modular-monolith
+      args:
+        - RUST_ENGINE_VERSION=latest
+        - AI_ENGINE_VERSION=latest
+        - SUPERTOKENS_VERSION=latest
+    container_name: atlas-core-platform
+    environment:
+      # Core Platform Configuration
+      NODE_ENV: development
+      HOST: "0.0.0.0"
+      PORT: 3000
+      
+      # Database Connections (via secrets)
+      DATABASE_URL_FILE: /run/secrets/rust_database_url
+      POSTGRES_CONNECTION_URI_FILE: /run/secrets/postgres_connection_uri
+      
+      # Authentication Configuration (embedded SuperTokens)
+      SUPERTOKENS_API_KEY_FILE: /run/secrets/supertokens_api_key
+      JWT_SECRET_FILE: /run/secrets/jwt_secret_key
+      SUPERTOKENS_CONNECTION_URI: postgres://atlas:${POSTGRES_PASSWORD}@atlas-data-postgres:5432/supertokens
+      
+      # Cache Configuration
+      REDIS_URL: redis://atlas-data-redis:6379
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+      
+      # API Gateway Integration
+      HASURA_GRAPHQL_URL: http://atlas-api-gateway:8081/v1/graphql
+      HASURA_ADMIN_SECRET_FILE: /run/secrets/hasura_admin_secret
+      
+      # AI Engine Configuration (embedded)
+      AI_ENGINE_SECRET_FILE: /run/secrets/ai_engine_secret
+      AI_MODEL_PATH: /app/models
+      
+      # Rust Financial Engine Configuration (embedded FFI)
+      RUST_ENGINE_MODE: embedded
+      RUST_LOG: info
+      
+      # Security Configuration
+      CORS_ORIGIN: http://localhost:3000
+      SECURE_COOKIES: "false"  # true in production
+      HTTPS_ONLY: "false"      # true in production
+      
+      # Observability
+      METRICS_ENABLED: "true"
+      PROMETHEUS_PORT: 9091
+      
+    secrets:
+      - postgres_connection_uri
+      - supertokens_api_key
+      - jwt_secret_key
+      - redis_password
+      - rust_database_url
+      - hasura_admin_secret
+      - ai_engine_secret
+      
+    ports:
+      - "3000:3000"      # Main application
+      - "9091:9091"      # Metrics endpoint
+      
+    depends_on:
+      atlas-data-postgres:
+        condition: service_healthy
+      atlas-data-redis:
+        condition: service_healthy
+      atlas-api-gateway:
+        condition: service_healthy
+        
+    networks:
+      - atlas-network
+      
+    volumes:
+      # Development hot-reload
+      - ../../apps/platform:/app
+      - /app/node_modules
+      - /app/.next
+      # AI Models
+      - ai_models:/app/models
+      - ai_cache:/app/cache
+      # Rust Engine Libraries
+      - rust_libs:/app/rust
+      
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # SERVICE 2: Atlas Data Platform (Consolidated Database Layer)
+  # Consolidates: PostgreSQL + Redis + Database Management
+  # Port: 5432 (PostgreSQL primary)
+  atlas-data-postgres:
+    image: postgres:15-alpine
+    container_name: atlas-data-postgres
+    environment:
+      # Multi-database setup for consolidated data layer
+      POSTGRES_DB: atlas_financial
+      POSTGRES_USER: atlas
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_MULTIPLE_DATABASES: atlas_core,hasura_metadata,supertokens,observability,cache_metadata
+      
+    secrets:
+      - postgres_password
+      
+    ports:
+      - "5432:5432"      # PostgreSQL
+      
+    networks:
+      - atlas-network
+      
+    volumes:
+      # PostgreSQL Data
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/create-multiple-databases.sh:/docker-entrypoint-initdb.d/create-multiple-databases.sh:ro
+      - ./data-platform/init:/docker-entrypoint-initdb.d/data-platform:ro
+      # Backup and Recovery
+      - ./data-platform/backup:/backup
+          
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atlas -d atlas_financial"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Redis as part of Data Platform
+  atlas-data-redis:
+    image: redis:7-alpine
+    container_name: atlas-data-redis
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass ${REDIS_PASSWORD:-redis_dev_password}
+    environment:
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+    secrets:
+      - redis_password
+    ports:
+      - "6379:6379"
+    networks:
+      - atlas-network
+    volumes:
+      - redis_data:/data
+      - ./data-platform/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a ${REDIS_PASSWORD:-redis_dev_password} ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # SERVICE 3: Atlas API Gateway (Hasura + External Integrations)
+  # Consolidates: Hasura + Firefly III Integration + External APIs
+  # Port: 8081 (GraphQL Gateway)
+  atlas-api-gateway:
+    image: hasura/graphql-engine:v2.42.0
+    container_name: atlas-api-gateway
+    environment:
+      # Database Configuration
+      HASURA_GRAPHQL_DATABASE_URL_FILE: /run/secrets/hasura_database_url
+      HASURA_GRAPHQL_METADATA_DATABASE_URL: postgres://atlas:${POSTGRES_PASSWORD}@atlas-data-postgres:5432/hasura_metadata
+      
+      # Security Configuration (Production-Ready)
+      HASURA_GRAPHQL_ADMIN_SECRET_FILE: /run/secrets/hasura_admin_secret
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "false"  # Security: Disabled in production
+      HASURA_GRAPHQL_DEV_MODE: "false"        # Security: Disabled
+      
+      # JWT Authentication (unified with Core Platform)
+      HASURA_GRAPHQL_JWT_SECRET: |
+        {
+          "jwk_url": "http://atlas-core:3000/auth/jwt/jwks.json",
+          "issuer": "http://atlas-core:3000",
+          "audience": "atlas-financial"
+        }
+        
+      # Security Hardening
+      HASURA_GRAPHQL_ENABLE_ALLOWLIST: "true"
+      HASURA_GRAPHQL_QUERY_COMPLEXITY_LIMIT: 1000
+      HASURA_GRAPHQL_MAX_ROWS: 10000
+      HASURA_GRAPHQL_ENABLE_INTROSPECTION: "false"
+      
+      # External Integration Configuration
+      FIREFLY_INTEGRATION_ENABLED: "true"
+      FIREFLY_API_URL: http://atlas-core:3000/integrations/firefly
+      
+      # Rate Limiting and Protection
+      HASURA_GRAPHQL_RATE_LIMIT_ENABLED: "true"
+      HASURA_GRAPHQL_RATE_LIMIT_MAX_REQS_PER_MIN: 1000
+      
+      # Logging and Monitoring
+      HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
+      
+    secrets:
+      - hasura_database_url
+      - hasura_admin_secret
+      
+    ports:
+      - "8081:8080"      # GraphQL API
+      
+    depends_on:
+      atlas-data-postgres:
+        condition: service_healthy
+      atlas-data-redis:
+        condition: service_healthy
+        
+    networks:
+      - atlas-network
+      
+    volumes:
+      # Hasura Metadata and Configuration
+      - ../../services/hasura/metadata:/hasura-metadata:ro
+      - ./api-gateway/actions:/hasura-actions:ro
+      - ./api-gateway/adapters:/hasura-adapters:ro
+      
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # SERVICE 4: Atlas Observability Platform (Monitoring & Operations)
+  # Consolidates: Prometheus + Grafana + Alerting + Log Aggregation
+  # Port: 9090 (Prometheus primary)
+  atlas-observability:
+    image: prom/prometheus:v2.51.2
+    container_name: atlas-observability-platform
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=10GB'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+      - '--log.level=info'
+      
+    environment:
+      # Monitoring Configuration
+      PROMETHEUS_SCRAPE_INTERVAL: 15s
+      PROMETHEUS_EVALUATION_INTERVAL: 15s
+      
+      # Grafana Sidecar Configuration
+      GRAFANA_ENABLED: "true"
+      GRAFANA_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin_dev_password}
+      GRAFANA_DATABASE_URL: postgres://atlas:${POSTGRES_PASSWORD}@atlas-data-postgres:5432/observability
+      
+      # Alert Manager Configuration
+      ALERTMANAGER_ENABLED: "true"
+      ALERTMANAGER_WEBHOOK_URL: http://atlas-core:3000/api/alerts
+      
+    ports:
+      - "9090:9090"      # Prometheus
+      - "3001:3001"      # Grafana (sidecar)
+      - "9093:9093"      # AlertManager (sidecar)
+      
+    depends_on:
+      atlas-core:
+        condition: service_healthy
+      atlas-data:
+        condition: service_healthy
+      atlas-api-gateway:
+        condition: service_healthy
+        
+    networks:
+      - atlas-network
+      
+    volumes:
+      # Prometheus Configuration
+      - ./prometheus/config:/etc/prometheus:ro
+      - ./prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+      # Grafana Configuration (sidecar)
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+      # Alert Manager Configuration
+      - ./observability/alertmanager:/etc/alertmanager:ro
+      
+    # Grafana sidecar for unified observability
+    sidecars:
+      grafana:
+        image: grafana/grafana-oss:10.4.1
+        environment:
+          GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin_dev_password}
+          GF_DATABASE_TYPE: postgres
+          GF_DATABASE_HOST: atlas-data:5432
+          GF_DATABASE_NAME: observability
+          GF_DATABASE_USER: atlas
+          GF_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-atlas_dev_password}
+        ports:
+          - "3001:3000"
+        volumes:
+          - grafana_data:/var/lib/grafana
+          - ./grafana/provisioning:/etc/grafana/provisioning:ro
+          
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy && curl -f http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+# Secure Network Configuration (Maintained)
+networks:
+  atlas-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+    # Network security policies
+    internal: false
+    attachable: false
+
+# Persistent Storage (Optimized for 4 Services)
+volumes:
+  # Data Platform Volumes
+  postgres_data:
+    driver: local
+    name: atlas-postgres-data
+  redis_data:
+    driver: local
+    name: atlas-redis-data
+    
+  # Core Platform Volumes
+  ai_models:
+    driver: local
+    name: atlas-ai-models
+  ai_cache:
+    driver: local
+    name: atlas-ai-cache
+  rust_libs:
+    driver: local
+    name: atlas-rust-libs
+    
+  # Observability Platform Volumes
+  prometheus_data:
+    driver: local
+    name: atlas-prometheus-data
+  grafana_data:
+    driver: local
+    name: atlas-grafana-data
+
+# Health Check Configuration
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+
+# Logging Configuration (Unified)
+x-logging-defaults: &logging-defaults
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+    labels: "atlas.service,atlas.environment"
+
+# Resource Limits (Optimized for Monolith)
+x-resource-defaults: &resource-defaults
+  deploy:
+    resources:
+      limits:
+        memory: 2G
+        cpus: '1.0'
+      reservations:
+        memory: 512M
+        cpus: '0.25'

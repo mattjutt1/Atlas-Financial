@@ -1,0 +1,268 @@
+# Atlas Financial Observability Platform - AlertManager Configuration
+# Optimized for 4-service modular monolith architecture
+
+global:
+  # SMTP configuration for email alerts
+  smtp_smarthost: '${SMTP_HOST}:${SMTP_PORT}'
+  smtp_from: 'alerts@atlas-financial.app'
+  smtp_auth_username: '${SMTP_USERNAME}'
+  smtp_auth_password: '${SMTP_PASSWORD}'
+  smtp_require_tls: true
+
+  # Slack webhook for team notifications
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+
+  # Resolve timeout
+  resolve_timeout: 5m
+
+# Templates for alert formatting
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Route configuration
+route:
+  group_by: ['alertname', 'service', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'atlas-default'
+  
+  routes:
+    # Critical alerts - immediate notification
+    - match:
+        severity: critical
+      receiver: 'atlas-critical'
+      group_wait: 10s
+      repeat_interval: 1h
+      
+    # Service-specific routing
+    - match:
+        service: atlas-core-platform
+      receiver: 'atlas-core-team'
+      
+    - match:
+        service: atlas-data-platform
+      receiver: 'atlas-data-team'
+      
+    - match:
+        service: atlas-api-gateway
+      receiver: 'atlas-api-team'
+      
+    - match:
+        service: atlas-observability
+      receiver: 'atlas-ops-team'
+      
+    # Business logic alerts
+    - match:
+        component: business-logic
+      receiver: 'atlas-business-team'
+      
+    # Security alerts
+    - match:
+        alertname: SecurityBreach
+      receiver: 'atlas-security-team'
+      group_wait: 0s
+      repeat_interval: 15m
+
+# Receivers configuration
+receivers:
+  # Default receiver
+  - name: 'atlas-default'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#atlas-alerts'
+        title: 'Atlas Financial Alert'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Service:* {{ .Labels.service }}
+          *Severity:* {{ .Labels.severity }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+
+  # Critical alerts
+  - name: 'atlas-critical'
+    email_configs:
+      - to: 'critical-alerts@atlas-financial.app'
+        subject: 'CRITICAL: Atlas Financial System Alert'
+        body: |
+          Critical alert in Atlas Financial system:
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Service: {{ .Labels.service }}
+          Component: {{ .Labels.component }}
+          Severity: {{ .Labels.severity }}
+          Description: {{ .Annotations.description }}
+          
+          Time: {{ .StartsAt }}
+          {{ if .Labels.runbook_url }}
+          Runbook: {{ .Labels.runbook_url }}
+          {{ end }}
+          {{ end }}
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#atlas-critical'
+        title: '🚨 CRITICAL: Atlas Financial Alert'
+        text: |
+          {{ range .Alerts }}
+          *CRITICAL ALERT*
+          *Service:* {{ .Labels.service }}
+          *Component:* {{ .Labels.component }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          {{ if .Labels.runbook_url }}
+          *Runbook:* {{ .Labels.runbook_url }}
+          {{ end }}
+          {{ end }}
+
+  # Core Platform team
+  - name: 'atlas-core-team'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#atlas-core-platform'
+        title: 'Atlas Core Platform Alert'
+        text: |
+          {{ range .Alerts }}
+          *Component:* {{ .Labels.component }}
+          *Alert:* {{ .Annotations.summary }}
+          *Severity:* {{ .Labels.severity }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+
+  # Data Platform team
+  - name: 'atlas-data-team'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#atlas-data-platform'
+        title: 'Atlas Data Platform Alert'
+        text: |
+          {{ range .Alerts }}
+          *Database/Cache:* {{ .Labels.component }}
+          *Alert:* {{ .Annotations.summary }}
+          *Severity:* {{ .Labels.severity }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+
+  # API Gateway team
+  - name: 'atlas-api-team'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#atlas-api-gateway'
+        title: 'Atlas API Gateway Alert'
+        text: |
+          {{ range .Alerts }}
+          *API Component:* {{ .Labels.component }}
+          *Alert:* {{ .Annotations.summary }}
+          *Severity:* {{ .Labels.severity }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+
+  # Operations team
+  - name: 'atlas-ops-team'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#atlas-operations'
+        title: 'Atlas Observability Alert'
+        text: |
+          {{ range .Alerts }}
+          *Monitoring Component:* {{ .Labels.component }}
+          *Alert:* {{ .Annotations.summary }}
+          *Severity:* {{ .Labels.severity }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+
+  # Business team
+  - name: 'atlas-business-team'
+    email_configs:
+      - to: 'business-alerts@atlas-financial.app'
+        subject: 'Atlas Financial Business Metric Alert'
+        body: |
+          Business metric alert in Atlas Financial:
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Metric: {{ .Labels.alertname }}
+          Value: {{ .Annotations.value }}
+          Threshold: {{ .Annotations.threshold }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+
+  # Security team
+  - name: 'atlas-security-team'
+    email_configs:
+      - to: 'security@atlas-financial.app'
+        subject: 'SECURITY ALERT: Atlas Financial'
+        body: |
+          SECURITY ALERT in Atlas Financial system:
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Service: {{ .Labels.service }}
+          Severity: {{ .Labels.severity }}
+          Description: {{ .Annotations.description }}
+          
+          Immediate action may be required.
+          Time: {{ .StartsAt }}
+          {{ end }}
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#atlas-security'
+        title: '🔒 SECURITY ALERT: Atlas Financial'
+        text: |
+          {{ range .Alerts }}
+          *SECURITY ALERT*
+          *Service:* {{ .Labels.service }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Immediate action required*
+          {{ end }}
+
+# Inhibit rules to prevent alert spam
+inhibit_rules:
+  # Inhibit low severity alerts when high severity is firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'service', 'component']
+
+  - source_match:
+      severity: 'warning'
+    target_match:
+      severity: 'info'
+    equal: ['alertname', 'service', 'component']
+
+  # Inhibit component alerts when service is down
+  - source_match:
+      alertname: 'ServiceDown'
+    target_match_re:
+      alertname: '.*'
+    equal: ['service']
+
+  # Inhibit database alerts when data platform is down
+  - source_match:
+      service: 'atlas-data-platform'
+      alertname: 'ServiceDown'
+    target_match:
+      service: 'atlas-core-platform'
+      alertname: 'DatabaseConnectionFailed'
+
+# Mute configuration for maintenance windows
+mute_time_intervals:
+  - name: maintenance-window
+    time_intervals:
+      - times:
+          - start_time: '02:00'
+            end_time: '04:00'
+        weekdays: ['sunday']
+        months: ['1:12']
+
+# Active alerts configuration
+active_time_intervals:
+  - name: business-hours
+    time_intervals:
+      - times:
+          - start_time: '09:00'
+            end_time: '17:00'
+        weekdays: ['monday:friday']

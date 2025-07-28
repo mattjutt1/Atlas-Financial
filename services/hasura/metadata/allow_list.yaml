@@ -15,7 +15,7 @@
             }
           }
 
-      # Account Management Queries  
+      # Account Management Queries
       - name: GetUserAccounts
         query: |
           query GetUserAccounts($userId: String!) {

@@ -6,18 +6,18 @@ import { useEffect, useState } from 'react'
 export function useAuthentication() {
   const session = useSessionContext()
   const [userEmail, setUserEmail] = useState<string | null>(null)
-  
+
   // Extract user email from SuperTokens session
   useEffect(() => {
     if (session.loading === false && session.doesSessionExist) {
       const userId = session.userId
       const accessTokenPayload = session.accessTokenPayload
-      
+
       // Try to get email from access token payload
-      const email = accessTokenPayload.email || 
+      const email = accessTokenPayload.email ||
                    accessTokenPayload['https://hasura.io/jwt/claims']?.['x-hasura-user-email'] ||
                    null
-      
+
       setUserEmail(email)
     } else {
       setUserEmail(null)
@@ -36,7 +36,7 @@ export function useAuthentication() {
   })
 
   const backendUser = userData?.users?.[0]
-  
+
   // Combine session user with backend user data
   const user = backendUser ? {
     id: backendUser.id,

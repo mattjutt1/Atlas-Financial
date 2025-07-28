@@ -1,0 +1,198 @@
+# Atlas Financial Observability Platform - Prometheus Configuration
+# Optimized for 4-service modular monolith architecture
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'atlas-financial'
+    environment: 'development'  # Override in production
+    architecture: 'modular-monolith'
+
+# Rule files for alerting
+rule_files:
+  - "/etc/prometheus/rules/atlas-financial.yml"
+  - "/etc/prometheus/rules/modular-monolith.yml"
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - 'localhost:9093'  # AlertManager sidecar
+
+# Scrape configurations for the 4-service architecture
+scrape_configs:
+  # ==========================================================================
+  # SERVICE 1: Atlas Core Platform (Consolidated Application)
+  # ==========================================================================
+  - job_name: 'atlas-core-platform'
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['atlas-core:9091']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: atlas-core:9091
+      - target_label: service
+        replacement: atlas-core-platform
+      - target_label: component
+        replacement: monolith
+
+  # Next.js application metrics
+  - job_name: 'atlas-core-nextjs'
+    scrape_interval: 15s
+    metrics_path: '/api/metrics'
+    static_configs:
+      - targets: ['atlas-core:3000']
+    relabel_configs:
+      - target_label: service
+        replacement: atlas-core-platform
+      - target_label: component
+        replacement: nextjs
+
+  # Rust Financial Engine metrics (embedded)
+  - job_name: 'atlas-core-rust-engine'
+    scrape_interval: 10s
+    metrics_path: '/api/financial/metrics'
+    static_configs:
+      - targets: ['atlas-core:3000']
+    relabel_configs:
+      - target_label: service
+        replacement: atlas-core-platform
+      - target_label: component
+        replacement: rust-engine
+
+  # AI Engine metrics (embedded)
+  - job_name: 'atlas-core-ai-engine'
+    scrape_interval: 30s
+    metrics_path: '/api/ai/metrics'
+    static_configs:
+      - targets: ['atlas-core:3000']
+    relabel_configs:
+      - target_label: service
+        replacement: atlas-core-platform
+      - target_label: component
+        replacement: ai-engine
+
+  # ==========================================================================
+  # SERVICE 2: Atlas Data Platform
+  # ==========================================================================
+  - job_name: 'atlas-data-postgres'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['atlas-data:9187']  # PostgreSQL exporter
+    relabel_configs:
+      - target_label: service
+        replacement: atlas-data-platform
+      - target_label: component
+        replacement: postgresql
+
+  - job_name: 'atlas-data-redis'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['atlas-data:9121']  # Redis exporter
+    relabel_configs:
+      - target_label: service
+        replacement: atlas-data-platform
+      - target_label: component
+        replacement: redis
+
+  # ==========================================================================
+  # SERVICE 3: Atlas API Gateway
+  # ==========================================================================
+  - job_name: 'atlas-api-gateway'
+    scrape_interval: 15s
+    metrics_path: '/v1/metrics'
+    static_configs:
+      - targets: ['atlas-api-gateway:8080']
+    relabel_configs:
+      - target_label: service
+        replacement: atlas-api-gateway
+      - target_label: component
+        replacement: hasura
+
+  # Custom API Gateway metrics
+  - job_name: 'atlas-api-gateway-custom'
+    scrape_interval: 15s
+    metrics_path: '/api/gateway/metrics'
+    static_configs:
+      - targets: ['atlas-api-gateway:8080']
+    relabel_configs:
+      - target_label: service
+        replacement: atlas-api-gateway
+      - target_label: component
+        replacement: gateway-middleware
+
+  # ==========================================================================
+  # SERVICE 4: Atlas Observability Platform (Self-monitoring)
+  # ==========================================================================
+  - job_name: 'atlas-observability-prometheus'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['localhost:9090']
+    relabel_configs:
+      - target_label: service
+        replacement: atlas-observability
+      - target_label: component
+        replacement: prometheus
+
+  - job_name: 'atlas-observability-grafana'
+    scrape_interval: 60s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['localhost:3001']
+    relabel_configs:
+      - target_label: service
+        replacement: atlas-observability
+      - target_label: component
+        replacement: grafana
+
+  # ==========================================================================
+  # Container and System Metrics
+  # ==========================================================================
+  - job_name: 'docker-containers'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['host.docker.internal:9104']  # cAdvisor if available
+    relabel_configs:
+      - target_label: service
+        replacement: infrastructure
+      - target_label: component
+        replacement: containers
+
+  # ==========================================================================
+  # Business Logic Metrics (Custom Metrics from Applications)
+  # ==========================================================================
+  - job_name: 'atlas-business-metrics'
+    scrape_interval: 30s
+    metrics_path: '/api/metrics/business'
+    static_configs:
+      - targets: ['atlas-core:3000']
+    relabel_configs:
+      - target_label: service
+        replacement: atlas-core-platform
+      - target_label: component
+        replacement: business-logic
+
+# Remote write configuration for long-term storage (optional)
+# remote_write:
+#   - url: "https://prometheus.atlas-financial.app/api/v1/write"
+#     basic_auth:
+#       username: "atlas"
+#       password: "secure-password"
+
+# Storage configuration
+storage:
+  tsdb:
+    retention.time: 30d
+    retention.size: 10GB
+    wal-compression: true
+
+# Performance configuration for modular monolith
+scrape_config_files:
+  - "/etc/prometheus/scrape_configs/*.yml"
