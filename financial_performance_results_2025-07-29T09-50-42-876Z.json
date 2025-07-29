@@ -1,0 +1,193 @@
+{
+  "timestamp": "2025-07-29T09:50:42.421Z",
+  "tests": [
+    {
+      "category": "Basic Arithmetic",
+      "results": [
+        {
+          "operation": "Addition",
+          "totalTime": "6.66",
+          "opsPerSecond": 15007376,
+          "avgTimePerOp": "0.000067"
+        },
+        {
+          "operation": "Subtraction",
+          "totalTime": "5.17",
+          "opsPerSecond": 19328180,
+          "avgTimePerOp": "0.000052"
+        },
+        {
+          "operation": "Multiplication",
+          "totalTime": "7.71",
+          "opsPerSecond": 12961781,
+          "avgTimePerOp": "0.000077"
+        },
+        {
+          "operation": "Division",
+          "totalTime": "4.29",
+          "opsPerSecond": 23288342,
+          "avgTimePerOp": "0.000043"
+        }
+      ],
+      "pass": true
+    },
+    {
+      "category": "Dashboard Aggregations",
+      "results": [
+        {
+          "operation": "Net Worth Calculation",
+          "avgTime": "0.91",
+          "totalTime": "91.14",
+          "iterations": 100,
+          "pass": true
+        },
+        {
+          "operation": "Category Aggregation",
+          "avgTime": "0.54",
+          "totalTime": "53.53",
+          "iterations": 100,
+          "pass": true
+        },
+        {
+          "operation": "Account Balance Calculation",
+          "avgTime": "0.54",
+          "totalTime": "54.39",
+          "iterations": 100,
+          "pass": true
+        },
+        {
+          "operation": "Monthly Trend Analysis",
+          "avgTime": "1.64",
+          "totalTime": "163.89",
+          "iterations": 100,
+          "pass": true
+        }
+      ],
+      "pass": true
+    },
+    {
+      "category": "Memory Usage",
+      "results": {
+        "iterations": 50000,
+        "creationTime": "15.85",
+        "calculationTime": "5.83",
+        "memoryUsage": {
+          "initial": {
+            "rss": "62.4 MB",
+            "heapTotal": "15.56 MB",
+            "heapUsed": "8.92 MB",
+            "external": "1.44 MB"
+          },
+          "afterCreation": {
+            "rss": "64.12 MB",
+            "heapTotal": "24.46 MB",
+            "heapUsed": "9.91 MB",
+            "external": "1.44 MB"
+          },
+          "final": {
+            "rss": "68.76 MB",
+            "heapTotal": "25.46 MB",
+            "heapUsed": "10.05 MB",
+            "external": "1.44 MB"
+          },
+          "peakIncrease": "1.13 MB"
+        },
+        "totalValue": "25011441.4629",
+        "averageValue": "500.2288",
+        "pass": true
+      },
+      "pass": true
+    },
+    {
+      "category": "Precision Accuracy",
+      "results": [
+        {
+          "name": "Floating Point Error Elimination",
+          "jsResult": 0.30000000000000004,
+          "preciseResult": 0.3,
+          "errorEliminated": true,
+          "javaScriptHasError": true,
+          "pass": true
+        },
+        {
+          "name": "Complex Tax Calculation",
+          "subtotal": "299.9700",
+          "tax": "26.6373",
+          "total": "326.6073",
+          "accurate": false,
+          "pass": false
+        },
+        {
+          "name": "Repeated Operations Precision",
+          "result": "1.0000",
+          "expected": "1.0000",
+          "accurate": true,
+          "pass": true
+        },
+        {
+          "name": "Large Number Precision",
+          "result": "1000000000000000.0000",
+          "expected": "999999999999999.9998",
+          "accurate": false,
+          "pass": false
+        }
+      ],
+      "pass": false
+    },
+    {
+      "category": "Edge Cases",
+      "results": [
+        {
+          "name": "Division by Zero",
+          "pass": true,
+          "error": "Division by zero"
+        },
+        {
+          "name": "Maximum DECIMAL(19,4) Value",
+          "pass": true,
+          "value": "1000000000000000.0000",
+          "withinBounds": true
+        },
+        {
+          "name": "Exceeding DECIMAL(19,4) Bounds",
+          "pass": true,
+          "error": "Financial amount exceeds DECIMAL(19,4) bounds: 9999999999999999.9999",
+          "boundsEnforced": true
+        },
+        {
+          "name": "Negative Values",
+          "pass": true,
+          "result": "0.0000",
+          "expected": "0.0000"
+        },
+        {
+          "name": "Empty Array Aggregations",
+          "pass": true,
+          "sum": "0.0000",
+          "average": "0.0000"
+        }
+      ],
+      "pass": true
+    }
+  ],
+  "summary": {
+    "totalTime": "421.76",
+    "testsRun": 5,
+    "testsPassed": 4,
+    "testsFailed": 1,
+    "overallPass": false
+  },
+  "systemInfo": {
+    "nodeVersion": "v22.16.0",
+    "platform": "linux",
+    "arch": "x64",
+    "memory": {
+      "rss": 42950656,
+      "heapTotal": 5308416,
+      "heapUsed": 3853552,
+      "external": 1238217,
+      "arrayBuffers": 10515
+    },
+    "cpus": 16
+  }
+}

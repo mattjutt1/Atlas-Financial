@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { Transaction } from '@/types/graphql'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency } from '@atlas/shared/utils'
 
 interface RecentTransactionsProps {
   transactions: Transaction[]

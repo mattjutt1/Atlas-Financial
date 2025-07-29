@@ -1,7 +1,7 @@
 'use client'
 
 import { Card, Badge } from '@/components/common'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency } from '@atlas/shared/utils'
 import { Account } from '@/types/graphql'
 
 interface AccountCardProps {

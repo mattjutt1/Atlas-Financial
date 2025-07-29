@@ -10,7 +10,8 @@ import SuperTokens from 'supertokens-auth-react'
 import { SuperTokensWrapper } from 'supertokens-auth-react'
 import Session from 'supertokens-auth-react/recipe/session'
 import EmailPassword from 'supertokens-auth-react/recipe/emailpassword'
-import { SessionAuth, redirectToAuth } from 'supertokens-auth-react/recipe/session'
+import { SessionAuth } from 'supertokens-auth-react/recipe/session'
+import { redirectToAuth } from 'supertokens-auth-react'
 
 import type { AtlasUser, AuthContext as IAuthContext, AuthConfig } from '../types'
 import { createLogger } from '../monitoring'
@@ -32,70 +33,11 @@ const initializeSuperTokens = (config: AuthConfig) => {
         websiteBasePath: '/auth',
       },
       recipeList: [
-        EmailPassword.init({
-          style: {
-            container: {
-              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-            },
-            inputWrapper: {
-              borderRadius: '0.375rem',
-              border: '1px solid #d1d5db',
-            },
-            button: {
-              backgroundColor: '#3b82f6',
-              borderRadius: '0.375rem',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-            },
-          },
-          signInAndUpFeature: {
-            defaultToSignUp: false,
-          },
-          resetPasswordUsingTokenFeature: {
-            disableDefaultUI: false,
-          },
-        }),
+        EmailPassword.init(),
         Session.init({
           tokenTransferMethod: 'cookie',
-          sessionTokenFrontendDomain: config.sessionDomain,
-          cookieDomain: config.cookieDomain,
-          cookieSecure: config.cookieSecure,
-          cookieSameSite: config.cookieSecure ? 'strict' : 'lax',
           sessionExpiredStatusCode: 401,
           invalidClaimStatusCode: 403,
-          override: {
-            functions: (originalImplementation) => ({
-              ...originalImplementation,
-
-              // Custom session validation with user data enrichment
-              getSessionInformation: async function (input) {
-                const sessionInfo = await originalImplementation.getSessionInformation(input)
-
-                if (sessionInfo) {
-                  try {
-                    // Fetch additional user data from backend
-                    const userResponse = await fetch('/api/auth/user-profile', {
-                      headers: {
-                        'Authorization': `Bearer ${input.accessToken}`,
-                      },
-                    })
-
-                    if (userResponse.ok) {
-                      const userData = await userResponse.json()
-                      return {
-                        ...sessionInfo,
-                        customUserData: userData,
-                      }
-                    }
-                  } catch (error) {
-                    logger.warn('Failed to fetch user profile', { error })
-                  }
-                }
-
-                return sessionInfo
-              },
-            }),
-          },
         }),
       ],
 
@@ -171,28 +113,26 @@ export function AuthProvider({ children, config }: AuthProviderProps) {
         const hasSession = await Session.doesSessionExist()
 
         if (hasSession) {
-          const sessionInfo = await Session.getSessionInformation()
+          const userId = await Session.getUserId()
 
-          // Extract user data from session
+          // Extract user data from session - basic implementation
           const atlasUser: AtlasUser = {
-            id: sessionInfo.userId,
-            email: sessionInfo.customUserData?.email || '',
-            firstName: sessionInfo.customUserData?.firstName,
-            lastName: sessionInfo.customUserData?.lastName,
-            emailVerified: sessionInfo.customUserData?.emailVerified || false,
-            roles: sessionInfo.customUserData?.roles || ['user'],
-            permissions: sessionInfo.customUserData?.permissions || [],
-            createdAt: sessionInfo.customUserData?.createdAt || new Date().toISOString(),
+            id: userId,
+            email: '',
+            emailVerified: false,
+            roles: ['user'],
+            permissions: [],
+            createdAt: new Date().toISOString(),
             lastLoginAt: new Date().toISOString(),
-            metadata: sessionInfo.customUserData?.metadata,
+            metadata: {},
           }
 
           setUser(atlasUser)
           setIsAuthenticated(true)
-          setToken(sessionInfo.accessToken)
-          setSessionId(sessionInfo.sessionId)
+          setToken('')
+          setSessionId(userId)
 
-          logger.info('Session loaded successfully', { userId: sessionInfo.userId })
+          logger.info('Session loaded successfully', { userId })
         }
       } catch (error) {
         logger.error('Failed to load session', { error })
@@ -217,24 +157,22 @@ export function AuthProvider({ children, config }: AuthProviderProps) {
         // Reload user data when session changes
         const loadUserData = async () => {
           try {
-            const sessionInfo = await Session.getSessionInformation()
+            const userId = await Session.getUserId()
             const atlasUser: AtlasUser = {
-              id: sessionInfo.userId,
-              email: sessionInfo.customUserData?.email || '',
-              firstName: sessionInfo.customUserData?.firstName,
-              lastName: sessionInfo.customUserData?.lastName,
-              emailVerified: sessionInfo.customUserData?.emailVerified || false,
-              roles: sessionInfo.customUserData?.roles || ['user'],
-              permissions: sessionInfo.customUserData?.permissions || [],
-              createdAt: sessionInfo.customUserData?.createdAt || new Date().toISOString(),
+              id: userId,
+              email: '',
+              emailVerified: false,
+              roles: ['user'],
+              permissions: [],
+              createdAt: new Date().toISOString(),
               lastLoginAt: new Date().toISOString(),
-              metadata: sessionInfo.customUserData?.metadata,
+              metadata: {},
             }
 
             setUser(atlasUser)
             setIsAuthenticated(true)
-            setToken(sessionInfo.accessToken)
-            setSessionId(sessionInfo.sessionId)
+            setToken('')
+            setSessionId(userId)
           } catch (error) {
             logger.error('Failed to load user data after session change', { error })
           }
@@ -354,7 +292,7 @@ export function ProtectedRoute({
   fallback
 }: ProtectedRouteProps) {
   return (
-    <SessionAuth fallback={fallback}>
+    <SessionAuth>
       <PermissionGate
         requiredRole={requiredRole}
         requiredPermission={requiredPermission}

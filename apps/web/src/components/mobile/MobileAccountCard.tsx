@@ -5,7 +5,7 @@ import { MobileCard, MobileCardHeader, MobileCardSection } from './MobileCard'
 import { MobileFinancialAmount, MobileAmountChange } from './MobileFinancialAmount'
 import { Badge } from '@/components/common'
 import { Account } from '@/types/graphql'
-import { FinancialAmount } from '@/lib/financial/FinancialAmount'
+import { FinancialAmount } from '@atlas/shared/financial'
 
 interface MobileAccountCardProps {
   account: Account

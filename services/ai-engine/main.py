@@ -17,7 +17,8 @@ from src.config import settings
 from src.ai.insights_generator import InsightsGenerator
 from src.data.hasura_client import HasuraClient
 from src.models.insights import InsightRequest, InsightResponse, HealthResponse
-from src.ai.financial_rules import FinancialRulesEngine
+from src.financial.calculations import FinancialCalculations
+from src.financial.precision_client import FinancialAmount
 
 # Configure structured logging
 structlog.configure(
@@ -42,12 +43,12 @@ logger = structlog.get_logger()
 # Global service instances
 hasura_client: HasuraClient = None
 insights_generator: InsightsGenerator = None
-rules_engine: FinancialRulesEngine = None
+financial_calculations: FinancialCalculations = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan management"""
-    global hasura_client, insights_generator, rules_engine
+    global hasura_client, insights_generator, financial_calculations
 
     logger.info("Starting Atlas Financial AI Engine", version="1.1.0")
 
@@ -58,11 +59,14 @@ async def lifespan(app: FastAPI):
             admin_secret=settings.hasura_admin_secret
         )
 
-        rules_engine = FinancialRulesEngine()
+        # Initialize financial calculations with Rust engine integration
+        financial_calculations = FinancialCalculations(
+            rust_engine_url=settings.rust_engine_url if hasattr(settings, 'rust_engine_url') else "http://localhost:8080"
+        )
 
         insights_generator = InsightsGenerator(
             model_path=settings.ai_model_path,
-            rules_engine=rules_engine
+            financial_calculations=financial_calculations
         )
 
         # Load AI model
@@ -145,35 +149,82 @@ async def generate_insights(
 
 @app.post("/insights/budget-check")
 async def budget_check(user_id: str) -> Dict[str, Any]:
-    """Check budget against 75/15/10 rule"""
+    """Check budget against 75/15/10 rule using bank-grade precision"""
     logger.info("Running budget check", user_id=user_id)
 
     try:
         # Get user's financial data
         financial_data = await hasura_client.get_user_financial_data(user_id)
+        
+        # Extract monthly income with precision validation
+        monthly_income = FinancialAmount(str(financial_data.get("monthly_income", "0")))
 
-        # Apply 75/15/10 rule
-        budget_analysis = rules_engine.apply_75_15_10_rule(financial_data)
+        # Apply 75/15/10 rule using Rust Financial Engine
+        budget_breakdown = await financial_calculations.apply_75_15_10_rule(monthly_income)
 
-        return budget_analysis
+        return {
+            "user_id": user_id,
+            "monthly_income": monthly_income.value,
+            "budget_breakdown": {
+                "needs": budget_breakdown.needs.value,
+                "wants": budget_breakdown.wants.value,
+                "savings": budget_breakdown.savings.value
+            },
+            "percentages": {
+                "needs": "75%",
+                "wants": "15%", 
+                "savings": "10%"
+            },
+            "precision": "DECIMAL(19,4)",
+            "engine": "rust-financial-engine"
+        }
 
     except Exception as e:
         logger.error("Budget check failed", user_id=user_id, error=str(e))
         raise HTTPException(status_code=500, detail="Budget check failed")
 
 @app.post("/insights/debt-snowball")
-async def debt_snowball_analysis(user_id: str) -> Dict[str, Any]:
-    """Generate debt snowball payoff plan"""
-    logger.info("Generating debt snowball analysis", user_id=user_id)
+async def debt_snowball_analysis(user_id: str, extra_payment: float = 0.0) -> Dict[str, Any]:
+    """Generate debt snowball payoff plan using Ramsey method with bank-grade precision"""
+    logger.info("Generating debt snowball analysis", user_id=user_id, extra_payment=extra_payment)
 
     try:
+        from src.financial.calculations import DebtInfo
+        from decimal import Decimal
+        
         # Get user's debt data
         debt_data = await hasura_client.get_user_debt_data(user_id)
+        
+        # Convert to DebtInfo objects with precision validation
+        debts = []
+        for debt in debt_data.get("debts", []):
+            debt_info = DebtInfo(
+                name=debt["name"],
+                balance=FinancialAmount(str(debt["balance"])),
+                minimum_payment=FinancialAmount(str(debt["minimum_payment"])),
+                interest_rate=Decimal(str(debt["interest_rate"]))
+            )
+            debts.append(debt_info)
+        
+        # Extra payment amount
+        extra_payment_amount = FinancialAmount(str(extra_payment))
 
-        # Apply Ramsey debt snowball method
-        snowball_plan = rules_engine.calculate_debt_snowball(debt_data)
+        # Apply Ramsey debt snowball method using Rust Financial Engine
+        snowball_plan = await financial_calculations.calculate_debt_snowball(debts, extra_payment_amount)
 
-        return snowball_plan
+        return {
+            "user_id": user_id,
+            "method": "debt_snowball",
+            "strategy": "smallest_balance_first",
+            "debts": snowball_plan.debts,
+            "summary": {
+                "total_interest_saved": snowball_plan.total_interest_saved.value,
+                "payoff_time_months": snowball_plan.payoff_time_months,
+                "monthly_extra_payment": snowball_plan.monthly_extra_payment.value
+            },
+            "precision": "DECIMAL(19,4)",
+            "engine": "rust-financial-engine"
+        }
 
     except Exception as e:
         logger.error("Debt snowball analysis failed", user_id=user_id, error=str(e))
@@ -181,17 +232,48 @@ async def debt_snowball_analysis(user_id: str) -> Dict[str, Any]:
 
 @app.post("/insights/portfolio-analysis")
 async def portfolio_analysis(user_id: str) -> Dict[str, Any]:
-    """Analyze investment portfolio using Dalio's All-Weather principles"""
+    """Calculate net worth with bank-grade precision"""
     logger.info("Running portfolio analysis", user_id=user_id)
 
     try:
-        # Get user's investment data
+        # Get user's investment and asset data
         portfolio_data = await hasura_client.get_user_portfolio_data(user_id)
+        
+        # Extract assets and liabilities with precision validation
+        assets = []
+        liabilities = []
+        
+        for asset in portfolio_data.get("assets", []):
+            assets.append(FinancialAmount(str(asset["value"])))
+        
+        for liability in portfolio_data.get("liabilities", []):
+            liabilities.append(FinancialAmount(str(liability["balance"])))
+        
+        # Calculate net worth using Rust Financial Engine
+        net_worth = await financial_calculations.calculate_net_worth(assets, liabilities)
+        
+        # Calculate emergency fund target
+        monthly_expenses = FinancialAmount(str(portfolio_data.get("monthly_expenses", "0")))
+        emergency_fund_target = await financial_calculations.calculate_emergency_fund_target(monthly_expenses)
 
-        # Apply All-Weather portfolio analysis
-        portfolio_analysis = rules_engine.analyze_all_weather_portfolio(portfolio_data)
-
-        return portfolio_analysis
+        return {
+            "user_id": user_id,
+            "net_worth": net_worth.value,
+            "assets": {
+                "total": (await financial_calculations.client.add_amounts(assets)).value if assets else "0.0000",
+                "count": len(assets)
+            },
+            "liabilities": {
+                "total": (await financial_calculations.client.add_amounts(liabilities)).value if liabilities else "0.0000",
+                "count": len(liabilities)
+            },
+            "emergency_fund": {
+                "target": emergency_fund_target.value,
+                "months_coverage": 6
+            },
+            "precision": "DECIMAL(19,4)",
+            "engine": "rust-financial-engine"
+        }
 
     except Exception as e:
         logger.error("Portfolio analysis failed", user_id=user_id, error=str(e))

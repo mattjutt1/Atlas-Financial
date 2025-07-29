@@ -1,5 +1,6 @@
 // Financial Core Module for Atlas Desktop
-// Bank-grade precision with rust_decimal integration
+// MIGRATED: Now uses Rust Financial Engine as primary calculation service
+// Maintains compatibility while routing calculations through shared engine
 
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -8,47 +9,53 @@ use std::fmt;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
+// Import from Rust Financial Engine
+use atlas_financial_core::{Money, Currency, FinancialError, Result};
+
 // ============================================================================
 // Core Financial Types
 // ============================================================================
 
-/// Bank-grade financial amount with exact decimal precision
-/// Uses DECIMAL(19,4) precision matching PostgreSQL financial columns
+/// Bank-grade financial amount - Desktop compatibility wrapper
+/// MIGRATION: Routes all operations through Rust Financial Engine
+/// Maintains API compatibility with existing desktop code
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FinancialAmount {
-    /// The exact decimal amount (precision 19,4)
+    /// Internal Money instance from Rust Financial Engine
+    #[serde(skip)]
+    money: Money,
+    /// Legacy compatibility fields
     amount: Decimal,
-    /// Currency code (ISO 4217)
     currency: String,
 }
 
 impl FinancialAmount {
-    /// Create a new FinancialAmount with validation
+    /// Create a new FinancialAmount using Rust Financial Engine
     pub fn new(amount: Decimal, currency: String) -> Result<Self, FinancialError> {
-        // Validate precision doesn't exceed DECIMAL(19,4)
-        if amount.scale() > 4 {
-            return Err(FinancialError::PrecisionError(
-                "Amount precision cannot exceed 4 decimal places".to_string()
-            ));
-        }
+        // Convert string currency to enum
+        let currency_enum = match currency.as_str() {
+            "USD" => Currency::USD,
+            "EUR" => Currency::EUR,
+            "GBP" => Currency::GBP,
+            "CAD" => Currency::CAD,
+            "AUD" => Currency::AUD,
+            "JPY" => Currency::JPY,
+            "CHF" => Currency::CHF,
+            "CNY" => Currency::CNY,
+            _ => return Err(FinancialError::CurrencyError(
+                format!("Unsupported currency: {}", currency)
+            )),
+        };
 
-        // Validate amount is within reasonable bounds
-        let max_value = Decimal::from_parts(4294967295, 4294967295, 4294967295, false, 4);
-        if amount.abs() > max_value {
-            return Err(FinancialError::ValidationError(
-                "Amount exceeds maximum allowed value".to_string()
-            ));
-        }
+        // Create Money instance through Financial Engine
+        let money = Money::new(amount, currency_enum)?;
 
-        // Validate currency code (basic validation)
-        if currency.len() != 3 || !currency.chars().all(|c| c.is_ascii_uppercase()) {
-            return Err(FinancialError::CurrencyError(
-                format!("Invalid currency code: {}", currency)
-            ));
-        }
-
-        Ok(Self { amount, currency })
+        Ok(Self { 
+            money,
+            amount,
+            currency,
+        })
     }
 
     /// Create from decimal with validation
@@ -84,87 +91,71 @@ impl FinancialAmount {
         (self.amount * dec!(100)).round().to_i64().unwrap_or(0)
     }
 
-    /// Add two amounts (must be same currency)
+    /// Add two amounts using Rust Financial Engine
     pub fn add(&self, other: &FinancialAmount) -> Result<FinancialAmount, FinancialError> {
-        if self.currency != other.currency {
-            return Err(FinancialError::CurrencyMismatch {
-                expected: self.currency.clone(),
-                actual: other.currency.clone(),
-            });
-        }
-
-        let result = self.amount.checked_add(other.amount)
-            .ok_or(FinancialError::ArithmeticOverflow)?;
-
+        let result_money = self.money.add(&other.money)?;
+        
         Ok(FinancialAmount {
-            amount: result,
+            money: result_money,
+            amount: result_money.amount(),
             currency: self.currency.clone(),
         })
     }
 
-    /// Subtract two amounts (must be same currency)
+    /// Subtract two amounts using Rust Financial Engine
     pub fn subtract(&self, other: &FinancialAmount) -> Result<FinancialAmount, FinancialError> {
-        if self.currency != other.currency {
-            return Err(FinancialError::CurrencyMismatch {
-                expected: self.currency.clone(),
-                actual: other.currency.clone(),
-            });
-        }
-
-        let result = self.amount.checked_sub(other.amount)
-            .ok_or(FinancialError::ArithmeticOverflow)?;
-
+        let result_money = self.money.subtract(&other.money)?;
+        
         Ok(FinancialAmount {
-            amount: result,
+            money: result_money,
+            amount: result_money.amount(),
             currency: self.currency.clone(),
         })
     }
 
-    /// Multiply by a decimal factor
+    /// Multiply by a decimal factor using Rust Financial Engine
     pub fn multiply(&self, factor: Decimal) -> Result<FinancialAmount, FinancialError> {
-        let result = self.amount.checked_mul(factor)
-            .ok_or(FinancialError::ArithmeticOverflow)?;
-
+        let result_money = self.money.multiply(factor)?;
+        
         Ok(FinancialAmount {
-            amount: result,
+            money: result_money,
+            amount: result_money.amount(),
             currency: self.currency.clone(),
         })
     }
 
-    /// Divide by a decimal divisor
+    /// Divide by a decimal divisor using Rust Financial Engine
     pub fn divide(&self, divisor: Decimal) -> Result<FinancialAmount, FinancialError> {
-        if divisor.is_zero() {
-            return Err(FinancialError::DivisionByZero);
-        }
-
-        let result = self.amount.checked_div(divisor)
-            .ok_or(FinancialError::ArithmeticOverflow)?;
-
+        let result_money = self.money.divide(divisor)?;
+        
         Ok(FinancialAmount {
-            amount: result,
+            money: result_money,
+            amount: result_money.amount(),
             currency: self.currency.clone(),
         })
     }
 
     /// Check if amount is positive
     pub fn is_positive(&self) -> bool {
-        self.amount.is_sign_positive()
+        self.money.is_positive()
     }
 
     /// Check if amount is negative
     pub fn is_negative(&self) -> bool {
-        self.amount.is_sign_negative()
+        self.money.is_negative()
     }
 
-    /// Check if amount is zero
+    /// Check if amount is zero (delegate to Financial Engine)
     pub fn is_zero(&self) -> bool {
-        self.amount.is_zero()
+        self.money.amount().is_zero()
     }
 
-    /// Get absolute value
+    /// Get absolute value using Rust Financial Engine
     pub fn abs(&self) -> FinancialAmount {
+        let abs_money = self.money.abs();
         FinancialAmount {
-            amount: self.amount.abs(),
+            money: abs_money,
+            amount: abs_money.amount(),
             currency: self.currency.clone(),
         }
     }

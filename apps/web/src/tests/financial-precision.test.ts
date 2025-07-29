@@ -9,7 +9,7 @@
  * - Boundary condition handling
  */
 
-import { FinancialAmount } from '../lib/financial/FinancialAmount'
+import { FinancialAmount } from '@atlas/shared/financial'
 
 describe('FinancialAmount Class', () => {
   describe('Construction and Validation', () => {

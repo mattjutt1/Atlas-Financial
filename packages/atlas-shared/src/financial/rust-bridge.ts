@@ -351,10 +351,15 @@ export class RustFinancialBridge {
     const startTime = performance.now();
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
       const response = await fetch(`${this.API_BASE_URL.replace('/graphql', '/health')}`, {
         method: 'GET',
-        timeout: 5000
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       const responseTime = performance.now() - startTime;
 
@@ -400,7 +405,7 @@ export class FallbackCalculations {
     const t = new Decimal(years);
 
     const factor = rate.div(n).add(1).pow(n.mul(t));
-    return principal.multiply(factor);
+    return principal.multiply(new FinancialAmount(factor));
   }
 
   /**
@@ -419,9 +424,8 @@ export class FallbackCalculations {
     const n = new Decimal(termInMonths);
 
     const factor = r.mul(r.add(1).pow(n)).div(r.add(1).pow(n).sub(1));
-    return principal.multiply(factor);
+    return principal.multiply(new FinancialAmount(factor));
   }
 }
 
-// Export types for external use
-export type { RustMoney, RustRate, CompoundInterestRequest, MonthlyPaymentRequest, DebtOptimizationRequest };
+// Types are already exported as interfaces above

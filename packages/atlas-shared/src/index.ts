@@ -9,32 +9,23 @@
  * @author Atlas Financial Team
  */
 
-// Core types and interfaces
-export * from './types'
+// Financial precision and calculations - Core functionality
+export * from './financial'
 
-// Authentication and authorization
-export * from './auth'
-
-// Configuration management
-export * from './config'
-
-// Error handling and validation
-export * from './errors'
-
-// GraphQL schemas, queries, and utilities
-export * from './graphql'
-
-// Utility functions
+// Utility functions - Currency and date formatting
 export * from './utils'
 
-// Security utilities
-export * from './security'
+// Core types for financial operations
+export * from './types'
 
-// Monitoring and observability
-export * from './monitoring'
-
-// Database patterns and connections
-export * from './database'
+// TODO: Enable these modules as needed
+// export * from './auth'
+// export * from './config'
+// export * from './errors'
+// export * from './graphql'
+// export * from './security'
+// export * from './monitoring'
+// export * from './database'
 
 /**
  * Library version and metadata

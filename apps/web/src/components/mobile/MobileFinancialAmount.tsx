@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { FinancialAmount, formatFinancialAmount } from '@/lib/financial/FinancialAmount'
+import { FinancialAmount, formatFinancialAmount } from '@atlas/shared/financial'
 
 interface MobileFinancialAmountProps {
   amount: FinancialAmount | string | number

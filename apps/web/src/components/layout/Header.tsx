@@ -28,6 +28,7 @@ export function Header() {
     { name: 'Accounts', href: '/accounts', current: pathname === '/accounts' },
     { name: 'Transactions', href: '/transactions', current: pathname === '/transactions' },
     { name: 'Budget', href: '/budget', current: pathname === '/budget' },
+    { name: 'Goals', href: '/goals', current: pathname === '/goals' },
     { name: 'Debt', href: '/debt', current: pathname === '/debt' },
     { name: 'Portfolio', href: '/portfolio', current: pathname === '/portfolio' },
     { name: 'Insights', href: '/insights', current: pathname === '/insights' },

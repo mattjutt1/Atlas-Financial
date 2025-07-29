@@ -6,7 +6,7 @@ import { MobileAccountCard, MobileAccountCardSkeleton } from './MobileAccountCar
 import { MobileTransactionList, MobileTransactionListSkeleton } from './MobileTransactionList'
 import { MobileFinancialAmount } from './MobileFinancialAmount'
 import { useFinancialData } from '@/hooks'
-import { FinancialAmount } from '@/lib/financial/FinancialAmount'
+import { FinancialAmount } from '@atlas/shared/financial'
 import { Account, Transaction } from '@/types/graphql'
 
 interface MobileDashboardProps {

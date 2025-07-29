@@ -4,7 +4,7 @@ import { useSubscription } from '@apollo/client'
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { SUBSCRIBE_FINANCIAL_PRECISION_UPDATES } from '@/lib/graphql/subscriptions'
 import { Transaction, Account } from '@/types/graphql'
-import { FinancialAmount, createFinancialAmount, formatFinancialAmount } from '@/lib/financial/FinancialAmount'
+import { FinancialAmount, createFinancialAmount, formatFinancialAmount } from '@atlas/shared/financial'
 
 interface UseFinancialPrecisionOptions {
   userId: number

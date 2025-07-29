@@ -1,6 +1,6 @@
 // GraphQL types matching the actual Hasura schema with ML and precision enhancements
 
-import { FinancialAmountString } from '../lib/financial/FinancialAmount'
+import { FinancialAmountString } from '@atlas/shared/financial'
 
 export interface User {
   id: number
@@ -159,6 +159,121 @@ export interface SubscribeMLModelMetricsResult {
 
 export interface SubscribeFinancialPrecisionUpdatesResult {
   subscribeFinancialPrecisionUpdates: Transaction[]
+}
+
+// Financial Goals Types
+export interface FinancialGoal {
+  id: string
+  user_id: string
+  name: string
+  description?: string
+  goal_type: GoalType
+  target_amount: FinancialAmountString
+  current_amount: FinancialAmountString
+  target_date?: string
+  monthly_contribution?: FinancialAmountString
+  priority: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+
+  // Calculated fields
+  progress_percentage: number
+  monthly_required?: FinancialAmountString
+  projected_completion_date?: string
+  is_on_track: boolean
+  is_overdue: boolean
+  days_remaining?: number
+  milestones?: GoalMilestone[]
+}
+
+export type GoalType =
+  | 'emergency_fund'
+  | 'vacation'
+  | 'house_down_payment'
+  | 'debt_payoff'
+  | 'retirement'
+  | 'car_purchase'
+  | 'education'
+  | 'wedding'
+  | 'home_improvement'
+  | 'custom'
+
+export interface GoalMilestone {
+  id: string
+  goal_id: string
+  name: string
+  target_amount: FinancialAmountString
+  target_date?: string
+  is_achieved: boolean
+  achieved_date?: string
+  created_at: string
+}
+
+export interface GoalContribution {
+  id: string
+  goal_id: string
+  amount: FinancialAmountString
+  contribution_date: string
+  description?: string
+  source?: 'manual' | 'automatic' | 'budget_allocation'
+  transaction_id?: string
+  created_at: string
+}
+
+export interface GoalTemplate {
+  id: string
+  goal_type: GoalType
+  name: string
+  description: string
+  suggested_amount?: FinancialAmountString
+  suggested_timeframe_months?: number
+  icon: string
+  color: string
+  tips: string[]
+  milestones?: Omit<GoalMilestone, 'id' | 'goal_id' | 'created_at'>[]
+}
+
+export interface GoalAllocation {
+  id: string
+  goal_id: string
+  budget_category_id?: string
+  account_id?: string
+  allocation_percentage: number
+  allocation_amount?: FinancialAmountString
+  frequency: 'weekly' | 'biweekly' | 'monthly' | 'quarterly'
+  next_allocation_date: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface GoalInsight {
+  id: string
+  goal_id: string
+  insight_type: 'behind_schedule' | 'ahead_of_schedule' | 'increase_contribution' | 'milestone_achieved' | 'completion_projection'
+  title: string
+  description: string
+  severity: 'info' | 'warning' | 'success' | 'critical'
+  action_items: string[]
+  is_dismissed: boolean
+  created_at: string
+}
+
+// Goal Analytics Types
+export interface GoalAnalytics {
+  total_goals: number
+  active_goals: number
+  completed_goals: number
+  total_target_amount: FinancialAmountString
+  total_current_amount: FinancialAmountString
+  overall_progress_percentage: number
+  on_track_goals: number
+  behind_schedule_goals: number
+  projected_completion_months?: number
+  monthly_contribution_total: FinancialAmountString
+  goals_by_type: Record<GoalType, number>
+  progress_trend: 'improving' | 'stable' | 'declining'
 }
 
 // Utility types for derived data

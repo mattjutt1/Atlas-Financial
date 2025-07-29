@@ -5,7 +5,7 @@
 
 export * from './providers'
 export * from './hooks'
-export * from './components'
+export { AuthWrapper } from './components'
 export * from './utils'
 export * from './jwt'
 export * from './permissions'

@@ -318,40 +318,4 @@ export interface FormState {
   touched: Record<string, boolean>
 }
 
-// Export all types as a namespace for easier imports
-export namespace AtlasTypes {
-  export type {
-    Environment,
-    AtlasUser,
-    UserRole,
-    Permission,
-    AuthContext,
-    Money,
-    Account,
-    AccountType,
-    Transaction,
-    Portfolio,
-    AssetAllocation,
-    RiskProfile,
-    DebtAccount,
-    DebtStrategy,
-    AppConfig,
-    ApiConfig,
-    AuthConfig,
-    DatabaseConfig,
-    RedisConfig,
-    MonitoringConfig,
-    FeatureFlags,
-    ApiResponse,
-    ApiError,
-    ResponseMeta,
-    PaginationMeta,
-    GraphQLVariables,
-    GraphQLResponse,
-    GraphQLError,
-    AuditEvent,
-    MetricEvent,
-    ValidationError,
-    FormState
-  }
-}
+// All types are exported above individually

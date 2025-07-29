@@ -3,7 +3,7 @@
  * Standardizes error patterns across all services and applications
  */
 
-import type { ApiError as IApiError, ValidationError } from '../types'
+import type { ApiError as IApiError, ValidationError as IValidationError } from '../types'
 import { createLogger } from '../monitoring'
 
 const logger = createLogger('errors')
@@ -158,7 +158,7 @@ export class InvalidTokenError extends AtlasError {
 /**
  * Validation Errors
  */
-export class ValidationError extends AtlasError {
+export class AtlasValidationError extends AtlasError {
   public readonly field: string
 
   constructor(field: string, message: string, metadata: Record<string, unknown> = {}) {
@@ -174,7 +174,7 @@ export class ValidationError extends AtlasError {
       ],
       { ...metadata, field }
     )
-    this.name = 'ValidationError'
+    this.name = 'AtlasValidationError'
     this.field = field
   }
 }
@@ -542,9 +542,9 @@ export function handleError(error: unknown, context?: string): AtlasError {
 /**
  * Create validation errors from validation library results
  */
-export function createValidationErrors(validationResults: ValidationError[]): ValidationError[] {
+export function createAtlasValidationErrors(validationResults: AtlasValidationError[]): AtlasValidationError[] {
   return validationResults.map(result =>
-    new ValidationError(result.field, result.message)
+    new AtlasValidationError(result.field, result.message)
   )
 }
 
@@ -582,7 +582,7 @@ export function getRetryDelay(error: AtlasError, attemptCount: number): number {
  */
 export const ErrorFactory = {
   validation: (field: string, message: string, metadata?: Record<string, unknown>) =>
-    new ValidationError(field, message, metadata),
+    new AtlasValidationError(field, message, metadata),
 
   notFound: (resourceType: string, resourceId: string, metadata?: Record<string, unknown>) =>
     new NotFoundError(resourceType, resourceId, metadata),
@@ -618,8 +618,8 @@ export const isAtlasError = (error: unknown): error is AtlasError =>
 export const isAuthenticationError = (error: unknown): error is AuthenticationError =>
   error instanceof AuthenticationError
 
-export const isValidationError = (error: unknown): error is ValidationError =>
-  error instanceof ValidationError
+export const isAtlasValidationError = (error: unknown): error is AtlasValidationError =>
+  error instanceof AtlasValidationError
 
 export const isNotFoundError = (error: unknown): error is NotFoundError =>
   error instanceof NotFoundError

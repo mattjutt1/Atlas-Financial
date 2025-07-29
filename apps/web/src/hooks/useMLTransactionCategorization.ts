@@ -16,7 +16,7 @@ import {
   MLCategoryInsight,
   MLModelMetrics
 } from '@/types/graphql'
-import { FinancialAmount } from '@/lib/financial/FinancialAmount'
+import { FinancialAmount } from '@atlas/shared/financial'
 
 interface UseMLTransactionCategorizationOptions {
   userId: number

@@ -2,13 +2,23 @@
   "name": "@atlas/shared",
   "version": "1.0.0",
   "description": "Shared library for Atlas Financial modular monolith",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/financial-only.js",
+  "types": "dist/financial-only.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/financial-only.js",
+      "require": "./dist/financial-only.js",
+      "types": "./dist/financial-only.d.ts"
+    },
+    "./financial": {
+      "import": "./dist/financial/precision.js",
+      "require": "./dist/financial/precision.js",
+      "types": "./dist/financial/precision.d.ts"
+    },
+    "./utils": {
+      "import": "./dist/utils/currency.js",
+      "require": "./dist/utils/currency.js",
+      "types": "./dist/utils/currency.d.ts"
     },
     "./auth": {
       "import": "./dist/auth/index.js",

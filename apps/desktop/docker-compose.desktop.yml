@@ -1,0 +1,169 @@
+# Atlas Financial Desktop App - Docker Compose Configuration
+# Phase 2.6: Modular Monolith Integration
+# Desktop app services integrated with main architecture
+
+version: '3.8'
+
+services:
+  # Atlas Desktop Backend Service
+  # Provides API gateway integration for desktop clients
+  atlas-desktop-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: atlas-desktop-backend
+    environment:
+      # Atlas Architecture Integration
+      ATLAS_CORE_URL: http://atlas-core:3000
+      ATLAS_API_GATEWAY_URL: http://atlas-api-gateway:8081
+      
+      # Service Configuration
+      NODE_ENV: production
+      ENVIRONMENT: production
+      SERVICE_NAME: atlas-desktop
+      SERVICE_VERSION: 2.6.0
+      
+      # Security Configuration
+      SECURITY_ENCRYPTION_ENABLED: "true"
+      SECURITY_AUDIT_LOGGING: "true"
+      SECURITY_AUTO_LOCK: "true"
+      SECURITY_REQUIRE_AUTH_STARTUP: "true"
+      SECURITY_TLS_CERT_PINNING: "true"
+      
+      # Feature Flags
+      FEATURE_AI_INSIGHTS: "true"
+      FEATURE_METRICS: "true"
+      FEATURE_DESKTOP_NOTIFICATIONS: "true"
+      FEATURE_OFFLINE_MODE: "false"
+      FEATURE_DEBUG_MODE: "false"
+      
+      # Monitoring Configuration
+      MONITORING_ENABLED: "true"
+      LOG_LEVEL: info
+      ENABLE_METRICS: "true"
+      METRICS_PORT: 9091
+      
+      # API Configuration
+      API_TIMEOUT: 30
+      API_RETRIES: 3
+      API_RATE_LIMIT_REQUESTS: 1000
+      API_RATE_LIMIT_WINDOW: 60
+      
+      # Cache Configuration
+      CACHE_ENABLED: "true"
+      CACHE_TTL: 300
+      CACHE_MAX_SIZE_MB: 100
+      CACHE_AUTO_CLEANUP: "true"
+
+    ports:
+      - "8090:8090"      # Desktop backend API
+      - "9091:9091"      # Metrics endpoint
+
+    networks:
+      - atlas-network
+
+    volumes:
+      # Desktop app data persistence
+      - desktop_data:/app/data
+      - desktop_config:/app/config
+      - desktop_logs:/app/logs
+
+    depends_on:
+      - atlas-core
+      - atlas-api-gateway
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8090/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    restart: unless-stopped
+
+    labels:
+      - "atlas.service=desktop-backend"
+      - "atlas.version=2.6.0"
+      - "atlas.environment=production"
+      - "atlas.phase=2.6"
+
+  # Atlas Desktop Client Service (for thin client deployments)
+  atlas-desktop-client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    container_name: atlas-desktop-client
+    environment:
+      # Desktop Client Configuration
+      DESKTOP_BACKEND_URL: http://atlas-desktop-backend:8090
+      ATLAS_CORE_URL: http://atlas-core:3000
+      ATLAS_API_GATEWAY_URL: http://atlas-api-gateway:8081
+      
+      # Client-specific settings
+      CLIENT_MODE: "web-hybrid"
+      AUTO_UPDATE_ENABLED: "true"
+      OFFLINE_MODE_ENABLED: "false"
+      
+      # UI Configuration
+      THEME: "auto"
+      LANGUAGE: "en"
+      CURRENCY_FORMAT: "symbol"
+      NOTIFICATIONS_ENABLED: "true"
+
+    ports:
+      - "3002:3000"      # Desktop client web interface
+
+    networks:
+      - atlas-network
+
+    depends_on:
+      - atlas-desktop-backend
+
+    volumes:
+      - desktop_client_data:/app/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    restart: unless-stopped
+
+    labels:
+      - "atlas.service=desktop-client"
+      - "atlas.version=2.6.0"
+      - "atlas.environment=production"
+
+# Networks (extends main atlas-network)
+networks:
+  atlas-network:
+    external: true
+    name: atlas-financial_atlas-network
+
+# Volumes for desktop app persistence
+volumes:
+  desktop_data:
+    driver: local
+    name: atlas-desktop-data
+  desktop_config:
+    driver: local
+    name: atlas-desktop-config
+  desktop_logs:
+    driver: local
+    name: atlas-desktop-logs
+  desktop_client_data:
+    driver: local
+    name: atlas-desktop-client-data
+
+# Development override for local development
+x-development-overrides: &dev-overrides
+  environment:
+    NODE_ENV: development
+    ENVIRONMENT: development
+    LOG_LEVEL: debug
+    FEATURE_DEBUG_MODE: "true"
+    MONITORING_ENABLED: "false"
+  volumes:
+    - .:/app/src:ro  # Mount source for hot reload

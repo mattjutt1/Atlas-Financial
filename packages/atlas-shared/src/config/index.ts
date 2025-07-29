@@ -128,11 +128,11 @@ export function createMonitoringConfig(environment: Environment): MonitoringConf
     metrics: {
       enabled: getBooleanEnv('METRICS_ENABLED', true),
       namespace: getOptionalEnv('METRICS_NAMESPACE', 'atlas_financial'),
-      endpoint: getOptionalEnv('METRICS_ENDPOINT', undefined)
+      endpoint: getOptionalEnv('METRICS_ENDPOINT', '')
     },
     tracing: {
       enabled: getBooleanEnv('TRACING_ENABLED', isProduction),
-      endpoint: getOptionalEnv('TRACING_ENDPOINT', undefined),
+      endpoint: getOptionalEnv('TRACING_ENDPOINT', ''),
       sampleRate: parseFloat(getOptionalEnv('TRACING_SAMPLE_RATE', '0.1'))
     }
   }

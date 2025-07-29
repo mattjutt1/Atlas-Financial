@@ -6,3 +6,9 @@ export { useTheme } from './useTheme'
 // ML and Real-time hooks
 export { useMLTransactionCategorization } from './useMLTransactionCategorization'
 export { useFinancialPrecision } from './useFinancialPrecision'
+
+// Goal tracking hooks
+export { useGoals } from './useGoals'
+
+// Debt management hooks
+export { useDebtManagement } from './useDebtManagement'

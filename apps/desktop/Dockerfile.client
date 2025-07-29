@@ -1,0 +1,58 @@
+# Atlas Financial Desktop Client - Web Hybrid Container
+# Phase 2.6: Thin client deployment for desktop app
+
+FROM node:18-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    git
+
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build for production
+RUN npm run build
+
+# Production stage
+FROM nginx:alpine AS runtime
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    curl \
+    ca-certificates \
+    tzdata
+
+# Copy built assets
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY nginx.desktop.conf /etc/nginx/conf.d/default.conf
+
+# Create non-root user
+RUN addgroup -g 1001 atlas && \
+    adduser -D -s /bin/sh -u 1001 -G atlas atlas
+
+# Set ownership
+RUN chown -R atlas:atlas /usr/share/nginx/html
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# Expose port
+EXPOSE 3000
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

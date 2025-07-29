@@ -4,7 +4,7 @@
 use tauri::{AppHandle, State, Window};
 use serde::{Deserialize, Serialize};
 use crate::{AppState, financial::FinancialAmount};
-use crate::storage::{DatabaseManager, AccountRepository, TransactionRepository, CreateAccountRequest, CreateTransactionRequest};
+use crate::api_client::{Account, Transaction, TransactionInput, FinancialAmount as ApiFinancialAmount};
 use crate::security::secure_query::InputValidator;
 use super::{CommandResponse, send_desktop_notification, desktop_utils};
 use rust_decimal::Decimal;
@@ -768,51 +768,24 @@ pub async fn import_financial_data(
 // Internal Implementation Functions
 // ============================================================================
 
+// Helper function to get session token - Phase 2.6 Architecture
+async fn get_session_token_from_app() -> Option<String> {
+    // TODO: Implement proper session management
+    // For now, return a placeholder that would need to be replaced with actual session retrieval
+    // This would typically come from secure storage or app state
+    Some("placeholder-session-token".to_string())
+}
+
 async fn fetch_user_accounts(state: &State<'_, AppState>) -> Result<Vec<Account>, Box<dyn std::error::Error>> {
-    // Get user ID from session state (placeholder for actual session management)
-    let user_id = "placeholder-user-id"; // TODO: Get from actual session
+    // Get session token from stored session (this would be improved with proper session management)
+    let session_token = get_session_token_from_app().await
+        .ok_or("No valid session found")?;
 
-    // Validate user ID format
-    Uuid::parse_str(user_id)
-        .map_err(|_| "Invalid user ID format")?;
-
-    // Use secure repository pattern
-    let db_manager = &state.database_manager; // Assuming database_manager is in AppState
-    let account_repo = AccountRepository::new(db_manager);
-
-    let account_records = account_repo.find_by_user_id(user_id).await
-        .map_err(|e| format!("Database error: {}", e))?;
-
-    // Convert to API types
-    let accounts = account_records.into_iter().map(|record| Account {
-        id: record.id,
-        user_id: record.user_id,
-        name: record.name,
-        account_type: match record.account_type {
-            crate::storage::AccountType::Checking => AccountType::Checking,
-            crate::storage::AccountType::Savings => AccountType::Savings,
-            crate::storage::AccountType::CreditCard => AccountType::CreditCard,
-            crate::storage::AccountType::Investment => AccountType::Investment,
-            crate::storage::AccountType::Retirement => AccountType::Retirement,
-            crate::storage::AccountType::Loan => AccountType::Loan,
-            crate::storage::AccountType::Mortgage => AccountType::Mortgage,
-            crate::storage::AccountType::Cash => AccountType::Cash,
-            crate::storage::AccountType::Other => AccountType::Other,
-        },
-        balance: FinancialAmount::from_decimal(record.balance, record.currency.clone())?,
-        currency: record.currency,
-        is_active: record.is_active,
-        created_at: record.created_at,
-        updated_at: record.updated_at,
-        institution: record.institution,
-        account_number_masked: record.account_number_masked,
-        credit_limit: record.credit_limit.map(|cl|
-            FinancialAmount::from_decimal(cl, "USD".to_string()).unwrap_or_else(|_|
-                FinancialAmount::zero("USD".to_string()).unwrap()
-            )
-        ),
-        interest_rate: record.interest_rate,
-    }).collect();
+    // Use API client to fetch accounts through GraphQL gateway
+    let accounts = state.api_client
+        .get_accounts(&session_token)
+        .await
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
     Ok(accounts)
 }

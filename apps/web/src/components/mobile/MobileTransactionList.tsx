@@ -5,7 +5,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { MobileCard, MobileCardHeader } from './MobileCard'
 import { MobileFinancialAmount } from './MobileFinancialAmount'
 import { Transaction } from '@/types/graphql'
-import { FinancialAmount } from '@/lib/financial/FinancialAmount'
+import { FinancialAmount } from '@atlas/shared/financial'
 
 interface MobileTransactionListProps {
   transactions: Transaction[]

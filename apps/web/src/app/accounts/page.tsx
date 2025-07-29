@@ -4,13 +4,18 @@ import { useState } from 'react'
 import { AccountCard } from '@/components/dashboard/AccountCard'
 import { LoadingSpinner, Card } from '@/components/common'
 import { SessionAuth } from '@/components/auth/AuthWrapper'
+import { BankConnectionWizard, ConnectedAccountCard, ConnectionStatusMonitor } from '@/components/banking'
 import { useAccountSummary } from '@/hooks'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency } from '@atlas/shared/utils'
 import { mockAccounts } from '@/lib/fixtures'
-import { PlusIcon, FunnelIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, FunnelIcon, Cog6ToothIcon } from '@heroicons/react/24/outline'
+import type { BankAccount } from '@/components/banking'
 
 function AccountsContent() {
   const [filterType, setFilterType] = useState<string>('all')
+  const [connectedBankAccounts, setConnectedBankAccounts] = useState<BankAccount[]>([])
+  const [showConnectionWizard, setShowConnectionWizard] = useState(false)
+  const [showConnectionMonitor, setShowConnectionMonitor] = useState(false)
   const { totalBalance, totalDebt, netWorth } = useAccountSummary({ accounts: mockAccounts as any })
 
   const filteredAccounts = filterType === 'all'
@@ -18,6 +23,25 @@ function AccountsContent() {
     : mockAccounts.filter(account => account.type === filterType)
 
   const accountTypes = ['all', 'checking', 'savings', 'credit', 'investment']
+
+  const handleAccountsConnected = (accounts: BankAccount[]) => {
+    setConnectedBankAccounts(prev => [...prev, ...accounts])
+    setShowConnectionWizard(false)
+
+    // Show success message
+    // In production, you would also sync with your backend here
+    console.log('Connected accounts:', accounts)
+  }
+
+  const handleAccountUpdate = (updatedAccount: BankAccount) => {
+    setConnectedBankAccounts(prev =>
+      prev.map(account => account.id === updatedAccount.id ? updatedAccount : account)
+    )
+  }
+
+  const handleAccountDelete = (accountId: string) => {
+    setConnectedBankAccounts(prev => prev.filter(account => account.id !== accountId))
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -32,10 +56,24 @@ function AccountsContent() {
           </p>
         </div>
 
-        <button className="btn-primary flex items-center gap-2">
-          <PlusIcon className="w-5 h-5" />
-          Add Account
-        </button>
+        <div className="flex items-center space-x-3">
+          {connectedBankAccounts.length > 0 && (
+            <button
+              onClick={() => setShowConnectionMonitor(!showConnectionMonitor)}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <Cog6ToothIcon className="w-5 h-5" />
+              Monitor Connections
+            </button>
+          )}
+          <button
+            onClick={() => setShowConnectionWizard(true)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <PlusIcon className="w-5 h-5" />
+            Connect Account
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -97,12 +135,46 @@ function AccountsContent() {
         </div>
       </div>
 
-      {/* Accounts Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredAccounts.map((account) => (
-          <AccountCard key={account.id} account={account as any} />
-        ))}
-      </div>
+      {/* Connection Status Monitor */}
+      {showConnectionMonitor && connectedBankAccounts.length > 0 && (
+        <div className="mb-8">
+          <ConnectionStatusMonitor accounts={connectedBankAccounts} />
+        </div>
+      )}
+
+      {/* Connected Bank Accounts */}
+      {connectedBankAccounts.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Connected Bank Accounts ({connectedBankAccounts.length})
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {connectedBankAccounts.map((account) => (
+              <ConnectedAccountCard
+                key={account.id}
+                account={account}
+                onUpdate={handleAccountUpdate}
+                onDelete={handleAccountDelete}
+                allowEdit={true}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Legacy Accounts Grid */}
+      {filteredAccounts.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Mock Accounts (Demo Data)
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredAccounts.map((account) => (
+              <AccountCard key={account.id} account={account as any} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {filteredAccounts.length === 0 && (
         <div className="text-center py-12">
@@ -120,11 +192,21 @@ function AccountsContent() {
               : `No ${filterType} accounts found. Try a different filter.`
             }
           </p>
-          <button className="btn-primary">
-            Add Your First Account
+          <button
+            onClick={() => setShowConnectionWizard(true)}
+            className="btn-primary"
+          >
+            Connect Your First Account
           </button>
         </div>
       )}
+
+      {/* Bank Connection Wizard */}
+      <BankConnectionWizard
+        isOpen={showConnectionWizard}
+        onComplete={handleAccountsConnected}
+        onCancel={() => setShowConnectionWizard(false)}
+      />
     </div>
   )
 }

@@ -13,7 +13,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { MockedProvider } from '@apollo/client/testing'
 import { useMLTransactionCategorization } from '../hooks/useMLTransactionCategorization'
 import { useFinancialPrecision } from '../hooks/useFinancialPrecision'
-import { FinancialAmount } from '../lib/financial/FinancialAmount'
+import { FinancialAmount } from '@atlas/shared/financial'
 import {
   SUBSCRIBE_ML_TRANSACTION_CATEGORIZATION,
   SUBSCRIBE_FINANCIAL_PRECISION_UPDATES

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useMLTransactionCategorization } from '@/hooks/useMLTransactionCategorization'
 import { useFinancialPrecision } from '@/hooks/useFinancialPrecision'
 import { WebSocketErrorBoundary } from '@/components/common/WebSocketErrorBoundary'
-import { FinancialAmount } from '@/lib/financial/FinancialAmount'
+import { FinancialAmount } from '@atlas/shared/financial'
 import { Transaction, MLCategorySuggestion } from '@/types/graphql'
 
 interface MLTransactionCategorizationDemoProps {

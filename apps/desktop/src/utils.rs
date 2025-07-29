@@ -14,10 +14,9 @@ use crate::financial::FinancialError;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
-    pub database_url: String,
-    pub supertokens_url: String,
-    pub financial_engine_url: String,
-    pub ai_engine_url: String,
+    // API Gateway Configuration - Phase 2.6 Architectural Compliance
+    pub atlas_core_url: String,           // Main API endpoint (port 3000)
+    pub atlas_api_gateway_url: String,    // GraphQL gateway (port 8081)
     pub log_level: String,
     pub cache_settings: CacheSettings,
     pub security_settings: SecuritySettings,
@@ -133,14 +132,11 @@ pub enum DateRangePreset {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            database_url: std::env::var("DATABASE_URL")
-                .unwrap_or_else(|_| "postgresql://localhost:5432/atlas_financial".to_string()),
-            supertokens_url: std::env::var("SUPERTOKENS_URL")
-                .unwrap_or_else(|_| "http://localhost:3567".to_string()),
-            financial_engine_url: std::env::var("FINANCIAL_ENGINE_URL")
-                .unwrap_or_else(|_| "http://localhost:8080".to_string()),
-            ai_engine_url: std::env::var("AI_ENGINE_URL")
-                .unwrap_or_else(|_| "http://localhost:8000".to_string()),
+            // Phase 2.6: API Gateway Exclusive Configuration
+            atlas_core_url: std::env::var("ATLAS_CORE_URL")
+                .unwrap_or_else(|_| "http://localhost:3000".to_string()),
+            atlas_api_gateway_url: std::env::var("ATLAS_API_GATEWAY_URL")
+                .unwrap_or_else(|_| "http://localhost:8081".to_string()),
             log_level: std::env::var("LOG_LEVEL")
                 .unwrap_or_else(|_| "info".to_string()),
             cache_settings: CacheSettings::default(),
@@ -284,13 +280,13 @@ impl Config {
 
     /// Validate configuration
     pub fn validate(&self) -> Result<(), FinancialError> {
-        // Validate URLs
-        if self.database_url.is_empty() {
-            return Err(FinancialError::ConfigurationError("Database URL cannot be empty".to_string()));
+        // Validate API Gateway URLs
+        if self.atlas_core_url.is_empty() {
+            return Err(FinancialError::ConfigurationError("Atlas Core URL cannot be empty".to_string()));
         }
 
-        if self.supertokens_url.is_empty() {
-            return Err(FinancialError::ConfigurationError("SuperTokens URL cannot be empty".to_string()));
+        if self.atlas_api_gateway_url.is_empty() {
+            return Err(FinancialError::ConfigurationError("Atlas API Gateway URL cannot be empty".to_string()));
         }
 
         // Validate numeric values

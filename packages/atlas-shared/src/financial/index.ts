@@ -17,8 +17,7 @@ export { default as FinancialAmount } from './precision';
 export {
   FinancialCalculations,
   FinancialValidation,
-  FinancialPerformance,
-  Decimal
+  FinancialPerformance
 } from './precision';
 
 // Type definitions for financial operations
@@ -30,15 +29,15 @@ export interface FinancialConfig {
 
 export interface DebtInfo {
   name: string;
-  balance: FinancialAmount;
-  minimumPayment: FinancialAmount;
+  balance: import('./precision').default;
+  minimumPayment: import('./precision').default;
   interestRate: number;
 }
 
 export interface BudgetBreakdown {
-  needs: FinancialAmount;
-  wants: FinancialAmount;
-  savings: FinancialAmount;
+  needs: import('./precision').default;
+  wants: import('./precision').default;
+  savings: import('./precision').default;
 }
 
 export interface PerformanceResult<T> {
@@ -68,21 +67,23 @@ export const DatabaseHelpers = {
   /**
    * Format financial amount for DECIMAL(19,4) database storage
    */
-  formatForDatabase(amount: FinancialAmount): string {
+  formatForDatabase(amount: import('./precision').default): string {
     return amount.toString();
   },
 
   /**
    * Parse financial amount from database DECIMAL(19,4) value
    */
-  parseFromDatabase(value: string | number): FinancialAmount {
+  parseFromDatabase(value: string | number): import('./precision').default {
+    const FinancialAmount = require('./precision').default;
     return new FinancialAmount(value.toString());
   },
 
   /**
    * Validate that amount fits in DECIMAL(19,4) constraints
    */
-  validateDatabaseConstraints(amount: FinancialAmount): boolean {
+  validateDatabaseConstraints(amount: import('./precision').default): boolean {
+    const { Decimal } = require('./precision');
     const value = amount.getDecimal();
     const maxValue = new Decimal(FINANCIAL_CONSTANTS.MAX_SAFE_VALUE);
     const minValue = new Decimal(FINANCIAL_CONSTANTS.MIN_SAFE_VALUE);

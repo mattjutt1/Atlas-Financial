@@ -1,3 +1,4 @@
+pub mod financial;
 pub mod graphql;
 /// HTTP handlers module
 ///
@@ -5,6 +6,7 @@ pub mod graphql;
 pub mod health;
 pub mod user;
 
+pub use financial::*;
 pub use graphql::*;
 pub use health::*;
 pub use user::*;

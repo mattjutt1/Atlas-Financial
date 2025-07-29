@@ -1,0 +1,151 @@
+# Atlas Financial AI Engine v2.0 - Containerized Deployment
+# Eliminates architectural violations with proper service boundaries
+
+version: '3.8'
+
+services:
+  atlas-ai-engine-v2:
+    build:
+      context: .
+      dockerfile: Dockerfile.v2
+    container_name: atlas-ai-engine-v2
+    restart: unless-stopped
+    
+    # Environment configuration using atlas-shared patterns
+    environment:
+      # Core service configuration
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SERVICE_NAME: ai-engine
+      SERVICE_VERSION: 2.0.0
+      DEBUG: ${DEBUG:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      
+      # API Gateway configuration (NEW - eliminates direct DB access)
+      API_GATEWAY_URL: http://atlas-api-gateway:8080
+      API_TIMEOUT: 30
+      
+      # SuperTokens authentication (NEW - standard auth flow)
+      SUPERTOKENS_CORE_URL: http://atlas-core:3567
+      JWT_SECRET: ${JWT_SECRET}
+      
+      # Atlas shared configuration patterns
+      ENABLE_METRICS: true
+      METRICS_PORT: 9090
+      
+      # Cache configuration using shared patterns
+      REDIS_URL: redis://atlas-data:6379
+      CACHE_TTL_SECONDS: 3600
+      
+      # Financial engine integration
+      RUST_ENGINE_URL: http://atlas-rust-engine:8000
+      
+      # AI model configuration
+      AI_MODEL_PATH: /app/models
+      AI_MODEL_NAME: qwen-2.5-32b-finance
+      AI_MAX_CONTEXT_LENGTH: 4096
+      HONESTY_LEVEL: moderate
+      INCLUDE_TOUGH_LOVE: true
+      
+      # Processing limits
+      MAX_CONCURRENT_REQUESTS: 3
+      REQUEST_TIMEOUT_SECONDS: 120
+      
+      # Financial rules configuration
+      BUDGET_75_15_10_ENABLED: true
+      RAMSEY_STEPS_ENABLED: true
+      DALIO_ALL_WEATHER_ENABLED: true
+      
+      # Security settings using atlas-shared patterns
+      CORS_ORIGINS: http://atlas-web:3000,http://atlas-platform:3000
+      
+    # Port mapping
+    ports:
+      - "8000:8000"  # API port
+      - "9090:9090"  # Metrics port
+      
+    # Volume mounts for persistent data
+    volumes:
+      - ./models:/app/models:ro  # AI models (read-only)
+      - ai-engine-cache:/app/cache  # Cache directory
+      - ai-engine-logs:/app/logs   # Log directory
+      
+    # Resource limits for production deployment
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+          
+    # Dependency management for proper service boundaries
+    depends_on:
+      - atlas-api-gateway
+      - atlas-core  # SuperTokens
+      - atlas-data  # Redis
+      - atlas-rust-engine
+      
+    # Network configuration
+    networks:
+      - atlas-internal
+      - atlas-external
+      
+    # Health check configuration
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+      
+    # Logging configuration using atlas-shared patterns
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        labels: "service=ai-engine,version=2.0.0"
+        
+    # Security configuration
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/cache
+      - /app/logs
+      
+    # Labels for monitoring and management
+    labels:
+      - "atlas.service=ai-engine"
+      - "atlas.version=2.0.0"
+      - "atlas.phase=2.5"
+      - "atlas.architecture=refactored"
+      - "atlas.auth=supertokens"
+      - "atlas.boundaries=api-gateway"
+
+# Named volumes for persistence
+volumes:
+  ai-engine-cache:
+    driver: local
+    labels:
+      - "atlas.volume=ai-engine-cache"
+      
+  ai-engine-logs:
+    driver: local
+    labels:
+      - "atlas.volume=ai-engine-logs"
+      
+# Network configuration for service boundaries
+networks:
+  atlas-internal:
+    driver: bridge
+    internal: true
+    labels:
+      - "atlas.network=internal"
+      
+  atlas-external:
+    driver: bridge
+    labels:
+      - "atlas.network=external"

@@ -4,12 +4,13 @@
  */
 
 import { useQuery } from '@apollo/client'
-import { useSessionContext } from 'supertokens-auth-react/recipe/session'
 import { useEffect, useState } from 'react'
+import Session from 'supertokens-auth-react/recipe/session'
 
 import type { AtlasUser } from '../types'
 import { GET_USER_BY_EMAIL } from '../graphql/queries'
 import { createLogger } from '../monitoring'
+import { useAuth } from './providers'
 
 const logger = createLogger('auth-hooks')
 
@@ -18,77 +19,42 @@ const logger = createLogger('auth-hooks')
  * Consolidates useAuthentication patterns from apps/web
  */
 export function useAuthentication() {
-  const session = useSessionContext()
-  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const auth = useAuth()
+  const [sessionInfo, setSessionInfo] = useState<any>(null)
 
-  // Extract user email from SuperTokens session
+  // Get session information from SuperTokens
   useEffect(() => {
-    if (session.loading === false && session.doesSessionExist) {
-      const userId = session.userId
-      const accessTokenPayload = session.accessTokenPayload
-
-      // Try to get email from access token payload
-      const email = accessTokenPayload.email ||
-                   accessTokenPayload['https://hasura.io/jwt/claims']?.['x-hasura-user-email'] ||
-                   null
-
-      setUserEmail(email)
-      logger.debug('User email extracted from session', { userId, email })
-    } else {
-      setUserEmail(null)
+    const loadSession = async () => {
+      try {
+        const hasSession = await Session.doesSessionExist()
+        if (hasSession) {
+          // Get basic session info without getSessionInformation
+          setSessionInfo({ hasSession, userId: await Session.getUserId() })
+        }
+      } catch (error) {
+        logger.error('Failed to load session', { error })
+      }
     }
-  }, [session])
 
-  const isLoading = session.loading
-  const isAuthenticated = session.doesSessionExist && !session.loading
-  const isUnauthenticated = !session.doesSessionExist && !session.loading
+    loadSession()
+  }, [auth.isAuthenticated])
 
-  // Fetch user data from backend (skip if no email available)
+  // Fetch user data from backend if authenticated
   const { data: userData, loading: userLoading, error: userError } = useQuery(GET_USER_BY_EMAIL, {
-    variables: { email: userEmail },
-    skip: !isAuthenticated || !userEmail,
-    errorPolicy: 'ignore' // Don't fail if user doesn't exist in backend yet
+    variables: { email: auth.user?.email },
+    skip: !auth.isAuthenticated || !auth.user?.email,
+    errorPolicy: 'ignore'
   })
 
   const backendUser = userData?.users?.[0]
 
-  // Combine session user with backend user data
-  const user: AtlasUser | null = backendUser ? {
-    id: backendUser.id,
-    email: backendUser.email,
-    firstName: backendUser.firstName,
-    lastName: backendUser.lastName,
-    emailVerified: backendUser.emailVerified || true,
-    roles: backendUser.roles || ['user'],
-    permissions: backendUser.permissions || [],
-    createdAt: backendUser.createdAt,
-    lastLoginAt: backendUser.lastLoginAt,
-    metadata: backendUser.metadata
-  } : (isAuthenticated && userEmail ? {
-    id: session.userId,
-    email: userEmail,
-    firstName: undefined,
-    lastName: undefined,
-    emailVerified: true,
-    roles: ['user'],
-    permissions: [],
-    createdAt: new Date().toISOString(),
-    lastLoginAt: new Date().toISOString(),
-    metadata: {}
-  } : null)
-
   return {
-    session: session.doesSessionExist ? {
-      user: user,
-      userId: session.userId,
-      accessToken: session.accessToken,
-      accessTokenPayload: session.accessTokenPayload
-    } : null,
-    status: isLoading ? 'loading' : (isAuthenticated ? 'authenticated' : 'unauthenticated'),
-    isLoading: isLoading || userLoading,
-    isAuthenticated,
-    isUnauthenticated,
-    user,
+    session: sessionInfo,
+    status: auth.isLoading ? 'loading' : (auth.isAuthenticated ? 'authenticated' : 'unauthenticated'),
+    isLoading: auth.isLoading || userLoading,
+    isAuthenticated: auth.isAuthenticated,
+    isUnauthenticated: !auth.isAuthenticated && !auth.isLoading,
+    user: auth.user,
     backendUser,
     userError
   }

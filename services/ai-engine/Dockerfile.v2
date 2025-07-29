@@ -1,0 +1,80 @@
+# Atlas Financial AI Engine v2.0 - Containerized Deployment
+# Eliminates architectural violations and improves security
+
+FROM python:3.11-slim as base
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN useradd --create-home --shell /bin/bash atlas
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY --chown=atlas:atlas . .
+
+# Create necessary directories
+RUN mkdir -p /app/models /app/cache /app/logs && \
+    chown -R atlas:atlas /app
+
+# Switch to non-root user
+USER atlas
+
+# Environment configuration using atlas-shared patterns
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV ENVIRONMENT=production
+ENV SERVICE_NAME=ai-engine
+ENV SERVICE_VERSION=2.0.0
+
+# API Gateway configuration (NEW - eliminates direct DB access)
+ENV API_GATEWAY_URL=http://atlas-api-gateway:8080
+ENV API_TIMEOUT=30
+
+# SuperTokens authentication (NEW - standard auth flow)
+ENV SUPERTOKENS_CORE_URL=http://atlas-core:3567
+ENV JWT_SECRET=${JWT_SECRET}
+
+# Atlas shared configuration
+ENV LOG_LEVEL=INFO
+ENV ENABLE_METRICS=true
+ENV METRICS_PORT=9090
+
+# Cache configuration
+ENV REDIS_URL=redis://atlas-data:6379
+ENV CACHE_TTL_SECONDS=3600
+
+# Financial engine integration
+ENV RUST_ENGINE_URL=http://atlas-rust-engine:8000
+
+# AI model configuration
+ENV AI_MODEL_PATH=/app/models
+ENV AI_MODEL_NAME=qwen-2.5-32b-finance
+ENV AI_MAX_CONTEXT_LENGTH=4096
+ENV HONESTY_LEVEL=moderate
+ENV INCLUDE_TOUGH_LOVE=true
+
+# Processing limits
+ENV MAX_CONCURRENT_REQUESTS=3
+ENV REQUEST_TIMEOUT_SECONDS=120
+
+# Security settings
+ENV CORS_ORIGINS=http://atlas-web:3000,http://atlas-platform:3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Expose ports
+EXPOSE 8000 9090
+
+# Start command
+CMD ["python", "main_refactored_v2.py"]

@@ -1,8 +1,11 @@
 /**
- * Financial Precision Foundation - Phase 1.5
+ * Financial Precision Foundation - Phase 2.3 Unified Implementation
  *
  * Eliminates IEEE 754 floating-point errors through comprehensive precision-first architecture
  * using Decimal.js for ALL financial calculations to achieve bank-grade precision (4 decimal places)
+ * 
+ * UNIFIED IMPLEMENTATION - Single source of truth for all Atlas Financial applications
+ * Consolidates duplicate implementations from apps/web and provides enhanced functionality
  */
 
 import Decimal from 'decimal.js';
@@ -17,92 +20,144 @@ Decimal.set({
   modulo: Decimal.ROUND_HALF_UP,
 });
 
+// DECIMAL(19,4) database constraints for validation
+const DECIMAL_19_4_MAX = new Decimal('999999999999999.9999');
+const DECIMAL_19_4_MIN = new Decimal('-999999999999999.9999');
+
 /**
- * Financial amount type that guarantees precision
+ * Unified Financial Amount class with DECIMAL(19,4) database compatibility
+ * Consolidates functionality from apps/web/FinancialAmount.ts for consistency
  */
 export class FinancialAmount {
-  private readonly value: Decimal;
+  private readonly _value: Decimal;
 
-  constructor(amount: string | number | Decimal) {
-    this.value = new Decimal(amount);
+  constructor(value: string | number | Decimal) {
+    // Configure Decimal.js for financial precision
+    Decimal.set({
+      precision: 23,  // 19 digits + 4 decimal places
+      rounding: Decimal.ROUND_HALF_UP,
+      toExpNeg: -19,
+      toExpPos: 4
+    });
+
+    this._value = new Decimal(value);
+
+    // Validate precision bounds for DECIMAL(19,4)
+    if (this._value.decimalPlaces() > 4) {
+      throw new Error(`Financial amount precision exceeds 4 decimal places: ${value}`);
+    }
+
+    // Validate database constraints
+    if (this._value.abs().greaterThan(DECIMAL_19_4_MAX)) {
+      throw new Error(`Financial amount exceeds DECIMAL(19,4) bounds: ${value}`);
+    }
   }
 
   /**
    * Add another financial amount
    */
   add(other: FinancialAmount | string | number): FinancialAmount {
-    const otherValue = other instanceof FinancialAmount ? other.value : new Decimal(other);
-    return new FinancialAmount(this.value.add(otherValue));
+    const otherAmount = other instanceof FinancialAmount ? other._value : new Decimal(other);
+    return new FinancialAmount(this._value.plus(otherAmount));
   }
 
   /**
    * Subtract another financial amount
    */
   subtract(other: FinancialAmount | string | number): FinancialAmount {
-    const otherValue = other instanceof FinancialAmount ? other.value : new Decimal(other);
-    return new FinancialAmount(this.value.sub(otherValue));
+    const otherAmount = other instanceof FinancialAmount ? other._value : new Decimal(other);
+    return new FinancialAmount(this._value.minus(otherAmount));
   }
 
   /**
    * Multiply by a factor
    */
-  multiply(factor: FinancialAmount | string | number): FinancialAmount {
-    const factorValue = factor instanceof FinancialAmount ? factor.value : new Decimal(factor);
-    return new FinancialAmount(this.value.mul(factorValue));
+  multiply(other: FinancialAmount | string | number): FinancialAmount {
+    const otherAmount = other instanceof FinancialAmount ? other._value : new Decimal(other);
+    return new FinancialAmount(this._value.times(otherAmount));
   }
 
   /**
    * Divide by a divisor
    */
-  divide(divisor: FinancialAmount | string | number): FinancialAmount {
-    const divisorValue = divisor instanceof FinancialAmount ? divisor.value : new Decimal(divisor);
-    return new FinancialAmount(this.value.div(divisorValue));
+  divide(other: FinancialAmount | string | number): FinancialAmount {
+    const otherAmount = other instanceof FinancialAmount ? other._value : new Decimal(other);
+    if (otherAmount.isZero()) {
+      throw new Error('Division by zero in financial calculation');
+    }
+    return new FinancialAmount(this._value.dividedBy(otherAmount));
   }
 
   /**
    * Calculate percentage
    */
   percentage(percent: number): FinancialAmount {
-    return this.multiply(new Decimal(percent).div(100));
+    return new FinancialAmount(this._value.times(percent).dividedBy(100));
+  }
+
+  /**
+   * Add percentage to amount
+   */
+  addPercentage(percent: number): FinancialAmount {
+    return this.add(this.percentage(percent));
   }
 
   /**
    * Compare amounts
    */
   equals(other: FinancialAmount | string | number): boolean {
-    const otherValue = other instanceof FinancialAmount ? other.value : new Decimal(other);
-    return this.value.equals(otherValue);
+    const otherAmount = other instanceof FinancialAmount ? other._value : new Decimal(other);
+    return this._value.equals(otherAmount);
   }
 
   greaterThan(other: FinancialAmount | string | number): boolean {
-    const otherValue = other instanceof FinancialAmount ? other.value : new Decimal(other);
-    return this.value.greaterThan(otherValue);
+    const otherAmount = other instanceof FinancialAmount ? other._value : new Decimal(other);
+    return this._value.greaterThan(otherAmount);
   }
 
   lessThan(other: FinancialAmount | string | number): boolean {
-    const otherValue = other instanceof FinancialAmount ? other.value : new Decimal(other);
-    return this.value.lessThan(otherValue);
+    const otherAmount = other instanceof FinancialAmount ? other._value : new Decimal(other);
+    return this._value.lessThan(otherAmount);
+  }
+
+  isZero(): boolean {
+    return this._value.isZero();
+  }
+
+  isPositive(): boolean {
+    return this._value.isPositive();
+  }
+
+  isNegative(): boolean {
+    return this._value.isNegative();
   }
 
   /**
    * Get absolute value
    */
   abs(): FinancialAmount {
-    return new FinancialAmount(this.value.abs());
+    return new FinancialAmount(this._value.abs());
+  }
+
+  /**
+   * Negate amount
+   */
+  negate(): FinancialAmount {
+    return new FinancialAmount(this._value.negated());
   }
 
   /**
    * Round to specified decimal places (default: 4 for bank-grade precision)
    */
   round(decimalPlaces: number = 4): FinancialAmount {
-    return new FinancialAmount(this.value.toDecimalPlaces(decimalPlaces));
+    return new FinancialAmount(this._value.toDecimalPlaces(decimalPlaces));
   }
 
   /**
    * Convert to string with bank-grade precision (4 decimal places)
    */
   toString(): string {
-    return this.value.toFixed(4);
+    return this._value.toFixed(4); // Always 4 decimal places for consistency
   }
 
   /**
@@ -110,24 +165,50 @@ export class FinancialAmount {
    * Rounds to 4 decimal places to prevent precision issues
    */
   toNumber(): number {
-    return this.value.toDecimalPlaces(4).toNumber();
+    return this._value.toNumber();
   }
 
   /**
    * Convert to formatted currency string
    */
-  toCurrency(currencyCode: string = 'USD'): string {
-    return currency(this.toNumber(), {
-      symbol: getCurrencySymbol(currencyCode),
-      precision: 2,
+  toCurrency(currencyCode: string = 'USD', locale: string = 'en-US'): string {
+    return currency(this._value.toNumber(), {
+      precision: 2 // Display precision for currency
     }).format();
+  }
+
+  /**
+   * Convert to compact currency format
+   */
+  toCurrencyCompact(currencyCode: string = 'USD', locale: string = 'en-US'): string {
+    const value = this._value.toNumber();
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: currencyCode,
+      notation: 'compact',
+      maximumFractionDigits: 1,
+    }).format(value);
   }
 
   /**
    * Get raw Decimal value for advanced operations
    */
   getDecimal(): Decimal {
-    return this.value;
+    return this._value;
+  }
+
+  /**
+   * GraphQL serialization - always return string for precision
+   */
+  toGraphQL(): string {
+    return this.toString();
+  }
+
+  /**
+   * Database serialization - DECIMAL(19,4) string
+   */
+  toDatabase(): string {
+    return this.toString();
   }
 
   /**
@@ -141,7 +222,60 @@ export class FinancialAmount {
    * Convert to cents for database storage
    */
   toCents(): number {
-    return this.value.mul(100).toNumber();
+    return this._value.mul(100).toNumber();
+  }
+
+  // Static factory methods from web app implementation
+  static fromString(value: string): FinancialAmount {
+    return new FinancialAmount(value);
+  }
+
+  static fromNumber(value: number): FinancialAmount {
+    return new FinancialAmount(value);
+  }
+
+  static fromCurrency(currencyString: string): FinancialAmount {
+    // Parse currency string removing symbols: "$1,234.56" -> "1234.56"
+    const numericValue = currencyString.replace(/[^0-9.-]+/g, '');
+    return new FinancialAmount(numericValue);
+  }
+
+  static zero(): FinancialAmount {
+    return new FinancialAmount('0.0000');
+  }
+
+  // Validation helpers
+  static isValidAmount(value: string | number): boolean {
+    try {
+      new FinancialAmount(value);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Array operations for financial calculations
+  static sum(amounts: FinancialAmount[]): FinancialAmount {
+    return amounts.reduce((acc, amount) => acc.add(amount), FinancialAmount.zero());
+  }
+
+  static average(amounts: FinancialAmount[]): FinancialAmount {
+    if (amounts.length === 0) return FinancialAmount.zero();
+    return FinancialAmount.sum(amounts).divide(amounts.length);
+  }
+
+  static max(amounts: FinancialAmount[]): FinancialAmount {
+    if (amounts.length === 0) return FinancialAmount.zero();
+    return amounts.reduce((max, current) =>
+      current.greaterThan(max) ? current : max
+    );
+  }
+
+  static min(amounts: FinancialAmount[]): FinancialAmount {
+    if (amounts.length === 0) return FinancialAmount.zero();
+    return amounts.reduce((min, current) =>
+      current.lessThan(min) ? current : min
+    );
   }
 }
 
@@ -183,7 +317,7 @@ export class FinancialCalculations {
     const t = new Decimal(years);
 
     const factor = rate.div(n).add(1).pow(n.mul(t));
-    return principal.multiply(factor);
+    return principal.multiply(new FinancialAmount(factor));
   }
 
   /**
@@ -203,7 +337,7 @@ export class FinancialCalculations {
     const n = new Decimal(termInMonths);
 
     const factor = r.mul(r.add(1).pow(n)).div(r.add(1).pow(n).sub(1));
-    return principal.multiply(factor);
+    return principal.multiply(new FinancialAmount(factor));
   }
 
   /**
@@ -368,7 +502,39 @@ export class FinancialValidation {
     const decimalPlaces = decimalString.length - decimalIndex - 1;
     return decimalPlaces <= 4;
   }
+
+  /**
+   * Validate DECIMAL(19,4) database constraints
+   */
+  static validateDatabaseConstraints(amount: FinancialAmount): boolean {
+    const value = amount.getDecimal();
+    return value.lte(DECIMAL_19_4_MAX) && value.gte(DECIMAL_19_4_MIN);
+  }
 }
+
+// Type guards and utilities from web app implementation
+export const isFinancialAmount = (value: any): value is FinancialAmount => {
+  return value instanceof FinancialAmount;
+};
+
+// Helper type for GraphQL responses
+export type FinancialAmountString = string;
+
+// Utility functions for common patterns
+export const createFinancialAmount = (value: string | number | Decimal): FinancialAmount => {
+  return new FinancialAmount(value);
+};
+
+export const formatFinancialAmount = (
+  amount: FinancialAmount | string | number,
+  currencyCode: string = 'USD',
+  locale: string = 'en-US'
+): string => {
+  const financialAmount = amount instanceof FinancialAmount
+    ? amount
+    : new FinancialAmount(amount);
+  return financialAmount.toCurrency(currencyCode, locale);
+};
 
 // Export utilities for easy imports
 export { Decimal };

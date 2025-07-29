@@ -260,7 +260,7 @@ export class PerformanceMonitor {
    * Start timing an operation
    */
   start(operation: string): void {
-    this.startTimes.set(operation, performance.now())
+    this.startTimes.set(operation, Date.now())
   }
 
   /**
@@ -273,7 +273,7 @@ export class PerformanceMonitor {
       return 0
     }
 
-    const duration = performance.now() - startTime
+    const duration = Date.now() - startTime
     this.startTimes.delete(operation)
 
     metrics.timer(`performance.${operation}`, duration, tags)
@@ -410,13 +410,13 @@ export function trackError(
  * Request tracking middleware
  */
 export function createRequestTracker(requestId: string, userId?: string) {
-  const startTime = performance.now()
+  const startTime = Date.now()
 
   return {
     logger: createLogger('request', { requestId, userId }),
 
     end: (statusCode: number, metadata?: Record<string, unknown>) => {
-      const duration = performance.now() - startTime
+      const duration = Date.now() - startTime
 
       metrics.timer('request.duration', duration, {
         status: statusCode.toString(),
@@ -471,10 +471,10 @@ export class HealthChecker {
     let overallStatus: 'healthy' | 'degraded' | 'unhealthy' = 'healthy'
 
     for (const [name, check] of this.checks) {
-      const startTime = performance.now()
+      const startTime = Date.now()
       try {
         const result = await check()
-        const duration = performance.now() - startTime
+        const duration = Date.now() - startTime
 
         results[name] = {
           ...result,
@@ -487,7 +487,7 @@ export class HealthChecker {
           overallStatus = 'degraded'
         }
       } catch (error) {
-        const duration = performance.now() - startTime
+        const duration = Date.now() - startTime
         results[name] = {
           status: 'fail',
           message: error instanceof Error ? error.message : 'Unknown error',

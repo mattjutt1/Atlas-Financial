@@ -15,19 +15,21 @@ mod storage;
 mod system;
 mod utils;
 mod security;
+mod api_client;
+mod atlas_config_bridge;
 
 use commands::*;
 use security::RateLimiter;
-// use financial::FinancialEngine;
-// use storage::DatabaseManager;
+use api_client::AtlasApiClient;
+use atlas_config_bridge::{get_atlas_config, ConsolidatedConfig};
 
-// Application State
+// Application State - Phase 2.6 Architectural Compliance
 #[derive(Debug)]
 pub struct AppState {
-    // pub financial_engine: FinancialEngine,
-    // pub database: DatabaseManager,
     pub config: utils::Config,
+    pub atlas_config: ConsolidatedConfig,
     pub rate_limiter: RateLimiter,
+    pub api_client: AtlasApiClient,
 }
 
 #[tokio::main]
@@ -39,19 +41,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("Starting Atlas Financial Desktop v1.1.0");
 
-    // Initialize application state
+    // Initialize application state - Phase 2.6 Architecture
+    tracing::info!("🔧 Loading Atlas configuration bridge");
+    
+    // Load Atlas shared configuration
+    let atlas_config_bridge = get_atlas_config("atlas-desktop")?;
+    let atlas_config = atlas_config_bridge.get_consolidated_config();
+    
+    // Log architectural compliance
+    tracing::info!("✅ Architectural compliance validated: Phase {}", 
+        atlas_config.architectural_compliance.phase);
+    tracing::info!("🚪 Service boundaries: {}", 
+        atlas_config.architectural_compliance.service_boundaries);
+    tracing::info!("🔐 Authentication: {}", 
+        atlas_config.architectural_compliance.authentication);
+    
+    // Initialize legacy config for backward compatibility
     let config = utils::Config::load().await?;
-    // let database = DatabaseManager::new(&config.database_url).await?;
-    // let financial_engine = FinancialEngine::new().await?;
-
+    
+    // Initialize API client with atlas configuration
+    let api_client = AtlasApiClient::new(&config)?;
+    
     // Initialize rate limiter with security configuration
     let rate_limiter = RateLimiter::new();
 
     let app_state = AppState {
-        // financial_engine,
-        // database,
         config,
+        atlas_config,
         rate_limiter,
+        api_client,
     };
 
     // Build Tauri application
