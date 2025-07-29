@@ -51,7 +51,7 @@ interface AICFOInsight {
 ```typescript
 {/* Third Row - AI CFO Insights */}
 <div className="grid grid-cols-1 gap-6 mb-8">
-  <AICFOInsights 
+  <AICFOInsights
     userId={session.userId}
     accounts={accounts}
     transactions={transactions}

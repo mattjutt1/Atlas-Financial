@@ -134,16 +134,16 @@ function cleanup_category() {
     local category="$1"
     local pattern="$2"
     echo "Cleaning $category..."
-    
+
     # Safety validation
     validate_safe_pattern "$pattern"
-    
+
     # Size calculation before cleanup
     before_size=$(du -sh "$pattern" 2>/dev/null || echo "0")
-    
+
     # Safe removal with progress
     find . -name "$pattern" -type d -exec rm -rf {} + 2>/dev/null
-    
+
     # Report recovery
     echo "Recovered: $before_size from $category"
 }

@@ -48,12 +48,12 @@ Ollama:
   features: [model_management, api_interface, resource_optimization]
   integration: REST_API
   performance: optimized
-  
+
 LM Studio (Alternative):
   deployment_score: 8.8/10
   features: [gui_interface, model_testing, easy_setup]
   use_case: development_testing
-  
+
 GPT4All (Lightweight):
   deployment_score: 8.2/10
   features: [resource_constrained, offline_operation]
@@ -69,13 +69,13 @@ Data Sovereignty:
   external_calls: ZERO
   data_transmission: NONE
   compliance: [GDPR, SOX, PCI]
-  
+
 Security Model:
   processing_location: on_device
   data_storage: local_only
   network_dependency: optional
   air_gap_capable: true
-  
+
 Privacy Benefits:
   financial_data: never_transmitted
   ai_insights: locally_generated
@@ -123,7 +123,7 @@ Capabilities:
 Models Used:
   primary: Qwen 2.5 32B (mathematical accuracy)
   secondary: Llama 3.3 70B (complex planning)
-  
+
 Output Format:
   confidence: 85-95%
   impact: [significant, moderate, minimal]
@@ -143,7 +143,7 @@ Capabilities:
 Models Used:
   primary: Llama 3.3 70B (complex reasoning)
   secondary: Qwen 2.5 32B (mathematical calculations)
-  
+
 Advanced Features:
   monte_carlo_simulations: 10000_iterations
   risk_metrics: [sharpe_ratio, max_drawdown, var]
@@ -163,7 +163,7 @@ Capabilities:
 Models Used:
   primary: Qwen 2.5 32B (pattern recognition)
   document_analysis: FinBERT (contract review)
-  
+
 Intelligence Features:
   recurring_expense_detection: automated
   cost_benefit_analysis: quantified
@@ -183,7 +183,7 @@ Capabilities:
 Models Used:
   primary: Llama 3.3 70B (complex risk modeling)
   document_processing: FinBERT (regulatory analysis)
-  
+
 Risk Framework:
   probability_assessment: quantified
   impact_analysis: financial_modeling
