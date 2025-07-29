@@ -37,6 +37,7 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+**/dist/
 
 # IDE
 .vscode/
@@ -44,10 +45,32 @@ next-env.d.ts
 
 # OS
 Thumbs.db
+.DS_Store
 
 # Logs
 logs
 *.log
+*.tmp
+*~
+*.bak
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*venv/
+*env/
+.Python
+
+# Build artifacts
+/coverage
+/build
+/out
+
+# Development test files
+*_cookies.txt
+*_headers.txt
+test_*.txt
 
 # Rust build artifacts
 /services/rust-financial-engine/target/

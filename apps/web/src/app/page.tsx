@@ -5,6 +5,7 @@ import { AccountCard } from '@/components/dashboard/AccountCard'
 import { NetWorthChart } from '@/components/dashboard/NetWorthChart'
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions'
 import { BrutalHonestyInsight } from '@/components/dashboard/BrutalHonestyInsight'
+import { AICFOInsights } from '@/components/dashboard/AICFOInsights'
 import { LoadingSpinner, Card } from '@/components/common'
 import { MobileDashboard } from '@/components/mobile/MobileDashboard'
 import { SessionAuth } from '@/components/auth/AuthWrapper'
@@ -149,7 +150,16 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Third Row - Recent Transactions */}
+      {/* Third Row - AI CFO Insights */}
+      <div className="grid grid-cols-1 gap-6 mb-8">
+        <AICFOInsights 
+          userId={session.userId}
+          accounts={accounts}
+          transactions={transactions}
+        />
+      </div>
+
+      {/* Fourth Row - Recent Transactions */}
       <div className="grid grid-cols-1 gap-6">
         <RecentTransactions transactions={transactions.slice(0, 10)} />
       </div>

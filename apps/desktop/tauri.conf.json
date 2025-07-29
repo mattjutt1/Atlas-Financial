@@ -1,0 +1,184 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "productName": "Atlas Financial",
+  "version": "1.1.0",
+  "identifier": "com.atlas.financial",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../web/dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Atlas Financial - Personal Finance Management",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "maximizable": true,
+        "minimizable": true,
+        "closable": true,
+        "center": true,
+        "focus": true,
+        "fullscreen": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "theme": "Light",
+        "titleBarStyle": "Visible",
+        "hiddenTitle": false,
+        "acceptFirstMouse": false,
+        "tabbingIdentifier": "main",
+        "userAgent": "Atlas Financial Desktop v1.1.0",
+        "visible": true,
+        "decorations": true,
+        "shadow": true,
+        "x": null,
+        "y": null,
+        "fileDropEnabled": false,
+        "additionalBrowserArgs": "--enable-features=WebUIDarkMode --force-dark-mode"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://api.atlas-financial.com; base-uri 'self'; form-action 'self' https://api.atlas-financial.com; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests; strict-transport-security 'max-age=31536000; includeSubDomains; preload';"
+    },
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://releases.atlas-financial.com/desktop/{{target}}/{{current_version}}"
+      ],
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IENCOEY4QzQyRUE1OTNCNUEK"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Finance",
+    "copyright": "Copyright © 2025 Atlas Financial. All rights reserved.",
+    "shortDescription": "Personal finance management with brutal honesty",
+    "longDescription": "Atlas Financial is a brutally honest personal finance platform that provides real insights into your financial situation. Built with bank-grade security and precision, Atlas helps you understand and improve your financial health through data-driven insights and actionable recommendations.",
+    "license": "MIT",
+    "licenseFile": "../../LICENSE",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "identifier": "com.atlas.financial",
+    "publisher": "Atlas Financial",
+    "resources": ["assets/*"],
+    "externalBin": [],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "https://timestamp.sectigo.com",
+      "tsp": false,
+      "wix": {
+        "language": "en-US",
+        "template": "main.wxs",
+        "fragmentPaths": ["assets/fragments"],
+        "componentGroupRefs": ["AtlasAssets"],
+        "componentRefs": ["AtlasMain"],
+        "featureGroupRefs": [],
+        "featureRefs": [],
+        "mergeRefs": [],
+        "skipWebviewInstall": false,
+        "license": "assets/license.rtf",
+        "enableElevatedUpdateTask": true,
+        "bannerPath": "assets/banner.png",
+        "dialogImagePath": "assets/dialog.png"
+      },
+      "nsis": {
+        "template": "installer.nsi",
+        "license": "assets/license.txt",
+        "headerImage": "assets/header.png",
+        "sidebarImage": "assets/sidebar.png",
+        "installerIcon": "assets/installer.ico",
+        "installMode": "perMachine",
+        "languages": ["English"],
+        "displayLanguageSelector": false,
+        "customLanguageFiles": {},
+        "allowDowngrades": false,
+        "deleteAppDataOnUninstall": false
+      }
+    },
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "10.13",
+      "license": "assets/license.txt",
+      "useBootstrapper": false,
+      "exceptionDomain": "atlas-financial.com",
+      "signingIdentity": null,
+      "providerShortName": null,
+      "entitlements": "assets/entitlements.plist"
+    },
+    "linux": {
+      "deb": {
+        "depends": ["libwebkit2gtk-4.0-37", "libssl3"]
+      },
+      "appimage": {
+        "bundleMediaFramework": false,
+        "libs": ["libwebkit2gtk-4.0-37", "libssl3"]
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "active": true
+    },
+    "window-state": {
+      "active": true
+    },
+    "fs": {
+      "active": true,
+      "scope": {
+        "allow": ["$APPDATA/atlas-financial/*", "$DOCUMENT/*"]
+      }
+    },
+    "dialog": {
+      "active": true,
+      "scope": {
+        "allow": [
+          {
+            "name": "save-export",
+            "extensions": ["csv", "json", "pdf"]
+          },
+          {
+            "name": "import-data",
+            "extensions": ["csv", "qif", "ofx"]
+          }
+        ]
+      }
+    },
+    "notification": {
+      "active": true
+    },
+    "global-shortcut": {
+      "active": true
+    },
+    "clipboard-manager": {
+      "active": true
+    },
+    "shell": {
+      "active": true,
+      "scope": {
+        "allow": [
+          {
+            "name": "open-url",
+            "cmd": {
+              "program": "open",
+              "args": ["$URL"]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

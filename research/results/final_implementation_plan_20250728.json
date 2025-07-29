@@ -1,0 +1,254 @@
+{
+  "project": "Atlas Financial - Personal AI CFO System",
+  "version": "1.0.0",
+  "date": "2025-07-28T19:31:55.053685",
+  "overview": {
+    "vision": "A privacy-first, AI-powered personal finance desktop application",
+    "target_user": "Personal use with CPA-grade business accounting",
+    "key_differentiators": [
+      "Local-first AI with Ollama/Llama 3.3",
+      "Bank-grade security with Tauri + Rust",
+      "Free tier cloud deployment",
+      "Comprehensive finance management"
+    ]
+  },
+  "technical_decisions": {
+    "desktop_framework_recommendation": {
+      "framework": "Tauri",
+      "reasons": [
+        "90% memory reduction vs Electron",
+        "Rust backend for bank-grade security",
+        "Native performance for financial calculations",
+        "Smaller bundle size for easier distribution",
+        "Growing ecosystem in 2025"
+      ],
+      "confidence": 0.95
+    },
+    "ai_integration_approach": {
+      "approach": "Hybrid Local-First",
+      "primary": "Ollama with Llama 3.3",
+      "fallback": "Cloud API for complex queries",
+      "features": [
+        "Local inference for privacy",
+        "Financial analysis prompts",
+        "Budget optimization AI",
+        "Transaction categorization",
+        "Investment insights generation"
+      ],
+      "implementation": {
+        "local_model": "llama3.3:70b-instruct-q4_K_M",
+        "api": "http://localhost:11434",
+        "fallback_provider": "anthropic/claude-3-haiku"
+      }
+    },
+    "security_architecture": {
+      "architecture": "Defense in Depth",
+      "layers": [
+        {
+          "name": "Data Encryption",
+          "implementation": "AES-256-GCM with hardware-bound keys",
+          "purpose": "Protect data at rest"
+        },
+        {
+          "name": "Transport Security",
+          "implementation": "TLS 1.3 with certificate pinning",
+          "purpose": "Protect data in transit"
+        },
+        {
+          "name": "Authentication",
+          "implementation": "OAuth 2.0 with PKCE for bank connections",
+          "purpose": "Secure third-party integrations"
+        },
+        {
+          "name": "Local Security",
+          "implementation": "OS keychain integration, biometric auth",
+          "purpose": "Protect local credentials"
+        }
+      ],
+      "compliance": [
+        "PCI DSS principles",
+        "GDPR ready",
+        "SOC 2 aligned"
+      ]
+    },
+    "cloud_deployment_strategy": {
+      "strategy": "Hybrid Desktop-Cloud",
+      "database": {
+        "provider": "Supabase",
+        "plan": "Free tier (500MB)",
+        "features": [
+          "Real-time sync",
+          "Row-level security",
+          "Built-in auth"
+        ]
+      },
+      "api_hosting": {
+        "primary": "Railway",
+        "backup": "Render",
+        "plan": "Free tier with auto-sleep"
+      },
+      "architecture": "Desktop-first with cloud sync",
+      "estimated_cost": "$0-5/month for personal use"
+    },
+    "open_source_components": [
+      {
+        "name": "rust_decimal",
+        "purpose": "Bank-grade decimal precision",
+        "license": "MIT"
+      },
+      {
+        "name": "tokio",
+        "purpose": "Async runtime for Rust",
+        "license": "MIT"
+      },
+      {
+        "name": "tauri",
+        "purpose": "Desktop framework",
+        "license": "MIT/Apache-2.0"
+      },
+      {
+        "name": "@supabase/supabase-js",
+        "purpose": "Cloud database client",
+        "license": "MIT"
+      },
+      {
+        "name": "ollama",
+        "purpose": "Local AI inference",
+        "license": "MIT"
+      }
+    ],
+    "feature_priorities": {
+      "must_have": [
+        "Autonomous bank sync via OAuth",
+        "AI-powered budgeting with local LLM",
+        "Business/personal finance separation",
+        "CPA-grade double-entry bookkeeping",
+        "Investment portfolio tracking",
+        "Retirement planning tools"
+      ],
+      "nice_to_have": [
+        "Mobile companion app",
+        "Family sharing",
+        "Advanced tax planning",
+        "Cryptocurrency tracking"
+      ],
+      "future": [
+        "Financial advisor AI chat",
+        "Automated investment rebalancing",
+        "Tax filing integration"
+      ]
+    },
+    "technology_stack": {
+      "desktop": {
+        "framework": "Tauri 2.0",
+        "backend": "Rust",
+        "frontend": "React + TypeScript + Tailwind CSS"
+      },
+      "database": {
+        "local": "SQLite with SQLCipher encryption",
+        "cloud": "PostgreSQL via Supabase"
+      },
+      "ai": {
+        "local": "Ollama + Llama 3.3 70B",
+        "prompting": "LangChain-inspired custom chain"
+      },
+      "auth": {
+        "local": "Biometric + OS Keychain",
+        "oauth": "Supabase Auth + SimpleFIN ($1/month)"
+      },
+      "sync": {
+        "strategy": "Event-sourced with CRDT",
+        "conflict_resolution": "Last-write-wins with manual merge"
+      },
+      "deployment": {
+        "desktop": "Auto-updater with code signing",
+        "cloud": "Docker on Railway/Render"
+      }
+    },
+    "implementation_roadmap": [
+      {
+        "phase": 1,
+        "name": "Foundation",
+        "duration": "2 weeks",
+        "tasks": [
+          "Set up Tauri 2.0 project structure",
+          "Implement secure local storage with SQLite",
+          "Create basic UI with React + Tailwind",
+          "Set up Supabase project and schema"
+        ]
+      },
+      {
+        "phase": 2,
+        "name": "Core Finance Features",
+        "duration": "3 weeks",
+        "tasks": [
+          "Account management system",
+          "Transaction tracking with categories",
+          "Basic reporting and analytics",
+          "Import/export functionality"
+        ]
+      },
+      {
+        "phase": 3,
+        "name": "AI Integration",
+        "duration": "2 weeks",
+        "tasks": [
+          "Set up Ollama with Llama 3.3",
+          "Implement transaction categorization AI",
+          "Create budget optimization prompts",
+          "Add financial insights generation"
+        ]
+      },
+      {
+        "phase": 4,
+        "name": "Bank Integration",
+        "duration": "2 weeks",
+        "tasks": [
+          "SimpleFIN OAuth integration",
+          "Automated transaction import",
+          "Balance reconciliation",
+          "Real-time sync setup"
+        ]
+      },
+      {
+        "phase": 5,
+        "name": "Business Features",
+        "duration": "3 weeks",
+        "tasks": [
+          "Double-entry bookkeeping system",
+          "Business expense tracking",
+          "Tax deduction categorization",
+          "Real estate property management"
+        ]
+      },
+      {
+        "phase": 6,
+        "name": "Advanced Features",
+        "duration": "3 weeks",
+        "tasks": [
+          "Investment portfolio tracking",
+          "Retirement planning tools",
+          "Monte Carlo simulations",
+          "Advanced reporting"
+        ]
+      },
+      {
+        "phase": 7,
+        "name": "Polish & Security",
+        "duration": "2 weeks",
+        "tasks": [
+          "Security audit and hardening",
+          "Performance optimization",
+          "UI/UX refinement",
+          "Beta testing"
+        ]
+      }
+    ]
+  },
+  "estimated_timeline": "17 weeks for full implementation",
+  "estimated_cost": {
+    "development": "$0 (personal project)",
+    "runtime": "$1-5/month (SimpleFIN + optional cloud resources)",
+    "one_time": "$0 (all open source)"
+  }
+}

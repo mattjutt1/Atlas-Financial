@@ -1,0 +1,35 @@
+{
+  "desktop_frameworks": [
+    {
+      "url": "https://tauri.app/v1/guides/",
+      "title": "Tauri - Build smaller, faster, and more secure desktop applications",
+      "score": 0.9,
+      "content_preview": "Tauri is a framework for building tiny, blazing fast binaries for all major desktop platforms. Developers can integrate any frontend framework that compiles to HTML, JS and CSS for building their user interface. The backend of the application is a rust-sourced binary with an API that the frontend can interact with."
+    }
+  ],
+  "ai_integration": [
+    {
+      "url": "https://ollama.ai/",
+      "title": "Ollama - Run Llama 3.3 and other models locally",
+      "score": 0.95,
+      "content_preview": "Get up and running with large language models locally. Run Llama 3.3, Mistral, and other models. Customize and create your own."
+    }
+  ],
+  "security_practices": [
+    {
+      "url": "https://owasp.org/",
+      "title": "OWASP Security Guidelines",
+      "score": 0.88,
+      "content_preview": "The Open Web Application Security Project (OWASP) is a nonprofit foundation that works to improve the security of software. AES encryption, OAuth 2.0 with PKCE, Zero knowledge architecture."
+    }
+  ],
+  "cloud_architectures": [
+    {
+      "url": "https://supabase.com/docs",
+      "title": "Supabase - Open source Firebase alternative",
+      "score": 0.92,
+      "content_preview": "Supabase is an open source Firebase alternative. Start your project with a Postgres database, Authentication, instant APIs, Edge Functions, Realtime subscriptions, and Storage. Free tier includes 500MB database."
+    }
+  ],
+  "open_source_tools": []
+}

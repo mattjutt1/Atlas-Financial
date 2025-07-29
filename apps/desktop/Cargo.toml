@@ -1,0 +1,131 @@
+[package]
+name = "atlas-desktop"
+version = "1.1.0"
+description = "Atlas Financial Desktop - Personal Finance Management with Brutal Honesty"
+authors = ["Atlas Financial Team"]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/atlas-financial/atlas"
+keywords = ["finance", "personal-finance", "desktop", "tauri"]
+categories = ["gui", "finance"]
+rust-version = "1.77.0"
+
+
+[[bin]]
+name = "atlas-desktop"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.3", features = ["codegen", "isolation"] }
+
+[dependencies]
+# Tauri Framework
+tauri = { version = "2.7", features = [
+  "macos-private-api",
+  "protocol-asset"
+] }
+tauri-plugin-window-state = "2.1"
+tauri-plugin-updater = "2.0"
+tauri-plugin-fs = "2.0"
+tauri-plugin-dialog = "2.0"
+tauri-plugin-notification = "2.0"
+tauri-plugin-global-shortcut = "2.0"
+tauri-plugin-clipboard-manager = "2.1"
+tauri-plugin-shell = "2.0"
+
+# Async Runtime
+tokio = { version = "1.40", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# HTTP Client
+reqwest = { version = "0.12", features = ["json", "rustls-tls", "stream"], default-features = false }
+
+# Financial Calculations (Integration with Rust Financial Engine)
+rust_decimal = { version = "1.35", features = ["serde-float"] }
+rust_decimal_macros = "1.35"
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "bigdecimal"] }
+
+# Error Handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Utilities
+uuid = { version = "1.10", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+url = "2.5"
+
+# Security
+argon2 = "0.5"
+aes-gcm = "0.10"
+rand = "0.8"
+pbkdf2 = "0.12"
+sha2 = "0.10"
+keyring = "3.2"
+base64 = "0.22"
+get_if_addrs = "0.5"
+hostname = "0.4"
+
+# Configuration
+config = "0.14"
+dirs = "5.0"
+toml = "0.8"
+
+# Performance
+rayon = "1.10"
+parking_lot = "0.12"
+
+# Desktop Integration
+opener = "0.7"
+notify = "6.1"
+
+# System Information
+num_cpus = "1.16"
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+# Windows-specific dependencies for WebView2 and native integration
+webview2-com = "0.38"
+windows = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_System_Threading",
+  "Win32_UI_Shell",
+  "Win32_Storage_FileSystem"
+] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# macOS-specific dependencies
+cocoa = "0.26"
+objc = "0.2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# Linux-specific dependencies
+gtk = "0.18"
+webkit2gtk = "2.0"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+dev-tools = ["tauri/devtools"]
+
+# Performance optimizations
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+strip = true
+opt-level = "s"
+
+[profile.dev]
+opt-level = 0
+debug = true
+split-debuginfo = "unpacked"

@@ -1,0 +1,217 @@
+# Personal AI CFO Research Configuration
+# Optimized for personal desktop application development research
+
+browser:
+  browser_type: "chromium"
+  headless: true  # Set to false for debugging
+  viewport_width: 1920
+  viewport_height: 1080
+  verbose: true
+  text_mode: false
+  light_mode: false
+  user_agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+  extra_args:
+    - "--disable-blink-features=AutomationControlled"
+    - "--disable-dev-shm-usage"
+    - "--no-sandbox"
+    - "--disable-gpu"
+
+research_targets:
+  # 2025 Desktop Frameworks for Personal Finance Apps
+  - name: "desktop_frameworks_2025"
+    base_urls:
+      - "https://electronjs.org/"
+      - "https://tauri.app/"
+      - "https://docs.flutter.dev/desktop"
+      - "https://www.qt.io/"
+      - "https://avaloniaui.net/"
+      - "https://neutralino.js.org/"
+      - "https://github.com/wailsapp/wails"
+      - "https://flet.dev/"
+    keywords:
+      - "desktop application"
+      - "cross-platform"
+      - "native performance"
+      - "security"
+      - "auto-update"
+      - "2025"
+      - "modern"
+      - "financial application"
+      - "data privacy"
+      - "offline capability"
+      - "personal use"
+      - "individual developer"
+    max_depth: 3
+    max_pages: 120
+    score_threshold: 0.5
+    description: "Research 2025 desktop frameworks for personal financial applications"
+
+  # AI/LLM Integration for Personal Finance
+  - name: "ai_financial_personal"
+    base_urls:
+      - "https://openai.com/api/"
+      - "https://docs.anthropic.com/"
+      - "https://ollama.ai/"
+      - "https://github.com/microsoft/semantic-kernel"
+      - "https://python.langchain.com/"
+      - "https://docs.llamaindex.ai/"
+      - "https://huggingface.co/models"
+      - "https://github.com/SciPhi-AI/R2R"
+      - "https://www.pinecone.io/"
+      - "https://github.com/chroma-core/chroma"
+    keywords:
+      - "personal finance AI"
+      - "budgeting AI"
+      - "financial planning"
+      - "local LLM"
+      - "offline AI"
+      - "personal CFO"
+      - "financial analysis"
+      - "expense categorization"
+      - "investment advice"
+      - "private AI"
+      - "self-hosted AI"
+    max_depth: 2
+    max_pages: 100
+    score_threshold: 0.6
+    description: "Research AI integration for personal financial applications"
+
+  # Personal Banking/Financial Data Integration
+  - name: "personal_banking_integration"
+    base_urls:
+      - "https://plaid.com/docs/"
+      - "https://yodlee.com/"
+      - "https://finicity.com/"
+      - "https://www.tink.com/"
+      - "https://nordigen.com/"
+      - "https://www.mx.com/"
+      - "https://github.com/plaid/quickstart"
+      - "https://ofxtools.readthedocs.io/"
+      - "https://github.com/wesabe/fixofx"
+      - "https://mint.intuit.com/"
+    keywords:
+      - "personal banking API"
+      - "account aggregation"
+      - "transaction import"
+      - "financial data"
+      - "personal use"
+      - "individual account"
+      - "bank connection"
+      - "CSV import"
+      - "OFX format"
+      - "QIF format"
+      - "manual entry"
+      - "privacy-focused"
+    max_depth: 2
+    max_pages: 80
+    score_threshold: 0.7
+    description: "Research personal banking and financial data integration"
+
+  # Security for Personal Financial Apps
+  - name: "personal_finance_security"
+    base_urls:
+      - "https://owasp.org/"
+      - "https://cheatsheetseries.owasp.org/"
+      - "https://www.nist.gov/cybersecurity"
+      - "https://github.com/OWASP/CheatSheetSeries"
+      - "https://signal.org/docs/"
+      - "https://age-encryption.org/"
+      - "https://github.com/FiloSottile/age"
+      - "https://libsodium.gitbook.io/"
+      - "https://argon2.online/"
+    keywords:
+      - "personal data security"
+      - "financial data encryption"
+      - "local encryption"
+      - "password security"
+      - "private key management"
+      - "secure storage"
+      - "desktop app security"
+      - "offline security"
+      - "personal privacy"
+      - "data protection"
+      - "GDPR compliance"
+    max_depth: 2
+    max_pages: 90
+    score_threshold: 0.8
+    description: "Research security practices for personal financial applications"
+
+  # Open Source Personal Finance Tools
+  - name: "opensource_personal_finance"
+    base_urls:
+      - "https://github.com/topics/personal-finance"
+      - "https://github.com/topics/budgeting"
+      - "https://github.com/firefly-iii/firefly-iii"
+      - "https://github.com/actualbudget/actual"
+      - "https://github.com/maybe-finance/maybe"
+      - "https://github.com/envelope-zero/backend"
+      - "https://github.com/beancount/beancount"
+      - "https://github.com/ledger/ledger"
+      - "https://github.com/gnucash/gnucash"
+      - "https://github.com/kimai/kimai"
+      - "https://alternativeto.net/software/mint/"
+    keywords:
+      - "personal finance"
+      - "budgeting"
+      - "expense tracking"
+      - "self-hosted"
+      - "open source"
+      - "privacy-focused"
+      - "desktop application"
+      - "personal use"
+      - "individual"
+      - "offline capable"
+      - "local data"
+      - "no cloud dependency"
+    max_depth: 2
+    max_pages: 100
+    score_threshold: 0.6
+    description: "Research open-source personal finance tools and patterns"
+
+  # Modern Tech Stack for Personal Apps
+  - name: "modern_personal_app_stack"
+    base_urls:
+      - "https://supabase.com/"
+      - "https://firebase.google.com/"
+      - "https://docs.docker.com/"
+      - "https://sqlite.org/"
+      - "https://www.postgresql.org/"
+      - "https://github.com/features/actions"
+      - "https://vercel.com/"
+      - "https://railway.app/"
+      - "https://fly.io/"
+      - "https://github.com/topics/self-hosted"
+    keywords:
+      - "personal deployment"
+      - "self-hosted"
+      - "lightweight deployment"
+      - "individual developer"
+      - "personal cloud"
+      - "home server"
+      - "docker deployment"
+      - "simple hosting"
+      - "cost-effective"
+      - "personal infrastructure"
+      - "raspberry pi"
+      - "local network"
+    max_depth: 2
+    max_pages: 70
+    score_threshold: 0.5
+    description: "Research modern tech stack for personal application deployment"
+
+# General research configuration
+general:
+  strategy: "best_first"  # bfs, dfs, best_first
+  use_streaming: true
+  enable_filters: true
+  extract_structured_data: true
+  save_raw_content: false  # Set to true if you need full HTML/markdown
+  output_dir: "ai_cfo_research_output"
+
+  # Rate limiting to be respectful
+  delay_between_requests: 1.0  # seconds
+  max_concurrent_requests: 3
+
+  # Quality thresholds
+  min_word_count: 50
+  min_content_score: 0.3
