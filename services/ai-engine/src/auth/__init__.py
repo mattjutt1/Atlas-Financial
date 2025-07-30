@@ -13,7 +13,7 @@ from .jwt_validator import (
 
 __all__ = [
     'JWTValidator',
-    'verify_jwt_token', 
+    'verify_jwt_token',
     'validate_session',
     'revoke_session',
     'get_jwt_validator'

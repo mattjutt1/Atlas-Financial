@@ -1,0 +1,186 @@
+groups:
+  - name: ai-engine-performance
+    rules:
+      # Response Time Alerts
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(ai_optimized_request_duration_seconds_bucket[5m])) * 1000 > 400
+        for: 2m
+        labels:
+          severity: warning
+          service: ai-engine
+        annotations:
+          summary: "AI Engine P95 response time is high"
+          description: "P95 response time is {{ $value }}ms, above 400ms target for {{ $labels.operation }}"
+
+      - alert: CriticalResponseTime
+        expr: histogram_quantile(0.95, rate(ai_optimized_request_duration_seconds_bucket[5m])) * 1000 > 1000
+        for: 1m
+        labels:
+          severity: critical
+          service: ai-engine
+        annotations:
+          summary: "AI Engine P95 response time is critically high"
+          description: "P95 response time is {{ $value }}ms, above 1000ms critical threshold for {{ $labels.operation }}"
+
+      # Error Rate Alerts
+      - alert: HighErrorRate
+        expr: (rate(ai_optimized_requests_total{cache_status!="hit"}[5m]) - rate(ai_optimized_requests_total{cache_status="hit"}[5m])) / rate(ai_optimized_requests_total[5m]) * 100 > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: ai-engine
+        annotations:
+          summary: "AI Engine error rate is high"
+          description: "Error rate is {{ $value }}%, above 5% threshold for {{ $labels.operation }}"
+
+      - alert: CriticalErrorRate
+        expr: (rate(ai_optimized_requests_total{cache_status!="hit"}[5m]) - rate(ai_optimized_requests_total{cache_status="hit"}[5m])) / rate(ai_optimized_requests_total[5m]) * 100 > 15
+        for: 1m
+        labels:
+          severity: critical
+          service: ai-engine
+        annotations:
+          summary: "AI Engine error rate is critically high"
+          description: "Error rate is {{ $value }}%, above 15% critical threshold for {{ $labels.operation }}"
+
+      # Cache Performance Alerts
+      - alert: LowCacheHitRate
+        expr: ai_cache_hit_rate < 0.7
+        for: 5m
+        labels:
+          severity: warning
+          service: ai-engine
+        annotations:
+          summary: "AI Engine cache hit rate is low"
+          description: "Cache hit rate is {{ $value }}, below 70% target for {{ $labels.operation }}"
+
+      - alert: CacheSystemDown
+        expr: up{job="ai-engine-optimized"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: ai-engine
+        annotations:
+          summary: "AI Engine cache system is down"
+          description: "AI Engine metrics endpoint is not responding"
+
+      # Throughput Alerts
+      - alert: LowThroughput
+        expr: rate(ai_optimized_requests_total[5m]) < 10
+        for: 3m
+        labels:
+          severity: warning
+          service: ai-engine
+        annotations:
+          summary: "AI Engine throughput is low"
+          description: "Current throughput is {{ $value }} requests/second, below 10 RPS minimum"
+
+      # Resource Usage Alerts
+      - alert: HighConcurrentRequests
+        expr: ai_concurrent_requests > 8000
+        for: 2m
+        labels:
+          severity: warning
+          service: ai-engine
+        annotations:
+          summary: "High concurrent request load"
+          description: "Current concurrent requests: {{ $value }}, approaching 10K limit"
+
+      - alert: CriticalConcurrentRequests
+        expr: ai_concurrent_requests > 9500
+        for: 30s
+        labels:
+          severity: critical
+          service: ai-engine
+        annotations:
+          summary: "Critical concurrent request load"
+          description: "Current concurrent requests: {{ $value }}, very close to 10K limit"
+
+  - name: ai-engine-system
+    rules:
+      # Memory Usage Alerts
+      - alert: HighMemoryUsage
+        expr: (process_resident_memory_bytes / (1024*1024*1024)) > 6
+        for: 3m
+        labels:
+          severity: warning
+          service: ai-engine
+        annotations:
+          summary: "AI Engine memory usage is high"
+          description: "Memory usage is {{ $value }}GB, above 6GB threshold"
+
+      - alert: CriticalMemoryUsage
+        expr: (process_resident_memory_bytes / (1024*1024*1024)) > 7
+        for: 1m
+        labels:
+          severity: critical
+          service: ai-engine
+        annotations:
+          summary: "AI Engine memory usage is critical"
+          description: "Memory usage is {{ $value }}GB, above 7GB critical threshold"
+
+      # Queue Size Alerts
+      - alert: HighQueueSize
+        expr: ai_request_queue_size > 100
+        for: 2m
+        labels:
+          severity: warning
+          service: ai-engine
+        annotations:
+          summary: "AI Engine request queue is large"
+          description: "Queue size is {{ $value }}, above 100 requests threshold"
+
+      - alert: CriticalQueueSize
+        expr: ai_request_queue_size > 500
+        for: 1m
+        labels:
+          severity: critical
+          service: ai-engine
+        annotations:
+          summary: "AI Engine request queue is critically large"
+          description: "Queue size is {{ $value }}, above 500 requests critical threshold"
+
+  - name: ai-engine-dependencies
+    rules:
+      # Redis Alerts
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Redis server is not responding"
+
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 3m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis memory usage is high"
+          description: "Redis memory usage is {{ $value }}% of maximum"
+
+      # Model Endpoint Alerts
+      - alert: ModelEndpointDown
+        expr: up{job="model-endpoints"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: model-endpoint
+        annotations:
+          summary: "Model endpoint is down"
+          description: "Model endpoint {{ $labels.instance }} is not responding"
+
+      # Load Balancer Alerts
+      - alert: UnhealthyEndpoints
+        expr: sum(up{job="model-endpoints"}) / count(up{job="model-endpoints"}) < 0.5
+        for: 2m
+        labels:
+          severity: critical
+          service: load-balancer
+        annotations:
+          summary: "Majority of model endpoints are unhealthy"
+          description: "Only {{ $value }}% of model endpoints are healthy"

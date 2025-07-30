@@ -18,8 +18,8 @@ export const ACCOUNT_BALANCE_UPDATED = gql`
 export const TRANSACTIONS_UPDATED = gql`
   subscription TransactionsUpdated($userId: uuid!) {
     transactions(
-      where: { 
-        account: { userId: { _eq: $userId } } 
+      where: {
+        account: { userId: { _eq: $userId } }
       }
       order_by: { createdAt: desc }
       limit: 10

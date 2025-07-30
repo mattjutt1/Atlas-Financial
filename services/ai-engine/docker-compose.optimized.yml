@@ -1,0 +1,282 @@
+version: '3.8'
+
+services:
+  # Optimized AI Engine Service
+  ai-engine-optimized:
+    build:
+      context: .
+      dockerfile: Dockerfile.optimized
+    container_name: atlas-ai-engine-optimized
+    ports:
+      - "8083:8083"
+      - "9090:9090"  # Prometheus metrics
+    environment:
+      # Core Configuration
+      - ENVIRONMENT=production
+      - HOST=0.0.0.0
+      - PORT=8083
+      - REDIS_URL=redis://redis-cluster:6379
+      
+      # Performance Optimization
+      - MAX_CONCURRENT_REQUESTS=10000
+      - REQUEST_TIMEOUT_MS=10000
+      - BATCH_SIZE=32
+      - BATCH_TIMEOUT_MS=50
+      - ENABLE_REQUEST_BATCHING=true
+      - ENABLE_CONNECTION_POOLING=true
+      - CONNECTION_POOL_SIZE=50
+      
+      # Caching Configuration
+      - CONTEXT_CACHE_TTL=3600
+      - RESULT_CACHE_TTL=300
+      - ENABLE_CACHE_WARMING=true
+      
+      # Security
+      - SUPERTOKENS_CONNECTION_URI=http://supertokens:3567
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - ENABLE_RATE_LIMITING=true
+      - RATE_LIMIT_RPM=1000
+      
+      # Monitoring
+      - ENABLE_PROMETHEUS=true
+      - ENABLE_TRACING=true
+      - LOG_LEVEL=INFO
+      - METRICS_PORT=9090
+      
+      # Model Endpoints (configurable)
+      - MONOLITHIC_MODEL_ENDPOINT=http://monolithic-model:8080
+      - SUPERVISOR_ENDPOINT=http://supervisor-agent:8080
+      - BUDGET_AGENT_ENDPOINT=http://budget-agent:8080
+      - INVESTMENT_AGENT_ENDPOINT=http://investment-agent:8080
+      - DEBT_AGENT_ENDPOINT=http://debt-agent:8080
+      - MARKET_AGENT_ENDPOINT=http://market-agent:8080
+      - GOAL_AGENT_ENDPOINT=http://goal-agent:8080
+      
+      # Resource Limits
+      - MAX_GPU_MEMORY_MB=16384
+      - ALERT_RESPONSE_TIME_MS=400
+      - ALERT_ERROR_RATE=0.05
+      - ALERT_CPU_USAGE=0.8
+      - ALERT_MEMORY_USAGE=0.8
+    
+    depends_on:
+      redis-cluster:
+        condition: service_healthy
+      prometheus:
+        condition: service_started
+    
+    volumes:
+      - ai-engine-logs:/app/logs
+      - ./config:/app/config:ro
+    
+    networks:
+      - ai-network
+      - monitoring-network
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '2.0'
+          memory: 4G
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    restart: unless-stopped
+    
+    labels:
+      - "atlas.service=ai-engine"
+      - "atlas.version=optimized"
+      - "prometheus.scrape=true"
+      - "prometheus.port=9090"
+
+  # High-Performance Redis Cluster
+  redis-cluster:
+    image: redis:7-alpine
+    container_name: atlas-redis-cluster
+    command: >
+      redis-server
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --tcp-keepalive 300
+      --timeout 0
+      --tcp-backlog 511
+      --databases 16
+      --maxclients 10000
+      --appendonly yes
+      --appendfsync everysec
+      --auto-aof-rewrite-percentage 100
+      --auto-aof-rewrite-min-size 64mb
+      --hash-max-ziplist-entries 512
+      --hash-max-ziplist-value 64
+      --list-max-ziplist-size -2
+      --set-max-intset-entries 512
+      --zset-max-ziplist-entries 128
+      --zset-max-ziplist-value 64
+      --hll-sparse-max-bytes 3000
+      --lazyfree-lazy-eviction yes
+      --lazyfree-lazy-expire yes
+      --lazyfree-lazy-server-del yes
+    
+    ports:
+      - "6379:6379"
+    
+    volumes:
+      - redis-data:/data
+      - ./infrastructure/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    
+    networks:
+      - ai-network
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 3G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    
+    restart: unless-stopped
+
+  # Prometheus for Metrics Collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: atlas-prometheus
+    ports:
+      - "9091:9090"
+    
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.wal-compression'
+    
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    
+    networks:
+      - monitoring-network
+    
+    restart: unless-stopped
+
+  # Grafana for Performance Dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: atlas-grafana
+    ports:
+      - "3001:3000"
+    
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    
+    networks:
+      - monitoring-network
+    
+    depends_on:
+      - prometheus
+    
+    restart: unless-stopped
+
+  # Mock Model Endpoints for Testing
+  monolithic-model:
+    image: nginx:alpine
+    container_name: atlas-monolithic-model
+    ports:
+      - "8080:80"
+    
+    volumes:
+      - ./test/mock-endpoints/monolithic:/usr/share/nginx/html:ro
+      - ./test/mock-endpoints/nginx.conf:/etc/nginx/nginx.conf:ro
+    
+    networks:
+      - ai-network
+    
+    restart: unless-stopped
+
+  supervisor-agent:
+    image: nginx:alpine
+    container_name: atlas-supervisor-agent
+    ports:
+      - "8081:80"
+    
+    volumes:
+      - ./test/mock-endpoints/supervisor:/usr/share/nginx/html:ro
+      - ./test/mock-endpoints/nginx.conf:/etc/nginx/nginx.conf:ro
+    
+    networks:
+      - ai-network
+    
+    restart: unless-stopped
+
+  # Load Testing Service
+  load-tester:
+    build:
+      context: .
+      dockerfile: Dockerfile.load-test
+    container_name: atlas-load-tester
+    
+    environment:
+      - AI_ENGINE_URL=http://ai-engine-optimized:8083
+      - CONCURRENT_USERS=1000
+      - REQUESTS_PER_USER=10
+      - TEST_DURATION=300
+    
+    depends_on:
+      ai-engine-optimized:
+        condition: service_healthy
+    
+    networks:
+      - ai-network
+    
+    profiles:
+      - testing
+
+volumes:
+  redis-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  ai-engine-logs:
+    driver: local
+
+networks:
+  ai-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  
+  monitoring-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

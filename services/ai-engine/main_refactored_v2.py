@@ -2,7 +2,7 @@
 Atlas Financial AI Engine - Finance Brain (v2.0)
 Refactored to eliminate architectural violations:
 - Uses API gateway instead of direct DB access
-- Implements standard SuperTokens authentication 
+- Implements standard SuperTokens authentication
 - Uses atlas-shared error handling patterns
 - Follows proper service boundaries
 """
@@ -73,15 +73,15 @@ async def lifespan(app: FastAPI):
     """Application lifespan management with proper error handling"""
     global api_client, insights_generator, financial_calculations
 
-    logger.info("Starting Atlas Financial AI Engine", 
-               version="2.0.0", 
+    logger.info("Starting Atlas Financial AI Engine",
+               version="2.0.0",
                service="ai-engine",
                environment=settings.environment)
 
     try:
         # Initialize API client for proper service boundaries
         api_client = create_api_client()
-        
+
         # Test API gateway connectivity
         is_healthy = await api_client.health_check()
         if not is_healthy:
@@ -144,14 +144,14 @@ async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(secur
     """
     try:
         from src.auth.jwt_validator import verify_jwt_token
-        
+
         token = credentials.credentials
         if not token:
             raise AuthenticationError("No authentication token provided")
 
         # Verify token using atlas-shared JWT patterns
         payload = await verify_jwt_token(token, settings.jwt_secret_key)
-        
+
         if not payload.get('userId'):
             raise AuthenticationError("Invalid token: missing user ID")
 
@@ -222,8 +222,8 @@ async def generate_insights(
     """
     Generate financial insights using API gateway instead of direct DB access
     """
-    logger.info("Generating insights", 
-               user_id=user_id, 
+    logger.info("Generating insights",
+               user_id=user_id,
                insight_type=request.insight_type,
                authenticated_user=user_id)
 
@@ -240,13 +240,13 @@ async def generate_insights(
 
         # Store insights back via API gateway (not direct DB access)
         background_tasks.add_task(
-            store_insights_via_api, 
-            user_id, 
-            insights, 
+            store_insights_via_api,
+            user_id,
+            insights,
             auth_api_client
         )
 
-        logger.info("Insights generated successfully", 
+        logger.info("Insights generated successfully",
                    user_id=user_id,
                    insights_count=len(insights.insights) if hasattr(insights, 'insights') else 0)
 
@@ -256,10 +256,10 @@ async def generate_insights(
         raise
     except Exception as e:
         error = handleError(e, f"Generate insights for user {user_id}")
-        logger.error("Failed to generate insights", 
-                    user_id=user_id, 
+        logger.error("Failed to generate insights",
+                    user_id=user_id,
                     error=error.toJSON())
-        
+
         if isinstance(error, AtlasError):
             raise HTTPException(status_code=error.statusCode, detail=error.message)
         else:
@@ -278,7 +278,7 @@ async def budget_check(
     try:
         # Get user's financial data via API gateway (not direct DB access)
         financial_data = await auth_api_client.get_user_financial_data(user_id)
-        
+
         # Extract monthly income with precision validation
         monthly_income = FinancialAmount(str(financial_data.get("monthly_income", "0")))
 
@@ -295,7 +295,7 @@ async def budget_check(
             },
             "percentages": {
                 "needs": "75%",
-                "wants": "15%", 
+                "wants": "15%",
                 "savings": "10%"
             },
             "precision": "DECIMAL(19,4)",
@@ -323,17 +323,17 @@ async def debt_snowball_analysis(
     """
     Generate debt snowball payoff plan using API gateway and bank-grade precision
     """
-    logger.info("Generating debt snowball analysis", 
-               user_id=user_id, 
+    logger.info("Generating debt snowball analysis",
+               user_id=user_id,
                extra_payment=extra_payment)
 
     try:
         from src.financial.calculations import DebtInfo
         from decimal import Decimal
-        
+
         # Get user's debt data via API gateway (not direct DB access)
         debt_data = await auth_api_client.get_user_debt_data(user_id)
-        
+
         # Convert to DebtInfo objects with precision validation
         debts = []
         for debt in debt_data.get("debts", []):
@@ -344,7 +344,7 @@ async def debt_snowball_analysis(
                 interest_rate=Decimal(str(debt["interest_rate"]))
             )
             debts.append(debt_info)
-        
+
         # Extra payment amount
         extra_payment_amount = FinancialAmount(str(extra_payment))
 
@@ -390,20 +390,20 @@ async def portfolio_analysis(
     try:
         # Get user's investment and asset data via API gateway (not direct DB access)
         portfolio_data = await auth_api_client.get_user_portfolio_data(user_id)
-        
+
         # Extract assets and liabilities with precision validation
         assets = []
         liabilities = []
-        
+
         for asset in portfolio_data.get("assets", []):
             assets.append(FinancialAmount(str(asset["value"])))
-        
+
         for liability in portfolio_data.get("liabilities", []):
             liabilities.append(FinancialAmount(str(liability["balance"])))
-        
+
         # Calculate net worth using Rust Financial Engine
         net_worth = await financial_calculations.calculate_net_worth(assets, liabilities)
-        
+
         # Calculate emergency fund target
         monthly_expenses = FinancialAmount(str(portfolio_data.get("monthly_expenses", "0")))
         emergency_fund_target = await financial_calculations.calculate_emergency_fund_target(monthly_expenses)
@@ -466,13 +466,13 @@ async def store_insights_via_api(user_id: str, insights: InsightResponse, api_cl
     """
     try:
         await api_client.store_user_insights(user_id, insights.dict())
-        logger.info("Insights stored via API gateway", 
+        logger.info("Insights stored via API gateway",
                    user_id=user_id,
                    method="api-gateway")  # NEW: indicates proper service boundaries
     except Exception as e:
         error = handleError(e, f"Store insights for user {user_id}")
-        logger.error("Failed to store insights via API gateway", 
-                    user_id=user_id, 
+        logger.error("Failed to store insights via API gateway",
+                    user_id=user_id,
                     error=error.toJSON())
 
 # Metrics endpoint for monitoring
@@ -481,7 +481,7 @@ async def metrics():
     """Prometheus metrics endpoint"""
     if not settings.enable_metrics:
         raise HTTPException(status_code=404, detail="Metrics disabled")
-    
+
     # Return basic metrics
     return {
         "service": "ai-engine",
@@ -494,11 +494,11 @@ async def metrics():
 
 if __name__ == "__main__":
     import uvicorn
-    
-    logger.info("Starting Atlas AI Engine v2.0", 
+
+    logger.info("Starting Atlas AI Engine v2.0",
                environment=settings.environment,
                api_gateway_url=settings.api_gateway_url)
-    
+
     uvicorn.run(
         "main_refactored_v2:app",
         host="0.0.0.0",

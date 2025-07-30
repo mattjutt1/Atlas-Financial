@@ -50,7 +50,7 @@ export function createApolloClient({
   // Auth Link for adding authorization headers
   const authLink = setContext((_, { headers }) => {
     const token = getToken?.()
-    
+
     return {
       headers: {
         ...headers,

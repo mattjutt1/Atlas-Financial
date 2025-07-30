@@ -1,18 +1,28 @@
-# Atlas Financial AI Engine Dependencies
+# Atlas Financial AI Engine Dependencies - Optimized for High Performance
 
-# Web framework
+# Web framework with performance optimizations
 fastapi==0.108.0
 uvicorn[standard]==0.25.0
 
-# HTTP client for Hasura GraphQL
+# High-performance async libraries
+uvloop==0.19.0          # Fast event loop
+httptools==0.6.1        # Fast HTTP parser
+orjson==3.9.10         # Fast JSON serialization
+aiodns==3.1.1          # Fast DNS resolution
+cchardet==2.1.7        # Fast character encoding detection
+
+# HTTP clients optimized for async
 httpx==0.26.0
 aiohttp==3.9.1
 
-# Database connectivity
+# Redis with async support and connection pooling
+redis[hiredis]==5.0.1   # hiredis for C-based parsing performance
+
+# Database connectivity with connection pooling
 asyncpg==0.29.0
 psycopg2-binary==2.9.9
 
-# AI/ML dependencies
+# AI/ML dependencies (production versions)
 torch==2.2.0
 transformers==4.36.2
 sentence-transformers==2.2.2
@@ -26,30 +36,51 @@ pgvector==0.2.4
 yfinance==0.2.28
 quantlib==1.32
 
-# Data validation
+# Data validation with performance optimizations
 pydantic==2.5.2
 pydantic-settings==2.1.0
 
 # Environment management
 python-dotenv==1.0.0
 
-# Logging and monitoring
+# Advanced logging and monitoring
 structlog==23.2.0
 prometheus-client==0.19.0
+
+# System monitoring
+psutil==5.9.6           # System resource monitoring
+
+# GraphQL with Strawberry
+strawberry-graphql==0.215.1
+
+# Authentication and security
+python-jose[cryptography]==3.3.0
 
 # Utilities
 python-multipart==0.0.6
 jinja2==3.1.3
-python-jose[cryptography]==3.3.0
+pyyaml==6.0.1          # Configuration management
+
+# Performance profiling and optimization
+py-spy==0.3.14         # Python profiler
+memory-profiler==0.61.0 # Memory usage profiling
+
+# Async utilities
+asyncio-throttle==1.0.2  # Rate limiting for async operations
+aiofiles==23.2.1         # Async file operations
 
 # Development dependencies
 pytest==7.4.4
 pytest-asyncio==0.23.2
+pytest-benchmark==4.0.0  # Performance benchmarking
 black==23.12.1
 isort==5.13.2
 mypy==1.8.0
 
-# Optional: Hugging Face model downloading
+# Load testing
+aiohttp==3.9.1         # For load testing scripts
+
+# Optional: Model downloading
 huggingface-hub==0.20.1
 
 # Optional: OpenAI fallback (disabled by default)

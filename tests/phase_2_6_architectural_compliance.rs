@@ -20,21 +20,21 @@ mod phase_2_6_tests {
         let utils_path = "apps/desktop/src/utils.rs";
         if Path::new(utils_path).exists() {
             let content = fs::read_to_string(utils_path).expect("Failed to read utils.rs");
-            
+
             // Should have atlas_core_url and atlas_api_gateway_url
-            assert!(content.contains("atlas_core_url"), 
+            assert!(content.contains("atlas_core_url"),
                 "Configuration should include atlas_core_url");
-            assert!(content.contains("atlas_api_gateway_url"), 
+            assert!(content.contains("atlas_api_gateway_url"),
                 "Configuration should include atlas_api_gateway_url");
-            
+
             // Should NOT have direct service URLs
-            assert!(!content.contains("database_url"), 
+            assert!(!content.contains("database_url"),
                 "Configuration should not include direct database_url");
-            assert!(!content.contains("supertokens_url"), 
+            assert!(!content.contains("supertokens_url"),
                 "Configuration should not include direct supertokens_url");
-            assert!(!content.contains("financial_engine_url"), 
+            assert!(!content.contains("financial_engine_url"),
                 "Configuration should not include direct financial_engine_url");
-            
+
             println!("✅ API Gateway configuration compliance verified");
         } else {
             panic!("❌ Desktop utils.rs not found");
@@ -49,25 +49,25 @@ mod phase_2_6_tests {
         let api_client_path = "apps/desktop/src/api_client.rs";
         if Path::new(api_client_path).exists() {
             let content = fs::read_to_string(api_client_path).expect("Failed to read api_client.rs");
-            
+
             // Should have AtlasApiClient
-            assert!(content.contains("struct AtlasApiClient"), 
+            assert!(content.contains("struct AtlasApiClient"),
                 "Should have AtlasApiClient struct");
-            
+
             // Should route through proper URLs
-            assert!(content.contains("atlas_core_url"), 
+            assert!(content.contains("atlas_core_url"),
                 "Should use atlas_core_url");
-            assert!(content.contains("atlas_api_gateway_url"), 
+            assert!(content.contains("atlas_api_gateway_url"),
                 "Should use atlas_api_gateway_url");
-            
+
             // Should have authentication methods
-            assert!(content.contains("fn authenticate"), 
+            assert!(content.contains("fn authenticate"),
                 "Should have authenticate method");
-            
+
             // Should have GraphQL methods
-            assert!(content.contains("graphql_query") || content.contains("graphql_mutation"), 
+            assert!(content.contains("graphql_query") || content.contains("graphql_mutation"),
                 "Should have GraphQL methods");
-            
+
             println!("✅ API client implementation verified");
         } else {
             panic!("❌ API client implementation not found");
@@ -82,19 +82,19 @@ mod phase_2_6_tests {
         let auth_path = "apps/desktop/src/commands/auth.rs";
         if Path::new(auth_path).exists() {
             let content = fs::read_to_string(auth_path).expect("Failed to read auth.rs");
-            
+
             // Should use API client for authentication
-            assert!(content.contains("api_client") || content.contains("AtlasApiClient"), 
+            assert!(content.contains("api_client") || content.contains("AtlasApiClient"),
                 "Authentication should use API client");
-            
+
             // Should NOT have direct SuperTokens calls
-            assert!(!content.contains("supertokens_url"), 
+            assert!(!content.contains("supertokens_url"),
                 "Should not have direct SuperTokens URL references");
-            
+
             // Should have proper gateway routing
-            assert!(content.contains("Atlas Core") || content.contains("API Gateway"), 
+            assert!(content.contains("Atlas Core") || content.contains("API Gateway"),
                 "Should reference Atlas Core or API Gateway");
-            
+
             println!("✅ Authentication compliance verified");
         } else {
             panic!("❌ Authentication module not found");
@@ -112,19 +112,19 @@ mod phase_2_6_tests {
             let content = fs::read_to_string(financial_path).exists() {
                 let content = fs::read_to_string(financial_refactored_path)
                     .expect("Failed to read financial_refactored.rs");
-                
+
                 // Should use API client instead of database
-                assert!(content.contains("api_client"), 
+                assert!(content.contains("api_client"),
                     "Should use API client for data access");
-                
+
                 // Should have GraphQL operations
-                assert!(content.contains("get_accounts") || content.contains("get_transactions"), 
+                assert!(content.contains("get_accounts") || content.contains("get_transactions"),
                     "Should have API gateway operations");
-                
+
                 println!("✅ Database elimination verified in refactored module");
             } else {
                 println!("⚠️ Refactored financial module not found - checking original");
-                
+
                 if content.contains("DatabaseManager") || content.contains("database_manager") {
                     println!("⚠️ Original financial module still contains database references");
                     println!("   This should be migrated to use the refactored API client approach");
@@ -143,19 +143,19 @@ mod phase_2_6_tests {
         let atlas_config_path = "apps/desktop/src/atlas_config_bridge.rs";
         if Path::new(atlas_config_path).exists() {
             let content = fs::read_to_string(atlas_config_path).expect("Failed to read atlas_config_bridge.rs");
-            
+
             // Should have AtlasConfigBridge
-            assert!(content.contains("struct AtlasConfigBridge"), 
+            assert!(content.contains("struct AtlasConfigBridge"),
                 "Should have AtlasConfigBridge struct");
-            
+
             // Should validate architectural compliance
-            assert!(content.contains("validate_configuration"), 
+            assert!(content.contains("validate_configuration"),
                 "Should have configuration validation");
-            
+
             // Should prevent direct database access
-            assert!(content.contains("direct_db_access"), 
+            assert!(content.contains("direct_db_access"),
                 "Should check for direct database access violations");
-            
+
             println!("✅ Shared configuration integration verified");
         } else {
             panic!("❌ Atlas config bridge not found");
@@ -165,15 +165,15 @@ mod phase_2_6_tests {
         let main_path = "apps/desktop/src/main.rs";
         if Path::new(main_path).exists() {
             let content = fs::read_to_string(main_path).expect("Failed to read main.rs");
-            
+
             // Should import atlas config bridge
-            assert!(content.contains("atlas_config_bridge"), 
+            assert!(content.contains("atlas_config_bridge"),
                 "Should import atlas_config_bridge module");
-            
+
             // Should use consolidated config
-            assert!(content.contains("ConsolidatedConfig") || content.contains("atlas_config"), 
+            assert!(content.contains("ConsolidatedConfig") || content.contains("atlas_config"),
                 "Should use consolidated configuration");
-            
+
             println!("✅ Main application integration verified");
         }
     }
@@ -187,17 +187,17 @@ mod phase_2_6_tests {
         let dockerfile_path = "apps/desktop/Dockerfile";
         if Path::new(dockerfile_path).exists() {
             let content = fs::read_to_string(dockerfile_path).expect("Failed to read Dockerfile");
-            
+
             // Should have proper environment variables
-            assert!(content.contains("ATLAS_CORE_URL"), 
+            assert!(content.contains("ATLAS_CORE_URL"),
                 "Dockerfile should set ATLAS_CORE_URL");
-            assert!(content.contains("ATLAS_API_GATEWAY_URL"), 
+            assert!(content.contains("ATLAS_API_GATEWAY_URL"),
                 "Dockerfile should set ATLAS_API_GATEWAY_URL");
-            
+
             // Should NOT have database URLs
-            assert!(!content.contains("DATABASE_URL"), 
+            assert!(!content.contains("DATABASE_URL"),
                 "Dockerfile should not set DATABASE_URL");
-            
+
             println!("✅ Dockerfile configuration verified");
         } else {
             panic!("❌ Dockerfile not found");
@@ -207,19 +207,19 @@ mod phase_2_6_tests {
         let compose_path = "apps/desktop/docker-compose.desktop.yml";
         if Path::new(compose_path).exists() {
             let content = fs::read_to_string(compose_path).expect("Failed to read docker-compose.desktop.yml");
-            
+
             // Should have proper service dependencies
-            assert!(content.contains("depends_on"), 
+            assert!(content.contains("depends_on"),
                 "Should have service dependencies");
-            
+
             // Should use atlas network
-            assert!(content.contains("atlas-network"), 
+            assert!(content.contains("atlas-network"),
                 "Should use atlas network");
-            
+
             // Should have proper environment configuration
-            assert!(content.contains("ATLAS_CORE_URL"), 
+            assert!(content.contains("ATLAS_CORE_URL"),
                 "Should configure ATLAS_CORE_URL");
-            
+
             println!("✅ Docker Compose configuration verified");
         } else {
             panic!("❌ Docker Compose file not found");
@@ -234,19 +234,19 @@ mod phase_2_6_tests {
         let desktop_script_path = "scripts/atlas-desktop-up.sh";
         if Path::new(desktop_script_path).exists() {
             let content = fs::read_to_string(desktop_script_path).expect("Failed to read atlas-desktop-up.sh");
-            
+
             // Should validate architectural compliance
-            assert!(content.contains("validate_architectural_compliance"), 
+            assert!(content.contains("validate_architectural_compliance"),
                 "Should have architectural compliance validation");
-            
+
             // Should check for violations
-            assert!(content.contains("violations"), 
+            assert!(content.contains("violations"),
                 "Should check for architectural violations");
-            
+
             // Should integrate with main monolith
-            assert!(content.contains("atlas-core") || content.contains("monolith"), 
+            assert!(content.contains("atlas-core") || content.contains("monolith"),
                 "Should integrate with main monolith");
-            
+
             println!("✅ Deployment script integration verified");
         } else {
             panic!("❌ Desktop deployment script not found");
@@ -308,10 +308,10 @@ mod phase_2_6_tests {
 
         // Calculate compliance percentage
         let compliance_percentage = (compliance_score as f64 / total_checks as f64) * 100.0;
-        
+
         println!("\n📊 Phase 2.6 Architectural Compliance Summary:");
         println!("   Compliance Score: {}/{} ({:.1}%)", compliance_score, total_checks, compliance_percentage);
-        
+
         if compliance_percentage == 100.0 {
             println!("🎉 Perfect architectural compliance achieved!");
         } else if compliance_percentage >= 80.0 {
@@ -321,7 +321,7 @@ mod phase_2_6_tests {
         }
 
         // Require at least 80% compliance to pass
-        assert!(compliance_percentage >= 80.0, 
+        assert!(compliance_percentage >= 80.0,
             "Architectural compliance must be at least 80% (current: {:.1}%)", compliance_percentage);
     }
 }

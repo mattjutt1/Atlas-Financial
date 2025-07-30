@@ -1,0 +1,409 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ai-engine-hpa
+  namespace: atlas-ai-production
+  labels:
+    app: ai-engine
+    component: autoscaling
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ai-engine
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Pods
+    pods:
+      metric:
+        name: ai_inference_requests_per_second
+      target:
+        type: AverageValue
+        averageValue: "50"
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+      - type: Pods
+        value: 1
+        periodSeconds: 60
+      selectPolicy: Min
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: market-data-service-hpa
+  namespace: atlas-ai-production
+  labels:
+    app: market-data-service
+    component: autoscaling
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: market-data-service
+  minReplicas: 3
+  maxReplicas: 15
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 60
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Pods
+    pods:
+      metric:
+        name: websocket_connections_active
+      target:
+        type: AverageValue
+        averageValue: "500"
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 30
+      - type: Pods
+        value: 3
+        periodSeconds: 30
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 180
+      policies:
+      - type: Percent
+        value: 20
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Min
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ab-testing-service-hpa
+  namespace: atlas-ai-production
+  labels:
+    app: ab-testing-service
+    component: autoscaling
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ab-testing-service
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 75
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 120
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      - type: Pods
+        value: 1
+        periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 25
+        periodSeconds: 120
+      selectPolicy: Min
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: ai-engine-vpa
+  namespace: atlas-ai-production
+  labels:
+    app: ai-engine
+    component: vpa
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ai-engine
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: ai-engine
+      minAllowed:
+        cpu: 500m
+        memory: 1Gi
+      maxAllowed:
+        cpu: 4000m
+        memory: 8Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: market-data-service-vpa
+  namespace: atlas-ai-production
+  labels:
+    app: market-data-service
+    component: vpa
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: market-data-service
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: market-data-service
+      minAllowed:
+        cpu: 250m
+        memory: 512Mi
+      maxAllowed:
+        cpu: 2000m
+        memory: 4Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: redis-cluster-vpa
+  namespace: atlas-ai-production
+  labels:
+    app: redis-cluster
+    component: vpa
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: redis-cluster
+  updatePolicy:
+    updateMode: "Off"  # Manual updates for stateful data services
+  resourcePolicy:
+    containerPolicies:
+    - containerName: redis
+      minAllowed:
+        cpu: 250m
+        memory: 1Gi
+      maxAllowed:
+        cpu: 2000m
+        memory: 8Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: timescaledb-vpa
+  namespace: atlas-ai-production
+  labels:
+    app: timescaledb
+    component: vpa
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: timescaledb
+  updatePolicy:
+    updateMode: "Off"  # Manual updates for database services
+  resourcePolicy:
+    containerPolicies:
+    - containerName: timescaledb
+      minAllowed:
+        cpu: 1000m
+        memory: 4Gi
+      maxAllowed:
+        cpu: 8000m
+        memory: 16Gi
+      controlledResources: ["cpu", "memory"]
+      controlledValues: RequestsAndLimits
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-autoscaler-config
+  namespace: kube-system
+  labels:
+    app: cluster-autoscaler
+data:
+  config.yaml: |
+    # Cluster Autoscaler Configuration for AI Workloads
+    nodeGroups:
+    - name: ai-compute-nodes
+      minSize: 3
+      maxSize: 20
+      desiredCapacity: 5
+      instanceTypes:
+        - m5.2xlarge
+        - m5.4xlarge
+        - c5.2xlarge
+        - c5.4xlarge
+      labels:
+        workload-type: ai-compute
+        node-group: ai-compute
+      taints:
+      - key: ai-workload
+        value: "true"
+        effect: NoSchedule
+      
+    - name: data-storage-nodes
+      minSize: 2
+      maxSize: 8
+      desiredCapacity: 3
+      instanceTypes:
+        - i3.xlarge
+        - i3.2xlarge
+        - r5.xlarge
+        - r5.2xlarge
+      labels:
+        workload-type: data-storage
+        node-group: data-storage
+      taints:
+      - key: data-storage
+        value: "true"
+        effect: NoSchedule
+    
+    # Scaling behavior
+    scaleDownDelayAfterAdd: 10m
+    scaleDownUnneededTime: 10m
+    scaleDownUtilizationThreshold: 0.5
+    maxNodeProvisionTime: 15m
+    
+    # Skip nodes with system pods
+    skipNodesWithLocalStorage: false
+    skipNodesWithSystemPods: true
+    
+    # Resource limits
+    maxNodesTotal: 50
+    coresTotal:
+      min: 20
+      max: 1000
+    memoryTotal:
+      min: 80Gi
+      max: 4000Gi
+    
+    # Cost optimization features
+    expander: priority
+    expanderPriorities:
+      - spot-instances
+      - on-demand
+    scaleDownGpuUtilizationThreshold: 0.5
+    scaleDownDelayAfterFailure: 3m
+    maxEmptyBulkDelete: 10
+    maxGracefulTerminationSec: 600
+    maxNodeProvisionTime: 15m
+    
+    # Spot instance configuration
+    spotInstancePools: 3
+    onDemandBaseCapacity: 20
+    onDemandPercentageAboveBaseCapacity: 20
+    
+    # Node selection preferences
+    nodeSelector:
+      cost-optimized: "true"
+    tolerations:
+    - key: "spot-instance"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ai-engine-pdb
+  namespace: atlas-ai-production
+  labels:
+    app: ai-engine
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: ai-engine
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: market-data-service-pdb
+  namespace: atlas-ai-production
+  labels:
+    app: market-data-service
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: market-data-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: redis-cluster-pdb
+  namespace: atlas-ai-production
+  labels:
+    app: redis-cluster
+spec:
+  minAvailable: 4
+  selector:
+    matchLabels:
+      app: redis-cluster
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: timescaledb-pdb
+  namespace: atlas-ai-production
+  labels:
+    app: timescaledb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: timescaledb

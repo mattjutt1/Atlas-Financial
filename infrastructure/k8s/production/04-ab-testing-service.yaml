@@ -1,0 +1,143 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ab-testing-service
+  namespace: atlas-ai-production
+  labels:
+    app: ab-testing-service
+    version: v2.0.0
+    tier: ai-services
+    wave: "2"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: ab-testing-service
+  template:
+    metadata:
+      labels:
+        app: ab-testing-service
+        version: v2.0.0
+        tier: ai-services
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8085"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: ab-testing-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 3000
+        fsGroup: 2000
+      containers:
+      - name: ab-testing-service
+        image: atlas-financial/ab-testing-service:v2.0.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8085
+          name: http
+          protocol: TCP
+        - containerPort: 9092
+          name: metrics
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "8085"
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: ai-engine-secrets
+              key: redis-url
+        - name: POSTGRES_URL
+          valueFrom:
+            secretKeyRef:
+              name: ai-engine-secrets
+              key: postgres-url
+        - name: LOG_LEVEL
+          value: "info"
+        - name: STATISTICAL_SIGNIFICANCE_THRESHOLD
+          value: "0.95"
+        - name: MIN_SAMPLE_SIZE
+          value: "1000"
+        - name: MAX_EXPERIMENTS_PER_USER
+          value: "3"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8085
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8085
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /app/cache
+      volumes:
+      - name: tmp
+        emptyDir:
+          sizeLimit: 256Mi
+      - name: cache
+        emptyDir:
+          sizeLimit: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ab-testing-service
+  namespace: atlas-ai-production
+  labels:
+    app: ab-testing-service
+spec:
+  type: ClusterIP
+  selector:
+    app: ab-testing-service
+  ports:
+  - name: http
+    port: 8085
+    targetPort: 8085
+    protocol: TCP
+  - name: metrics
+    port: 9092
+    targetPort: 9092
+    protocol: TCP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ab-testing-sa
+  namespace: atlas-ai-production
+  labels:
+    app: ab-testing-service

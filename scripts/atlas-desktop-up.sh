@@ -30,7 +30,7 @@ echo ""
 print_service_info() {
     echo -e "${GREEN}🏗️  Desktop Architecture Integration:${NC}"
     echo -e "  🎯 Atlas Core Platform (Port 3000) - Main API Gateway"
-    echo -e "  🌐 Atlas API Gateway (Port 8081) - GraphQL Gateway" 
+    echo -e "  🌐 Atlas API Gateway (Port 8081) - GraphQL Gateway"
     echo -e "  🖥️  Atlas Desktop Backend (Port 8090) - Desktop API Server"
     echo -e "  📱 Atlas Desktop Client (Port 3002) - Web Hybrid Client"
     echo -e "  📊 Metrics & Monitoring (Port 9091) - Desktop Metrics"
@@ -51,7 +51,7 @@ check_prerequisites() {
     # Check if main monolith is running
     if ! docker ps --format "table {{.Names}}" | grep -q "atlas-core-platform"; then
         echo -e "${YELLOW}⚠️  Main Atlas monolith not running. Starting it first...${NC}"
-        
+
         if [ -f "$SCRIPT_DIR/atlas-modular-monolith-up.sh" ]; then
             bash "$SCRIPT_DIR/atlas-modular-monolith-up.sh"
         else
@@ -127,7 +127,7 @@ validate_architectural_compliance() {
         echo ""
         echo -e "${YELLOW}💡 These violations indicate the desktop app may be bypassing architectural boundaries.${NC}"
         echo -e "${YELLOW}   Please ensure all communication goes through Atlas Core and API Gateway.${NC}"
-        
+
         read -p "Continue anyway? (y/N): " -n 1 -r
         echo ""
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -307,7 +307,7 @@ main() {
     build_desktop_images
     start_desktop_services
     monitor_startup
-    
+
     # Run integration tests
     if run_integration_tests; then
         show_status

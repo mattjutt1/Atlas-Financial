@@ -1,11 +1,16 @@
 /// Service layer for financial API
 ///
 /// Contains business logic and service implementations
-use axum::{routing::{get, post}, Router};
+use axum::{
+    routing::{get, post},
+    Router,
+};
 use std::sync::Arc;
 
 use crate::graphql::resolvers::{create_schema, ApiSchema};
-use crate::handlers::{health_check, readiness_check, calculate, validate_precision, financial_health};
+use crate::handlers::{
+    calculate, financial_health, health_check, readiness_check, validate_precision,
+};
 
 /// Financial API service
 pub struct FinancialService {

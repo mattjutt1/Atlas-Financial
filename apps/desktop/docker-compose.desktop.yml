@@ -16,39 +16,39 @@ services:
       # Atlas Architecture Integration
       ATLAS_CORE_URL: http://atlas-core:3000
       ATLAS_API_GATEWAY_URL: http://atlas-api-gateway:8081
-      
+
       # Service Configuration
       NODE_ENV: production
       ENVIRONMENT: production
       SERVICE_NAME: atlas-desktop
       SERVICE_VERSION: 2.6.0
-      
+
       # Security Configuration
       SECURITY_ENCRYPTION_ENABLED: "true"
       SECURITY_AUDIT_LOGGING: "true"
       SECURITY_AUTO_LOCK: "true"
       SECURITY_REQUIRE_AUTH_STARTUP: "true"
       SECURITY_TLS_CERT_PINNING: "true"
-      
+
       # Feature Flags
       FEATURE_AI_INSIGHTS: "true"
       FEATURE_METRICS: "true"
       FEATURE_DESKTOP_NOTIFICATIONS: "true"
       FEATURE_OFFLINE_MODE: "false"
       FEATURE_DEBUG_MODE: "false"
-      
+
       # Monitoring Configuration
       MONITORING_ENABLED: "true"
       LOG_LEVEL: info
       ENABLE_METRICS: "true"
       METRICS_PORT: 9091
-      
+
       # API Configuration
       API_TIMEOUT: 30
       API_RETRIES: 3
       API_RATE_LIMIT_REQUESTS: 1000
       API_RATE_LIMIT_WINDOW: 60
-      
+
       # Cache Configuration
       CACHE_ENABLED: "true"
       CACHE_TTL: 300
@@ -98,12 +98,12 @@ services:
       DESKTOP_BACKEND_URL: http://atlas-desktop-backend:8090
       ATLAS_CORE_URL: http://atlas-core:3000
       ATLAS_API_GATEWAY_URL: http://atlas-api-gateway:8081
-      
+
       # Client-specific settings
       CLIENT_MODE: "web-hybrid"
       AUTO_UPDATE_ENABLED: "true"
       OFFLINE_MODE_ENABLED: "false"
-      
+
       # UI Configuration
       THEME: "auto"
       LANGUAGE: "en"

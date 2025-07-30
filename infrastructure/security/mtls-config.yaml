@@ -1,0 +1,442 @@
+# mTLS Configuration for Atlas Financial Services
+# Enables mandatory mutual TLS for all inter-service communication
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mtls-config
+  namespace: atlas-financial
+  labels:
+    security-tier: critical
+    purpose: service-mesh
+data:
+  istio-mtls.yaml: |
+    # Mandatory mTLS for all services
+    apiVersion: security.istio.io/v1beta1
+    kind: PeerAuthentication
+    metadata:
+      name: default-mtls-strict
+      namespace: atlas-financial
+    spec:
+      mtls:
+        mode: STRICT
+    ---
+    # Destination rules for mTLS
+    apiVersion: networking.istio.io/v1beta1
+    kind: DestinationRule
+    metadata:
+      name: default-mtls-destination
+      namespace: atlas-financial
+    spec:
+      host: "*.atlas-financial.svc.cluster.local"
+      trafficPolicy:
+        tls:
+          mode: ISTIO_MUTUAL
+      exportTo:
+        - "."
+    ---
+    # Specific mTLS for AI Engine
+    apiVersion: networking.istio.io/v1beta1
+    kind: DestinationRule
+    metadata:
+      name: ai-engine-mtls
+      namespace: atlas-financial
+    spec:
+      host: "ai-engine.atlas-financial.svc.cluster.local"
+      trafficPolicy:
+        tls:
+          mode: ISTIO_MUTUAL
+          caCertificates: /etc/ssl/certs/ca-certificates.crt
+          clientCertificate: /etc/ssl/certs/client-cert.pem
+          privateKey: /etc/ssl/private/client-key.pem
+          sni: "ai-engine.atlas-financial.local"
+    ---
+    # Market Data Service mTLS
+    apiVersion: networking.istio.io/v1beta1
+    kind: DestinationRule
+    metadata:
+      name: market-data-mtls
+      namespace: atlas-financial
+    spec:
+      host: "market-data-service.atlas-financial.svc.cluster.local"
+      trafficPolicy:
+        tls:
+          mode: ISTIO_MUTUAL
+          caCertificates: /etc/ssl/certs/ca-certificates.crt
+          clientCertificate: /etc/ssl/certs/client-cert.pem
+          privateKey: /etc/ssl/private/client-key.pem
+          sni: "market-data-service.atlas-financial.local"
+
+  redis-tls.yaml: |
+    # Redis TLS Configuration
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: redis-tls-config
+      namespace: atlas-financial
+    data:
+      redis.conf: |
+        # Enable TLS
+        tls-port 6380
+        port 0
+        
+        # TLS Configuration
+        tls-cert-file /etc/redis/tls/redis.crt
+        tls-key-file /etc/redis/tls/redis.key
+        tls-ca-cert-file /etc/redis/tls/ca.crt
+        
+        # Client certificate verification
+        tls-auth-clients yes
+        tls-protocols "TLSv1.2 TLSv1.3"
+        
+        # Cipher configuration
+        tls-ciphers "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256"
+        tls-ciphersuites "TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256"
+        
+        # Security settings
+        tls-session-caching no
+        tls-session-cache-size 0
+        tls-session-cache-timeout 60
+
+  postgres-tls.yaml: |
+    # PostgreSQL TLS Configuration
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: postgres-tls-config
+      namespace: atlas-financial
+    data:
+      postgresql.conf: |
+        # TLS Configuration
+        ssl = on
+        ssl_cert_file = '/etc/postgresql/tls/server.crt'
+        ssl_key_file = '/etc/postgresql/tls/server.key'
+        ssl_ca_file = '/etc/postgresql/tls/ca.crt'
+        
+        # Client certificate verification
+        ssl_client_auth = verify-full
+        ssl_min_protocol_version = 'TLSv1.2'
+        ssl_max_protocol_version = 'TLSv1.3'
+        
+        # Cipher configuration
+        ssl_ciphers = 'ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256'
+        ssl_ecdh_curve = 'prime256v1'
+        
+        # Security settings
+        ssl_prefer_server_ciphers = on
+        ssl_passphrase_command = ''
+        ssl_passphrase_command_supports_reload = off
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: service-mesh-ca
+  namespace: atlas-financial
+  labels:
+    security-tier: critical
+    purpose: certificate-authority
+type: kubernetes.io/tls
+stringData:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    # Generated CA Certificate for Atlas Financial Service Mesh
+    # This should be replaced with actual CA certificate in production
+    ${SERVICE_MESH_CA_CERT}
+    -----END CERTIFICATE-----
+  ca.key: |
+    -----BEGIN PRIVATE KEY-----
+    # Generated CA Private Key for Atlas Financial Service Mesh
+    # This should be replaced with actual CA key in production
+    ${SERVICE_MESH_CA_KEY}
+    -----END PRIVATE KEY-----
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: generate-service-certificates
+  namespace: atlas-financial
+  labels:
+    security-tier: critical
+    purpose: certificate-generation
+spec:
+  template:
+    metadata:
+      labels:
+        security-tier: critical
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+      containers:
+      - name: cert-generator
+        image: cfssl/cfssl:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          
+          echo "Generating service mesh certificates..."
+          
+          # Create certificate directory
+          mkdir -p /tmp/certs
+          cd /tmp/certs
+          
+          # Generate CA configuration
+          cat > ca-config.json <<EOF
+          {
+            "signing": {
+              "default": {
+                "expiry": "8760h"
+              },
+              "profiles": {
+                "service-mesh": {
+                  "usages": [
+                    "signing",
+                    "key encipherment",
+                    "server auth",
+                    "client auth"
+                  ],
+                  "expiry": "8760h"
+                }
+              }
+            }
+          }
+          EOF
+          
+          # Generate service certificates for each service
+          services="ai-engine market-data-service ab-testing-service hasura redis postgres"
+          
+          for service in $services; do
+            echo "Generating certificate for $service..."
+            
+            # Create CSR configuration
+            cat > ${service}-csr.json <<EOF
+          {
+            "CN": "${service}.atlas-financial.local",
+            "hosts": [
+              "${service}",
+              "${service}.atlas-financial",
+              "${service}.atlas-financial.svc",
+              "${service}.atlas-financial.svc.cluster.local",
+              "localhost",
+              "127.0.0.1"
+            ],
+            "key": {
+              "algo": "ecdsa",
+              "size": 256
+            },
+            "names": [
+              {
+                "C": "US",
+                "ST": "NY",
+                "L": "New York", 
+                "O": "Atlas Financial",
+                "OU": "Engineering"
+              }
+            ]
+          }
+          EOF
+            
+            # Generate certificate
+            cfssl gencert \
+              -ca=/etc/certs/ca.crt \
+              -ca-key=/etc/certs/ca.key \
+              -config=ca-config.json \
+              -profile=service-mesh \
+              ${service}-csr.json | cfssljson -bare ${service}
+            
+            # Create Kubernetes secret
+            kubectl create secret tls ${service}-tls-cert \
+              --cert=${service}.pem \
+              --key=${service}-key.pem \
+              --namespace=atlas-financial \
+              --dry-run=client -o yaml | kubectl apply -f -
+            
+            echo "Certificate generated for $service"
+          done
+          
+          echo "All service certificates generated successfully"
+          
+        volumeMounts:
+        - name: ca-certs
+          mountPath: /etc/certs
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 65534
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: ca-certs
+        secret:
+          secretName: service-mesh-ca
+      - name: tmp
+        emptyDir:
+          sizeLimit: 100Mi
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: certificate-rotator
+  namespace: atlas-financial
+  labels:
+    security-tier: critical
+    purpose: certificate-rotation
+spec:
+  selector:
+    matchLabels:
+      app: certificate-rotator
+  template:
+    metadata:
+      labels:
+        app: certificate-rotator
+        security-tier: critical
+    spec:
+      hostNetwork: false
+      hostPID: false
+      hostIPC: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+      containers:
+      - name: cert-rotator
+        image: alpine:3.18
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Certificate rotation script
+          while true; do
+            echo "Checking certificate expiration..."
+            
+            # Check each service certificate
+            for secret in $(kubectl get secrets -n atlas-financial -l app.kubernetes.io/component=tls -o name); do
+              secret_name=$(echo $secret | cut -d'/' -f2)
+              
+              # Get certificate expiration
+              cert_data=$(kubectl get secret $secret_name -n atlas-financial -o jsonpath='{.data.tls\.crt}' | base64 -d)
+              expiry=$(echo "$cert_data" | openssl x509 -noout -enddate | cut -d'=' -f2)
+              expiry_epoch=$(date -d "$expiry" +%s)
+              current_epoch=$(date +%s)
+              days_until_expiry=$(( (expiry_epoch - current_epoch) / 86400 ))
+              
+              echo "Certificate $secret_name expires in $days_until_expiry days"
+              
+              # Rotate if expiring within 30 days
+              if [ $days_until_expiry -lt 30 ]; then
+                echo "Rotating certificate $secret_name..."
+                kubectl annotate secret $secret_name -n atlas-financial cert.atlas-financial.com/rotation-needed=true
+              fi
+            done
+            
+            # Sleep for 24 hours
+            sleep 86400
+          done
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "10m"
+          limits:
+            memory: "128Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 65534
+          capabilities:
+            drop:
+            - ALL
+      serviceAccountName: certificate-rotator-sa
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: certificate-rotator-sa
+  namespace: atlas-financial
+  labels:
+    security-tier: critical
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: certificate-rotator-role
+  namespace: atlas-financial
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets"]
+  verbs: ["get", "list", "patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: certificate-rotator-rolebinding
+  namespace: atlas-financial
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: certificate-rotator-role
+subjects:
+- kind: ServiceAccount
+  name: certificate-rotator-sa
+  namespace: atlas-financial
+
+---
+# Network Policy for Certificate Management
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: certificate-management-policy
+  namespace: atlas-financial
+  labels:
+    security-tier: critical
+    purpose: certificate-management
+spec:
+  podSelector:
+    matchLabels:
+      purpose: certificate-management
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: atlas-monitoring
+    ports:
+    - protocol: TCP
+      port: 9090
+  egress:
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: TCP
+      port: 443  # Kubernetes API

@@ -48,7 +48,7 @@ impl AtlasApiClient {
         });
 
         let url = format!("{}/api/auth/signin", self.atlas_core_url);
-        
+
         let response = self.http_client
             .post(&url)
             .json(&auth_payload)
@@ -71,7 +71,7 @@ impl AtlasApiClient {
     /// Logout user through Atlas Core
     pub async fn logout(&self, session_token: &str) -> Result<(), FinancialError> {
         let url = format!("{}/api/auth/signout", self.atlas_core_url);
-        
+
         let response = self.http_client
             .post(&url)
             .header("Authorization", format!("Bearer {}", session_token))
@@ -91,7 +91,7 @@ impl AtlasApiClient {
     /// Validate session through Atlas Core
     pub async fn validate_session(&self, session_token: &str) -> Result<SessionInfo, FinancialError> {
         let url = format!("{}/api/auth/session", self.atlas_core_url);
-        
+
         let response = self.http_client
             .get(&url)
             .header("Authorization", format!("Bearer {}", session_token))
@@ -126,7 +126,7 @@ impl AtlasApiClient {
         });
 
         let url = format!("{}/v1/graphql", self.atlas_api_gateway_url);
-        
+
         let response = self.http_client
             .post(&url)
             .header("Authorization", format!("Bearer {}", session_token))
@@ -286,7 +286,7 @@ impl AtlasApiClient {
     /// Get AI insights through Atlas Core
     pub async fn get_ai_insights(&self, session_token: &str) -> Result<AIInsights, FinancialError> {
         let url = format!("{}/api/ai/insights", self.atlas_core_url);
-        
+
         let response = self.http_client
             .get(&url)
             .header("Authorization", format!("Bearer {}", session_token))
@@ -313,7 +313,7 @@ impl AtlasApiClient {
     /// Check system health through Atlas Core
     pub async fn health_check(&self) -> Result<HealthStatus, FinancialError> {
         let url = format!("{}/api/health", self.atlas_core_url);
-        
+
         let response = self.http_client
             .get(&url)
             .send()

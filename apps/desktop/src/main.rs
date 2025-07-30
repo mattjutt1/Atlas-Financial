@@ -43,25 +43,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize application state - Phase 2.6 Architecture
     tracing::info!("🔧 Loading Atlas configuration bridge");
-    
+
     // Load Atlas shared configuration
     let atlas_config_bridge = get_atlas_config("atlas-desktop")?;
     let atlas_config = atlas_config_bridge.get_consolidated_config();
-    
+
     // Log architectural compliance
-    tracing::info!("✅ Architectural compliance validated: Phase {}", 
+    tracing::info!("✅ Architectural compliance validated: Phase {}",
         atlas_config.architectural_compliance.phase);
-    tracing::info!("🚪 Service boundaries: {}", 
+    tracing::info!("🚪 Service boundaries: {}",
         atlas_config.architectural_compliance.service_boundaries);
-    tracing::info!("🔐 Authentication: {}", 
+    tracing::info!("🔐 Authentication: {}",
         atlas_config.architectural_compliance.authentication);
-    
+
     // Initialize legacy config for backward compatibility
     let config = utils::Config::load().await?;
-    
+
     // Initialize API client with atlas configuration
     let api_client = AtlasApiClient::new(&config)?;
-    
+
     // Initialize rate limiter with security configuration
     let rate_limiter = RateLimiter::new();
 

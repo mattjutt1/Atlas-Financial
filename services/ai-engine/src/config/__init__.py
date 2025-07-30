@@ -12,7 +12,7 @@ from .atlas_config_bridge import (
 
 __all__ = [
     'AtlasConfigBridge',
-    'get_atlas_config', 
+    'get_atlas_config',
     'reset_atlas_config',
     'ATLAS_SHARED_AVAILABLE'
 ]

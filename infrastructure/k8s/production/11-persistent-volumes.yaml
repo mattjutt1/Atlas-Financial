@@ -1,0 +1,377 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast-ssd
+  labels:
+    storage-tier: high-performance
+    use-case: ai-workloads
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp3
+  iops: "3000"
+  throughput: "125"
+  fsType: ext4
+  encrypted: "true"
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+mountOptions:
+- noatime
+- nodiratime
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: standard-ssd
+  labels:
+    storage-tier: standard
+    use-case: general-workloads
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp3
+  iops: "1000"
+  throughput: "125"
+  fsType: ext4
+  encrypted: "true"
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: high-iops-ssd
+  labels:
+    storage-tier: premium
+    use-case: database-workloads
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: io2
+  iops: "10000"
+  fsType: ext4
+  encrypted: "true"
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ai-model-cache-pvc
+  namespace: atlas-ai-production
+  labels:
+    app: ai-engine
+    storage-type: model-cache
+    security-tier: high
+spec:
+  accessModes:
+  - ReadWriteMany
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 100Gi
+  selector:
+    matchLabels:
+      use-case: ai-model-storage
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ai-model-cache-pv
+  labels:
+    use-case: ai-model-storage
+    storage-tier: high-performance
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+  - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: fast-ssd
+  awsElasticBlockStore:
+    volumeID: vol-ai-models-cache-001
+    fsType: ext4
+    encrypted: true
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: workload-type
+          operator: In
+          values:
+          - ai-compute
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-storage-pvc
+  namespace: atlas-monitoring
+  labels:
+    app: prometheus
+    storage-type: metrics-data
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 200Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-storage-pvc
+  namespace: atlas-monitoring
+  labels:
+    app: grafana
+    storage-type: dashboard-data
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: standard-ssd
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-config
+  namespace: atlas-ai-production
+  labels:
+    purpose: data-backup
+    security-tier: high
+data:
+  backup-policy.yaml: |
+    # Backup Configuration for AI Production Data
+    schedules:
+      ai_models:
+        cron: "0 2 * * *"  # Daily at 2 AM
+        retention: "30d"
+        compression: "gzip"
+        encryption: "aes-256-gcm"
+        destination: "s3://atlas-ai-backups/models/"
+        
+      feature_store:
+        cron: "0 3 * * *"  # Daily at 3 AM
+        retention: "90d"
+        compression: "gzip"
+        encryption: "aes-256-gcm"
+        destination: "s3://atlas-ai-backups/features/"
+        
+      redis_snapshots:
+        cron: "0 */6 * * *"  # Every 6 hours
+        retention: "7d"
+        compression: "lz4"
+        encryption: "aes-256-gcm"
+        destination: "s3://atlas-ai-backups/redis/"
+        
+      monitoring_data:
+        cron: "0 4 * * 0"  # Weekly on Sunday at 4 AM
+        retention: "52w"
+        compression: "gzip"
+        encryption: "aes-256-gcm"
+        destination: "s3://atlas-ai-backups/monitoring/"
+    
+    recovery_procedures:
+      rto: "4h"  # Recovery Time Objective
+      rpo: "1h"  # Recovery Point Objective
+      disaster_recovery_site: "us-west-2"
+      
+  restore-script.sh: |
+    #!/bin/bash
+    set -euo pipefail
+    
+    BACKUP_TYPE=${1:-""}
+    RESTORE_DATE=${2:-$(date -d '1 day ago' +%Y-%m-%d)}
+    S3_BUCKET="atlas-ai-backups"
+    
+    case $BACKUP_TYPE in
+      "models")
+        echo "Restoring AI models from $RESTORE_DATE..."
+        aws s3 sync s3://$S3_BUCKET/models/$RESTORE_DATE/ /app/models/
+        echo "AI models restored successfully"
+        ;;
+      "features")
+        echo "Restoring feature store from $RESTORE_DATE..."
+        BACKUP_FILE="features_$RESTORE_DATE.sql.gz"
+        aws s3 cp s3://$S3_BUCKET/features/$BACKUP_FILE /tmp/
+        gunzip /tmp/$BACKUP_FILE
+        psql -h timescaledb.atlas-ai-production -U ai_features_user -d features -f /tmp/features_$RESTORE_DATE.sql
+        echo "Feature store restored successfully"
+        ;;
+      "redis")
+        echo "Restoring Redis data from $RESTORE_DATE..."
+        BACKUP_FILE="dump_$RESTORE_DATE.rdb.lz4"
+        aws s3 cp s3://$S3_BUCKET/redis/$BACKUP_FILE /tmp/
+        lz4 -d /tmp/$BACKUP_FILE /tmp/dump.rdb
+        kubectl exec -n atlas-ai-production redis-cluster-0 -- redis-cli DEBUG LOADAOF /tmp/dump.rdb
+        echo "Redis data restored successfully"
+        ;;
+      *)
+        echo "Usage: $0 {models|features|redis} [YYYY-MM-DD]"
+        exit 1
+        ;;
+    esac
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-job
+  namespace: atlas-ai-production
+  labels:
+    purpose: data-backup
+    security-tier: high
+spec:
+  schedule: "0 1 * * *"  # Daily at 1 AM
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            purpose: data-backup
+        spec:
+          serviceAccountName: backup-sa
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            fsGroup: 65534
+          containers:
+          - name: backup-runner
+            image: atlas-financial/backup-utility:v1.0.0
+            command:
+            - /bin/bash
+            - -c
+            - |
+              set -euo pipefail
+              
+              echo "Starting backup process..."
+              DATE=$(date +%Y-%m-%d)
+              
+              # Backup AI models
+              echo "Backing up AI models..."
+              tar -czf /tmp/ai-models-$DATE.tar.gz -C /app/models .
+              aws s3 cp /tmp/ai-models-$DATE.tar.gz s3://atlas-ai-backups/models/
+              
+              # Backup feature store
+              echo "Backing up feature store..."
+              pg_dump -h timescaledb.atlas-ai-production -U ai_features_user -d features | gzip > /tmp/features-$DATE.sql.gz
+              aws s3 cp /tmp/features-$DATE.sql.gz s3://atlas-ai-backups/features/
+              
+              # Backup Redis snapshots
+              echo "Backing up Redis data..."
+              kubectl exec -n atlas-ai-production redis-cluster-0 -- redis-cli BGSAVE
+              sleep 30
+              kubectl cp atlas-ai-production/redis-cluster-0:/data/dump.rdb /tmp/dump-$DATE.rdb
+              lz4 -z /tmp/dump-$DATE.rdb /tmp/dump-$DATE.rdb.lz4
+              aws s3 cp /tmp/dump-$DATE.rdb.lz4 s3://atlas-ai-backups/redis/
+              
+              # Cleanup old backups
+              echo "Cleaning up old backups..."
+              aws s3 ls s3://atlas-ai-backups/models/ | grep -v "$(date -d '30 days ago' +%Y-%m)" | awk '{print $4}' | xargs -I {} aws s3 rm s3://atlas-ai-backups/models/{}
+              aws s3 ls s3://atlas-ai-backups/features/ | grep -v "$(date -d '90 days ago' +%Y-%m)" | awk '{print $4}' | xargs -I {} aws s3 rm s3://atlas-ai-backups/features/{}
+              aws s3 ls s3://atlas-ai-backups/redis/ | grep -v "$(date -d '7 days ago' +%Y-%m)" | awk '{print $4}' | xargs -I {} aws s3 rm s3://atlas-ai-backups/redis/{}
+              
+              echo "Backup process completed successfully"
+            env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: backup-secrets
+                  key: aws-access-key-id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: backup-secrets
+                  key: aws-secret-access-key
+            - name: AWS_DEFAULT_REGION
+              value: "us-east-1"
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: timescaledb-secrets
+                  key: password
+            resources:
+              requests:
+                memory: "1Gi"
+                cpu: "500m"
+              limits:
+                memory: "2Gi"
+                cpu: "1000m"
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: 65534
+              capabilities:
+                drop:
+                - ALL
+            volumeMounts:
+            - name: backup-tmp
+              mountPath: /tmp
+            - name: ai-models
+              mountPath: /app/models
+              readOnly: true
+          volumes:
+          - name: backup-tmp
+            emptyDir:
+              sizeLimit: 10Gi
+          - name: ai-models
+            persistentVolumeClaim:
+              claimName: ai-model-cache-pvc
+          restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backup-sa
+  namespace: atlas-ai-production
+  labels:
+    purpose: data-backup
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: backup-role
+  namespace: atlas-ai-production
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/exec", "persistentvolumes", "persistentvolumeclaims"]
+  verbs: ["get", "list", "create"]
+- apiGroups: [""]
+  resources: ["pods/exec"]
+  verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: backup-rolebinding
+  namespace: atlas-ai-production
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: backup-role
+subjects:
+- kind: ServiceAccount
+  name: backup-sa
+  namespace: atlas-ai-production
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backup-secrets
+  namespace: atlas-ai-production
+  labels:
+    purpose: data-backup
+    security-tier: high
+type: Opaque
+stringData:
+  aws-access-key-id: "${AWS_BACKUP_ACCESS_KEY_ID}"
+  aws-secret-access-key: "${AWS_BACKUP_SECRET_ACCESS_KEY}"
+  encryption-key: "${BACKUP_ENCRYPTION_KEY}"

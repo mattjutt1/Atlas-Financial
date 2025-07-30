@@ -4,7 +4,7 @@
  */
 
 // Re-export financial precision
-export { 
+export {
   FinancialAmount,
   FinancialCalculations,
   FinancialValidation,

@@ -20,7 +20,7 @@ export function decodeJWT(token: string): JWTPayload | null {
   try {
     const parts = token.split('.')
     if (parts.length !== 3) return null
-    
+
     const payload = JSON.parse(atob(parts[1]))
     return payload as JWTPayload
   } catch {
@@ -34,7 +34,7 @@ export function decodeJWT(token: string): JWTPayload | null {
 export function isJWTExpired(token: string): boolean {
   const payload = decodeJWT(token)
   if (!payload || !payload.exp) return true
-  
+
   return Date.now() >= payload.exp * 1000
 }
 
@@ -44,7 +44,7 @@ export function isJWTExpired(token: string): boolean {
 export function getJWTExpiration(token: string): Date | null {
   const payload = decodeJWT(token)
   if (!payload || !payload.exp) return null
-  
+
   return new Date(payload.exp * 1000)
 }
 
@@ -54,7 +54,7 @@ export function getJWTExpiration(token: string): Date | null {
 export function getUserFromJWT(token: string) {
   const payload = decodeJWT(token)
   if (!payload) return null
-  
+
   return {
     id: payload.sub,
     email: payload.email,

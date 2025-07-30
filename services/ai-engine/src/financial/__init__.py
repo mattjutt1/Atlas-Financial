@@ -9,6 +9,6 @@ from .validation import FinancialValidation
 
 __all__ = [
     'FinancialPrecisionClient',
-    'FinancialCalculations', 
+    'FinancialCalculations',
     'FinancialValidation'
 ]

@@ -35,7 +35,7 @@ pub async fn get_accounts_v2(
     match state.api_client.get_accounts(&session_token).await {
         Ok(accounts) => {
             tracing::info!("✅ Successfully fetched {} accounts through API Gateway", accounts.len());
-            
+
             // Send desktop notification for large account counts
             if accounts.len() > 10 {
                 let _ = send_desktop_notification(
@@ -81,7 +81,7 @@ pub async fn get_transactions_v2(
     ).await {
         Ok(transactions) => {
             tracing::info!("✅ Successfully fetched {} transactions through API Gateway", transactions.len());
-            
+
             // Send desktop notification for transaction updates
             if transactions.len() > 50 {
                 let _ = send_desktop_notification(
@@ -128,7 +128,7 @@ pub async fn add_transaction_v2(
     match state.api_client.create_transaction(&transaction_input, &session_token).await {
         Ok(transaction) => {
             tracing::info!("✅ Successfully created transaction through API Gateway: {}", transaction.id);
-            
+
             // Send desktop notification for transaction creation
             let _ = send_desktop_notification(
                 &app,
@@ -166,7 +166,7 @@ pub async fn get_ai_insights_v2(
     match state.api_client.get_ai_insights(&session_token).await {
         Ok(insights) => {
             tracing::info!("✅ Successfully fetched AI insights through Atlas Core");
-            
+
             // Send desktop notification for insights update
             let _ = send_desktop_notification(
                 &app,
@@ -229,7 +229,7 @@ async fn get_session_token(app: &AppHandle) -> Option<String> {
 /// Get stored session token from Tauri secure storage
 async fn get_stored_session_token(app: &AppHandle) -> Result<Option<String>, Box<dyn std::error::Error>> {
     use crate::security::{decrypt_data};
-    
+
     // Get app data directory
     let app_data_dir = app.path().app_data_dir()?;
     let session_path = app_data_dir.join("session.json");
@@ -241,7 +241,7 @@ async fn get_stored_session_token(app: &AppHandle) -> Result<Option<String>, Box
     // Read and decrypt session data
     let encrypted_data = tokio::fs::read(session_path).await?;
     let session_json = decrypt_data(app.clone(), &encrypted_data).await?;
-    
+
     // Parse session info to extract token
     let session_info: serde_json::Value = serde_json::from_str(&session_json)?;
     let token = session_info["session_token"]

@@ -2,7 +2,7 @@
 /// Primary calculation service for all Atlas applications
 use crate::error::Result;
 use axum::{extract::Query, http::StatusCode, response::Json};
-use financial_core::{Money, Currency, Percentage, Rate, Period};
+use financial_core::{Currency, Money, Percentage, Period, Rate};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -57,9 +57,10 @@ pub async fn calculate(
         "compound_interest" => handle_compound_interest(request).await?,
         "loan_payment" => handle_loan_payment(request).await?,
         _ => {
-            return Err(crate::error::FinancialError::ValidationError(
-                format!("Unsupported operation: {}", request.operation)
-            ));
+            return Err(crate::error::FinancialError::ValidationError(format!(
+                "Unsupported operation: {}",
+                request.operation
+            )));
         }
     };
 
@@ -67,9 +68,7 @@ pub async fn calculate(
 }
 
 /// Validate financial precision and constraints
-pub async fn validate_precision(
-    Json(data): Json<MoneyData>,
-) -> Result<Json<ValidationResponse>> {
+pub async fn validate_precision(Json(data): Json<MoneyData>) -> Result<Json<ValidationResponse>> {
     info!("Validating precision for amount: {}", data.amount);
 
     let mut response = ValidationResponse {
@@ -85,9 +84,9 @@ pub async fn validate_precision(
             // Check precision (max 4 decimal places for DECIMAL(19,4))
             if decimal_val.scale() > 4 {
                 response.is_valid = false;
-                response.errors.push(
-                    "Amount precision exceeds 4 decimal places".to_string()
-                );
+                response
+                    .errors
+                    .push("Amount precision exceeds 4 decimal places".to_string());
             } else {
                 response.precision_check = true;
             }
@@ -96,9 +95,9 @@ pub async fn validate_precision(
             let max_value = Decimal::from_parts(999999999999999u32, 0, 0, false, 4);
             if decimal_val.abs() > max_value {
                 response.is_valid = false;
-                response.errors.push(
-                    "Amount exceeds DECIMAL(19,4) bounds".to_string()
-                );
+                response
+                    .errors
+                    .push("Amount exceeds DECIMAL(19,4) bounds".to_string());
             }
 
             // Warnings for unusual values
@@ -107,7 +106,9 @@ pub async fn validate_precision(
             }
 
             if decimal_val > Decimal::from(1_000_000) {
-                response.warnings.push("Amount is very large (>$1M)".to_string());
+                response
+                    .warnings
+                    .push("Amount is very large (>$1M)".to_string());
             }
         }
         Err(_) => {
@@ -119,7 +120,9 @@ pub async fn validate_precision(
     // Validate currency
     if !is_valid_currency(&data.currency) {
         response.is_valid = false;
-        response.errors.push("Invalid or unsupported currency".to_string());
+        response
+            .errors
+            .push("Invalid or unsupported currency".to_string());
     }
 
     Ok(Json(response))
@@ -132,9 +135,18 @@ pub async fn financial_health() -> Result<Json<HashMap<String, String>>> {
     let mut health = HashMap::new();
     health.insert("status".to_string(), "healthy".to_string());
     health.insert("precision".to_string(), "DECIMAL(19,4)".to_string());
-    health.insert("operations".to_string(), "add,subtract,multiply,divide,compound_interest,loan_payment".to_string());
-    health.insert("currencies".to_string(), "USD,EUR,GBP,CAD,AUD,JPY,CHF,CNY".to_string());
-    health.insert("engine".to_string(), "atlas-rust-financial-core".to_string());
+    health.insert(
+        "operations".to_string(),
+        "add,subtract,multiply,divide,compound_interest,loan_payment".to_string(),
+    );
+    health.insert(
+        "currencies".to_string(),
+        "USD,EUR,GBP,CAD,AUD,JPY,CHF,CNY".to_string(),
+    );
+    health.insert(
+        "engine".to_string(),
+        "atlas-rust-financial-core".to_string(),
+    );
 
     // Test basic calculation to ensure engine is working
     match test_calculation().await {
@@ -160,7 +172,7 @@ async fn handle_addition(request: CalculationRequest) -> Result<CalculationRespo
 
     if operands.len() < 2 {
         return Err(crate::error::FinancialError::ValidationError(
-            "Addition requires at least 2 operands".to_string()
+            "Addition requires at least 2 operands".to_string(),
         ));
     }
 
@@ -184,12 +196,14 @@ async fn handle_addition(request: CalculationRequest) -> Result<CalculationRespo
 
 async fn handle_subtraction(request: CalculationRequest) -> Result<CalculationResponse> {
     let operands = request.operands.ok_or_else(|| {
-        crate::error::FinancialError::ValidationError("Missing operands for subtraction".to_string())
+        crate::error::FinancialError::ValidationError(
+            "Missing operands for subtraction".to_string(),
+        )
     })?;
 
     if operands.len() != 2 {
         return Err(crate::error::FinancialError::ValidationError(
-            "Subtraction requires exactly 2 operands".to_string()
+            "Subtraction requires exactly 2 operands".to_string(),
         ));
     }
 
@@ -208,17 +222,21 @@ async fn handle_subtraction(request: CalculationRequest) -> Result<CalculationRe
 
 async fn handle_multiplication(request: CalculationRequest) -> Result<CalculationResponse> {
     let operands = request.operands.ok_or_else(|| {
-        crate::error::FinancialError::ValidationError("Missing operands for multiplication".to_string())
+        crate::error::FinancialError::ValidationError(
+            "Missing operands for multiplication".to_string(),
+        )
     })?;
 
     if operands.len() != 1 {
         return Err(crate::error::FinancialError::ValidationError(
-            "Multiplication requires exactly 1 operand".to_string()
+            "Multiplication requires exactly 1 operand".to_string(),
         ));
     }
 
     let factor_str = request.factor.ok_or_else(|| {
-        crate::error::FinancialError::ValidationError("Missing factor for multiplication".to_string())
+        crate::error::FinancialError::ValidationError(
+            "Missing factor for multiplication".to_string(),
+        )
     })?;
 
     let money = parse_money_data(&operands[0])?;
@@ -244,7 +262,7 @@ async fn handle_division(request: CalculationRequest) -> Result<CalculationRespo
 
     if operands.len() != 1 {
         return Err(crate::error::FinancialError::ValidationError(
-            "Division requires exactly 1 operand".to_string()
+            "Division requires exactly 1 operand".to_string(),
         ));
     }
 
@@ -270,16 +288,22 @@ async fn handle_division(request: CalculationRequest) -> Result<CalculationRespo
 
 async fn handle_compound_interest(request: CalculationRequest) -> Result<CalculationResponse> {
     let principal_data = request.principal.ok_or_else(|| {
-        crate::error::FinancialError::ValidationError("Missing principal for compound interest".to_string())
+        crate::error::FinancialError::ValidationError(
+            "Missing principal for compound interest".to_string(),
+        )
     })?;
 
     let principal = parse_money_data(&principal_data)?;
-    
-    let annual_rate = request.annual_rate.ok_or_else(|| {
-        crate::error::FinancialError::ValidationError("Missing annual rate".to_string())
-    })?.parse::<Decimal>().map_err(|_| {
-        crate::error::FinancialError::ValidationError("Invalid annual rate format".to_string())
-    })?;
+
+    let annual_rate = request
+        .annual_rate
+        .ok_or_else(|| {
+            crate::error::FinancialError::ValidationError("Missing annual rate".to_string())
+        })?
+        .parse::<Decimal>()
+        .map_err(|_| {
+            crate::error::FinancialError::ValidationError("Invalid annual rate format".to_string())
+        })?;
 
     let compounds_per_year = request.compounds_per_year.unwrap_or(12) as u32;
     let years = request.years.unwrap_or(1) as u32;
@@ -287,11 +311,11 @@ async fn handle_compound_interest(request: CalculationRequest) -> Result<Calcula
     // Calculate compound interest: A = P(1 + r/n)^(nt)
     let rate_per_compound = annual_rate / Decimal::from(100) / Decimal::from(compounds_per_year);
     let total_compounds = compounds_per_year * years;
-    
+
     let growth_factor = (Decimal::from(1) + rate_per_compound)
         .powu(total_compounds)
         .unwrap();
-    
+
     let result = principal.multiply(growth_factor)?;
 
     Ok(CalculationResponse {
@@ -305,16 +329,22 @@ async fn handle_compound_interest(request: CalculationRequest) -> Result<Calcula
 
 async fn handle_loan_payment(request: CalculationRequest) -> Result<CalculationResponse> {
     let principal_data = request.principal.ok_or_else(|| {
-        crate::error::FinancialError::ValidationError("Missing principal for loan payment".to_string())
+        crate::error::FinancialError::ValidationError(
+            "Missing principal for loan payment".to_string(),
+        )
     })?;
 
     let principal = parse_money_data(&principal_data)?;
-    
-    let annual_rate = request.annual_rate.ok_or_else(|| {
-        crate::error::FinancialError::ValidationError("Missing annual rate".to_string())
-    })?.parse::<Decimal>().map_err(|_| {
-        crate::error::FinancialError::ValidationError("Invalid annual rate format".to_string())
-    })?;
+
+    let annual_rate = request
+        .annual_rate
+        .ok_or_else(|| {
+            crate::error::FinancialError::ValidationError("Missing annual rate".to_string())
+        })?
+        .parse::<Decimal>()
+        .map_err(|_| {
+            crate::error::FinancialError::ValidationError("Invalid annual rate format".to_string())
+        })?;
 
     let term_months = request.term_months.unwrap_or(12);
 
@@ -332,9 +362,11 @@ async fn handle_loan_payment(request: CalculationRequest) -> Result<CalculationR
     }
 
     let monthly_rate = annual_rate / Decimal::from(100) / Decimal::from(12);
-    let factor = (Decimal::from(1) + monthly_rate).powu(term_months as u32).unwrap();
+    let factor = (Decimal::from(1) + monthly_rate)
+        .powu(term_months as u32)
+        .unwrap();
     let payment_factor = monthly_rate * factor / (factor - Decimal::from(1));
-    
+
     let result = principal.multiply(payment_factor)?;
 
     Ok(CalculationResponse {
@@ -360,16 +392,22 @@ fn parse_money_data(data: &MoneyData) -> Result<Money> {
         "JPY" => Currency::JPY,
         "CHF" => Currency::CHF,
         "CNY" => Currency::CNY,
-        _ => return Err(crate::error::FinancialError::ValidationError(
-            format!("Unsupported currency: {}", data.currency)
-        )),
+        _ => {
+            return Err(crate::error::FinancialError::ValidationError(format!(
+                "Unsupported currency: {}",
+                data.currency
+            )))
+        }
     };
 
     Money::new(amount, currency).map_err(|e| e.into())
 }
 
 fn is_valid_currency(currency: &str) -> bool {
-    matches!(currency, "USD" | "EUR" | "GBP" | "CAD" | "AUD" | "JPY" | "CHF" | "CNY")
+    matches!(
+        currency,
+        "USD" | "EUR" | "GBP" | "CAD" | "AUD" | "JPY" | "CHF" | "CNY"
+    )
 }
 
 async fn test_calculation() -> Result<()> {
@@ -377,7 +415,7 @@ async fn test_calculation() -> Result<()> {
     let money1 = Money::new(Decimal::from(100), Currency::USD)?;
     let money2 = Money::new(Decimal::from(50), Currency::USD)?;
     let _result = money1.add(&money2)?;
-    
+
     info!("Financial calculation test passed");
     Ok(())
 }

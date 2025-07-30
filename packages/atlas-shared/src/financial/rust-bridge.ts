@@ -353,12 +353,12 @@ export class RustFinancialBridge {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
+
       const response = await fetch(`${this.API_BASE_URL.replace('/graphql', '/health')}`, {
         method: 'GET',
         signal: controller.signal
       });
-      
+
       clearTimeout(timeoutId);
 
       const responseTime = performance.now() - startTime;

@@ -92,28 +92,28 @@ graph TB
 ```mermaid
 graph TB
     User[👤 User] --> BudgetPage[📄 Budget Page<br/>Route: /budget]
-    
+
     BudgetPage --> BudgetDashboard[📊 BudgetDashboard<br/>Main Interface]
     BudgetPage --> BudgetAllocation[⚖️ BudgetAllocationInterface<br/>Strategy Application]
     BudgetPage --> CategoryMgmt[📂 CategoryManagement<br/>CRUD Operations]
-    
+
     BudgetDashboard --> BudgetWizard[🪄 BudgetCreationWizard<br/>Multi-step Creation]
     BudgetDashboard --> BudgetChart[📈 BudgetProgressChart<br/>Visual Tracking]
     BudgetDashboard --> BudgetAlerts[🚨 BudgetAlerts<br/>Smart Notifications]
     BudgetDashboard --> CategoryCard[🏷️ BudgetCategoryCard<br/>Individual Display]
-    
+
     %% GraphQL Integration
     BudgetWizard --> BudgetMutations[🔄 Budget Mutations<br/>Create/Update/Delete]
     BudgetDashboard --> BudgetQueries[📋 Budget Queries<br/>Data Fetching]
-    
+
     BudgetMutations --> Hasura[⚡ Hasura GraphQL]
     BudgetQueries --> Hasura
     Hasura --> PostgreSQL[(🗄️ PostgreSQL<br/>Budget Tables)]
-    
+
     classDef component fill:#4caf50,stroke:#388e3c,color:#fff
     classDef route fill:#2196f3,stroke:#1976d2,color:#fff
     classDef data fill:#ff9800,stroke:#f57c00,color:#fff
-    
+
     class BudgetWizard,BudgetDashboard,BudgetAllocation,CategoryMgmt,BudgetChart,BudgetAlerts,CategoryCard component
     class BudgetPage route
     class BudgetMutations,BudgetQueries,Hasura,PostgreSQL data
@@ -123,36 +123,36 @@ graph TB
 ```mermaid
 graph TB
     User[👤 User] --> GoalPage[📄 Goals Page<br/>Route: /goals]
-    
+
     GoalPage --> GoalDashboard[📊 GoalDashboard<br/>Analytics & Overview]
     GoalDashboard --> GoalWizard[🪄 GoalCreationWizard<br/>Multi-type Creation]
     GoalDashboard --> GoalProgress[📈 GoalProgressCard<br/>Individual Display]
     GoalDashboard --> GoalMilestone[🎖️ GoalMilestoneTracker<br/>Progress Visualization]
     GoalDashboard --> GoalCelebration[🎉 GoalAchievementCelebration<br/>Success Rewards]
     GoalDashboard --> GoalAllocation[⚖️ GoalAllocationInterface<br/>Savings Integration]
-    
+
     %% Goal Templates & Utils
     GoalWizard --> GoalTemplates[📋 Goal Templates<br/>Smart Defaults]
     GoalDashboard --> GoalUtils[🔧 Goal Utils<br/>Calculations]
-    
+
     %% GraphQL Integration
     GoalWizard --> GoalMutations[🔄 Goal Mutations<br/>CRUD Operations]
     GoalDashboard --> GoalQueries[📋 Goal Queries<br/>Analytics Data]
     GoalDashboard --> GoalFragments[🧩 Goal Fragments<br/>Reusable Queries]
-    
+
     GoalMutations --> Hasura[⚡ Hasura GraphQL]
     GoalQueries --> Hasura
     GoalFragments --> Hasura
     Hasura --> PostgreSQL[(🗄️ PostgreSQL<br/>Goal Tables)]
-    
+
     %% Budget Integration
     GoalAllocation --> BudgetSystem[💰 Budget System<br/>Automatic Transfers]
-    
+
     classDef component fill:#4caf50,stroke:#388e3c,color:#fff
     classDef route fill:#2196f3,stroke:#1976d2,color:#fff
     classDef data fill:#ff9800,stroke:#f57c00,color:#fff
     classDef integration fill:#9c27b0,stroke:#7b1fa2,color:#fff
-    
+
     class GoalWizard,GoalDashboard,GoalProgress,GoalMilestone,GoalCelebration,GoalAllocation component
     class GoalPage route
     class GoalMutations,GoalQueries,GoalFragments,Hasura,PostgreSQL data
@@ -163,7 +163,7 @@ graph TB
 ```mermaid
 graph TB
     User[👤 User] --> PortfolioPage[📄 Portfolio Page<br/>Route: /portfolio]
-    
+
     PortfolioPage --> InvestmentDashboard[📊 InvestmentDashboard<br/>Professional Interface]
     InvestmentDashboard --> PortfolioOverview[📋 PortfolioOverviewCard<br/>High-level Metrics]
     InvestmentDashboard --> AssetAllocation[🥧 AssetAllocationChart<br/>Visual Breakdown]
@@ -172,29 +172,29 @@ graph TB
     InvestmentDashboard --> PortfolioRebalancer[⚖️ PortfolioRebalancer<br/>Optimization]
     InvestmentDashboard --> DividendTracker[💰 DividendTracker<br/>Income Tracking]
     InvestmentDashboard --> RiskAnalysis[🛡️ RiskAnalysisPanel<br/>Advanced Metrics]
-    
+
     %% GraphQL Integration
     InvestmentDashboard --> PortfolioQueries[📋 Portfolio Queries<br/>Data Fetching]
     PortfolioRebalancer --> PortfolioMutations[🔄 Portfolio Mutations<br/>Rebalancing Operations]
-    
+
     PortfolioQueries --> Hasura[⚡ Hasura GraphQL]
     PortfolioMutations --> Hasura
     Hasura --> PostgreSQL[(🗄️ PostgreSQL<br/>Investment Tables)]
-    
+
     %% Financial Engine Integration
     PerformanceChart --> RustFinancial[🦀 Rust Financial Engine<br/>Precise Calculations]
     RiskAnalysis --> RustFinancial
     PortfolioRebalancer --> RustFinancial
-    
+
     %% Market Data (Wave 2 Ready)
     PerformanceChart --> MarketData[📊 Market Data<br/>Real-time Feeds<br/><i>Wave 2</i>]
-    
+
     classDef component fill:#4caf50,stroke:#388e3c,color:#fff
     classDef route fill:#2196f3,stroke:#1976d2,color:#fff
     classDef data fill:#ff9800,stroke:#f57c00,color:#fff
     classDef engine fill:#795548,stroke:#5d4037,color:#fff
     classDef wave2Ready fill:#ff9800,stroke:#f57c00,color:#fff
-    
+
     class PortfolioOverview,AssetAllocation,HoldingCard,PerformanceChart,PortfolioRebalancer,DividendTracker,RiskAnalysis,InvestmentDashboard component
     class PortfolioPage route
     class PortfolioQueries,PortfolioMutations,Hasura,PostgreSQL data
@@ -206,7 +206,7 @@ graph TB
 ```mermaid
 graph TB
     User[👤 User] --> DebtPage[📄 Debt Page<br/>Route: /debt]
-    
+
     DebtPage --> DebtDashboard[📊 DebtDashboard<br/>Strategy Interface]
     DebtDashboard --> DebtOverview[📋 DebtOverviewCard<br/>High-level Metrics]
     DebtDashboard --> DebtStrategy[🎯 DebtStrategySelector<br/>Avalanche/Snowball]
@@ -215,29 +215,29 @@ graph TB
     DebtDashboard --> DebtCard[🏷️ DebtCard<br/>Individual Debts]
     DebtDashboard --> PaymentOptimizer[⚖️ PaymentAllocationOptimizer<br/>Optimal Distribution]
     DebtDashboard --> ConsolidationAnalyzer[🔄 DebtConsolidationAnalyzer<br/>Consolidation Options]
-    
+
     %% Custom Hook Integration
     DebtDashboard --> DebtHook[🪝 useDebtManagement<br/>State Management]
-    
+
     %% GraphQL Integration
     DebtHook --> DebtQueries[📋 Debt Queries<br/>Data Fetching]
     PaymentOptimizer --> DebtMutations[🔄 Debt Mutations<br/>Payment Operations]
-    
+
     DebtQueries --> Hasura[⚡ Hasura GraphQL]
     DebtMutations --> Hasura
     Hasura --> PostgreSQL[(🗄️ PostgreSQL<br/>Debt Tables)]
-    
+
     %% Financial Engine Integration
     DebtCalculator --> RustFinancial[🦀 Rust Financial Engine<br/>Interest Calculations]
     PaymentOptimizer --> RustFinancial
     ConsolidationAnalyzer --> RustFinancial
-    
+
     classDef component fill:#4caf50,stroke:#388e3c,color:#fff
     classDef route fill:#2196f3,stroke:#1976d2,color:#fff
     classDef data fill:#ff9800,stroke:#f57c00,color:#fff
     classDef engine fill:#795548,stroke:#5d4037,color:#fff
     classDef hook fill:#9c27b0,stroke:#7b1fa2,color:#fff
-    
+
     class DebtOverview,DebtStrategy,DebtCalculator,DebtProgress,DebtCard,PaymentOptimizer,ConsolidationAnalyzer,DebtDashboard component
     class DebtPage route
     class DebtQueries,DebtMutations,Hasura,PostgreSQL data
@@ -249,7 +249,7 @@ graph TB
 ```mermaid
 graph TB
     User[👤 User] --> AccountsPage[📄 Accounts Page<br/>Route: /accounts]
-    
+
     AccountsPage --> BankWizard[🪄 BankConnectionWizard<br/>6-step Secure Flow]
     BankWizard --> MethodSelector[🔀 ConnectionMethodSelector<br/>Multi-method Support]
     BankWizard --> PlaidConnector[🔗 PlaidConnector<br/>11,000+ Institutions]
@@ -257,30 +257,30 @@ graph TB
     BankWizard --> FileImport[📄 FileImportHandler<br/>CSV/OFX/QIF]
     BankWizard --> AccountVerification[✅ AccountVerificationStep<br/>6-stage Security]
     BankWizard --> SecurityEducation[🛡️ SecurityEducationPanel<br/>User Education]
-    
+
     AccountsPage --> AccountCard[🏷️ ConnectedAccountCard<br/>Account Management]
     AccountsPage --> StatusMonitor[📊 ConnectionStatusMonitor<br/>Health Monitoring]
     AccountsPage --> Troubleshooting[🔧 TroubleshootingHelper<br/>Issue Resolution]
-    
+
     %% Security Features
     PlaidConnector --> OAuth[🔐 OAuth 2.0<br/>Bank-grade Security]
     ManualSetup --> Encryption[🔒 256-bit Encryption<br/>Zero Storage]
-    
+
     %% External Integration
     PlaidConnector --> PlaidAPI[🏦 Plaid API<br/>Institution Connection]
     FileImport --> DataProcessor[⚙️ Data Processing<br/>Parse & Validate]
-    
+
     %% Database Integration
     AccountVerification --> Hasura[⚡ Hasura GraphQL]
     StatusMonitor --> Hasura
     Hasura --> PostgreSQL[(🗄️ PostgreSQL<br/>Account Tables)]
-    
+
     classDef component fill:#4caf50,stroke:#388e3c,color:#fff
     classDef route fill:#2196f3,stroke:#1976d2,color:#fff
     classDef security fill:#f44336,stroke:#d32f2f,color:#fff
     classDef external fill:#607d8b,stroke:#455a64,color:#fff
     classDef data fill:#ff9800,stroke:#f57c00,color:#fff
-    
+
     class BankWizard,MethodSelector,PlaidConnector,ManualSetup,FileImport,AccountVerification,SecurityEducation,AccountCard,StatusMonitor,Troubleshooting component
     class AccountsPage route
     class OAuth,Encryption security
@@ -308,17 +308,17 @@ graph TB
         Accessibility[♿ WCAG 2.1 AA<br/>100% Compliance<br/>✅ Verified]
         Security[🛡️ Bank Security<br/>256-bit Encryption<br/>✅ Implemented]
     end
-    
+
     subgraph "User Experience"
         DarkMode[🌙 Dark Mode<br/>Professional UI<br/>✅ Complete]
         PWA[📲 PWA Ready<br/>Native-like<br/>✅ Enabled]
         TypeSafety[🔒 Type Safety<br/>Full TypeScript<br/>✅ Comprehensive]
         Testing[🧪 Testing<br/>Component Tests<br/>✅ Validated]
     end
-    
+
     classDef excellent fill:#4caf50,stroke:#388e3c,color:#fff
     classDef complete fill:#2196f3,stroke:#1976d2,color:#fff
-    
+
     class LoadTime,Responsive,Accessibility,Security excellent
     class DarkMode,PWA,TypeSafety,Testing complete
 ```
@@ -334,7 +334,7 @@ sequenceDiagram
     participant H as Hasura
     participant R as Rust Engine
     participant P as PostgreSQL
-    
+
     %% Authentication Flow
     U->>W: Access Atlas Financial
     W->>A: Authenticate User
@@ -344,7 +344,7 @@ sequenceDiagram
     P->>H: Financial Data
     H->>W: Structured Response
     W->>U: Dashboard Display
-    
+
     %% Feature System Interactions
     U->>W: Create Budget
     W->>H: Budget Mutation
@@ -353,7 +353,7 @@ sequenceDiagram
     R->>H: Precise Results
     H->>W: Updated Budget
     W->>U: Success Confirmation
-    
+
     %% Goal Tracking Flow
     U->>W: Set Financial Goal
     W->>H: Goal Creation
@@ -362,7 +362,7 @@ sequenceDiagram
     R->>H: Projection Data
     H->>W: Goal Progress
     W->>U: Visual Tracking
-    
+
     %% Investment Analysis Flow
     U->>W: Portfolio Analysis
     W->>H: Investment Query
@@ -371,7 +371,7 @@ sequenceDiagram
     R->>H: Analytics Results
     H->>W: Professional Charts
     W->>U: Investment Insights
-    
+
     %% Debt Management Flow
     U->>W: Debt Payoff Plan
     W->>H: Debt Strategy Query
@@ -380,7 +380,7 @@ sequenceDiagram
     R->>H: Payoff Strategy
     H->>W: Debt Timeline
     W->>U: Payoff Plan
-    
+
     %% Bank Connection Flow
     U->>W: Connect Bank Account
     W->>W: Security Wizard
@@ -400,37 +400,37 @@ graph TB
         CSP[🛡️ Content Security Policy<br/>XSS Protection]
         CORS[🌐 CORS<br/>Origin Validation]
     end
-    
+
     subgraph "Authentication Security Layer"
         JWT[🎫 JWT Tokens<br/>RS256 Signing]
         Session[📱 Session Management<br/>HttpOnly Cookies]
         MFA[🔐 MFA Ready<br/>Wave 2 Feature]
     end
-    
+
     subgraph "API Security Layer"
         RateLimit[⏱️ Rate Limiting<br/>Query Complexity]
         Allowlist[📋 GraphQL Allowlist<br/>Whitelisted Operations]
         RLS[🔐 Row Level Security<br/>User Isolation]
     end
-    
+
     subgraph "Data Security Layer"
         Encryption[🔒 AES-256<br/>Data at Rest]
         PII[🛡️ PII Protection<br/>Field Encryption]
         Backup[💾 Encrypted Backups<br/>Point-in-time Recovery]
     end
-    
+
     subgraph "Infrastructure Security Layer"
         Network[🌐 Network Isolation<br/>Docker Security]
         Secrets[🔑 Secret Management<br/>_FILE Variables]
         Audit[📊 Audit Logging<br/>Complete Trail]
     end
-    
+
     classDef security fill:#f44336,stroke:#d32f2f,color:#fff
     classDef auth fill:#ff9800,stroke:#f57c00,color:#fff
     classDef api fill:#2196f3,stroke:#1976d2,color:#fff
     classDef data fill:#4caf50,stroke:#388e3c,color:#fff
     classDef infra fill:#9c27b0,stroke:#7b1fa2,color:#fff
-    
+
     class HTTPS,CSP,CORS security
     class JWT,Session,MFA auth
     class RateLimit,Allowlist,RLS api
@@ -447,18 +447,18 @@ graph TB
         Budget[💰 Budget System] --> Goals[🎯 Goals<br/>Automated Savings]
         Budget --> Debt[💳 Debt<br/>Payment Allocation]
     end
-    
+
     subgraph "Investment System Integration"
         Investment[📈 Investment] --> RustEngine[🦀 Rust Engine<br/>Risk Calculations]
         Investment --> Goals[🎯 Goals<br/>Investment Targets]
     end
-    
+
     subgraph "Banking System Integration"
         Banking[🏦 Banking] --> Budget[💰 Budget<br/>Transaction Import]
         Banking --> Investment[📈 Investment<br/>Account Linking]
         Banking --> Debt[💳 Debt<br/>Payment Tracking]
     end
-    
+
     subgraph "Data Layer Integration"
         RustEngine --> Hasura[⚡ Hasura<br/>GraphQL Gateway]
         Goals --> Hasura
@@ -468,11 +468,11 @@ graph TB
         Banking --> Hasura
         Hasura --> PostgreSQL[(🗄️ PostgreSQL<br/>Unified Database)]
     end
-    
+
     classDef system fill:#4caf50,stroke:#388e3c,color:#fff
     classDef integration fill:#ff9800,stroke:#f57c00,color:#fff
     classDef data fill:#2196f3,stroke:#1976d2,color:#fff
-    
+
     class Budget,Goals,Investment,Debt,Banking system
     class RustEngine integration
     class Hasura,PostgreSQL data
@@ -490,14 +490,14 @@ graph TB
         DebtData[💳 Debt Data<br/>Payment History]
         BankingData[🏦 Banking Data<br/>Transaction History]
     end
-    
+
     subgraph "AI Engine Integration (Ready)"
         MLPipeline[🤖 ML Pipeline<br/>Pattern Recognition]
         Insights[💡 AI Insights<br/>Personalized Recommendations]
         Predictions[🔮 Predictions<br/>Financial Forecasting]
         Automation[⚙️ Automation<br/>Smart Actions]
     end
-    
+
     subgraph "Wave 2 Features (Planned)"
         SmartBudget[🧠 Smart Budgeting<br/>AI-powered Allocation]
         GoalOptimization[🎯 Goal Optimization<br/>ML-driven Strategies]
@@ -505,27 +505,27 @@ graph TB
         DebtAI[💳 Debt AI<br/>Optimal Payoff Plans]
         RealTimeData[📊 Real-time Data<br/>Live Market Feeds]
     end
-    
+
     BudgetData --> MLPipeline
     GoalData --> MLPipeline
     InvestmentData --> MLPipeline
     DebtData --> MLPipeline
     BankingData --> MLPipeline
-    
+
     MLPipeline --> Insights
     MLPipeline --> Predictions
     MLPipeline --> Automation
-    
+
     Insights --> SmartBudget
     Insights --> GoalOptimization
     Insights --> PortfolioAI
     Insights --> DebtAI
     Automation --> RealTimeData
-    
+
     classDef complete fill:#4caf50,stroke:#388e3c,color:#fff
     classDef ready fill:#ff9800,stroke:#f57c00,color:#fff
     classDef planned fill:#9e9e9e,stroke:#616161,color:#fff
-    
+
     class BudgetData,GoalData,InvestmentData,DebtData,BankingData complete
     class MLPipeline,Insights,Predictions,Automation ready
     class SmartBudget,GoalOptimization,PortfolioAI,DebtAI,RealTimeData planned
@@ -555,20 +555,20 @@ graph LR
         Mobile1[📱 Mobile Performance<br/>✅ Touch Optimized]
         Cache1[📦 Smart Caching<br/>✅ Redis + Apollo]
     end
-    
+
     subgraph "Wave 2 Performance (Ready)"
         Load2[⚡ <200ms Load Times<br/>🔄 Real-time Updates]
         Mobile2[📱 Native Performance<br/>🔄 PWA Enhanced]
         Cache2[📦 Intelligent Caching<br/>🔄 ML-powered]
     end
-    
+
     Load1 --> Load2
     Mobile1 --> Mobile2
     Cache1 --> Cache2
-    
+
     classDef achieved fill:#4caf50,stroke:#388e3c,color:#fff
     classDef ready fill:#ff9800,stroke:#f57c00,color:#fff
-    
+
     class Load1,Mobile1,Cache1 achieved
     class Load2,Mobile2,Cache2 ready
 ```

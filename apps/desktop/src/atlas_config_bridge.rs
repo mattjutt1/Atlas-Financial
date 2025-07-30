@@ -18,15 +18,15 @@ impl AtlasConfigBridge {
     /// Create new configuration bridge
     pub fn new(service_name: &str) -> Result<Self, FinancialError> {
         let environment = get_environment();
-        
+
         let bridge = Self {
             service_name: service_name.to_string(),
             environment,
         };
-        
+
         // Validate configuration for architectural compliance
         bridge.validate_configuration()?;
-        
+
         Ok(bridge)
     }
 
@@ -58,7 +58,7 @@ impl AtlasConfigBridge {
     /// Get monitoring configuration using atlas-shared patterns
     pub fn get_monitoring_config(&self) -> MonitoringConfig {
         let is_production = self.environment == "production";
-        
+
         MonitoringConfig {
             enabled: get_boolean_env("MONITORING_ENABLED", is_production),
             level: get_optional_env("LOG_LEVEL", if is_production { "info" } else { "debug" }),
@@ -80,7 +80,7 @@ impl AtlasConfigBridge {
     /// Get feature flags using atlas-shared patterns
     pub fn get_feature_flags(&self) -> FeatureFlags {
         let is_development = self.environment == "development";
-        
+
         FeatureFlags {
             enable_ai_insights: get_boolean_env("FEATURE_AI_INSIGHTS", true),
             enable_real_time_data: get_boolean_env("FEATURE_REAL_TIME_DATA", false),
@@ -353,9 +353,9 @@ static ATLAS_CONFIG: OnceLock<Arc<Mutex<Option<AtlasConfigBridge>>>> = OnceLock:
 /// Get or create atlas configuration bridge
 pub fn get_atlas_config(service_name: &str) -> Result<AtlasConfigBridge, FinancialError> {
     let config_container = ATLAS_CONFIG.get_or_init(|| Arc::new(Mutex::new(None)));
-    
+
     let mut config_guard = config_container.lock().unwrap();
-    
+
     if config_guard.is_none() {
         let bridge = AtlasConfigBridge::new(service_name)?;
         *config_guard = Some(bridge.clone());
@@ -394,7 +394,7 @@ mod tests {
     fn test_api_config() {
         let bridge = AtlasConfigBridge::new("test-service").expect("Should create config bridge");
         let api_config = bridge.get_api_config();
-        
+
         assert!(!api_config.atlas_core_url.is_empty());
         assert!(!api_config.atlas_api_gateway_url.is_empty());
         assert!(api_config.timeout_seconds > 0);
@@ -405,7 +405,7 @@ mod tests {
     fn test_architectural_compliance() {
         let bridge = AtlasConfigBridge::new("test-service").expect("Should create config bridge");
         let consolidated = bridge.get_consolidated_config();
-        
+
         assert_eq!(consolidated.architectural_compliance.service_boundaries, "api-gateway");
         assert_eq!(consolidated.architectural_compliance.authentication, "supertokens");
         assert!(!consolidated.architectural_compliance.direct_db_access);
@@ -416,7 +416,7 @@ mod tests {
     fn test_feature_flags() {
         let bridge = AtlasConfigBridge::new("test-service").expect("Should create config bridge");
         let features = bridge.get_feature_flags();
-        
+
         // Should have reasonable defaults
         assert!(features.enable_ai_insights);
         assert!(features.enable_metrics);

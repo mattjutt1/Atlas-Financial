@@ -51,7 +51,7 @@ impl FinancialAmount {
         // Create Money instance through Financial Engine
         let money = Money::new(amount, currency_enum)?;
 
-        Ok(Self { 
+        Ok(Self {
             money,
             amount,
             currency,
@@ -94,7 +94,7 @@ impl FinancialAmount {
     /// Add two amounts using Rust Financial Engine
     pub fn add(&self, other: &FinancialAmount) -> Result<FinancialAmount, FinancialError> {
         let result_money = self.money.add(&other.money)?;
-        
+
         Ok(FinancialAmount {
             money: result_money,
             amount: result_money.amount(),
@@ -105,7 +105,7 @@ impl FinancialAmount {
     /// Subtract two amounts using Rust Financial Engine
     pub fn subtract(&self, other: &FinancialAmount) -> Result<FinancialAmount, FinancialError> {
         let result_money = self.money.subtract(&other.money)?;
-        
+
         Ok(FinancialAmount {
             money: result_money,
             amount: result_money.amount(),
@@ -116,7 +116,7 @@ impl FinancialAmount {
     /// Multiply by a decimal factor using Rust Financial Engine
     pub fn multiply(&self, factor: Decimal) -> Result<FinancialAmount, FinancialError> {
         let result_money = self.money.multiply(factor)?;
-        
+
         Ok(FinancialAmount {
             money: result_money,
             amount: result_money.amount(),
@@ -127,7 +127,7 @@ impl FinancialAmount {
     /// Divide by a decimal divisor using Rust Financial Engine
     pub fn divide(&self, divisor: Decimal) -> Result<FinancialAmount, FinancialError> {
         let result_money = self.money.divide(divisor)?;
-        
+
         Ok(FinancialAmount {
             money: result_money,
             amount: result_money.amount(),

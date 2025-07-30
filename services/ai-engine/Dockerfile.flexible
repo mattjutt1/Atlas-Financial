@@ -1,0 +1,95 @@
+# Atlas Financial AI Engine - Flexible Multi-Agent Architecture
+# Supports both monolithic and multi-agent deployment modes
+
+FROM python:3.11-slim as base
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    POETRY_VERSION=1.7.1
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    curl \
+    git \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Poetry
+RUN pip install poetry==$POETRY_VERSION
+
+# Copy dependency files
+COPY pyproject.toml poetry.lock ./
+
+# Configure Poetry
+RUN poetry config virtualenvs.create false
+
+# Development stage
+FROM base as development
+
+# Install all dependencies including dev dependencies
+RUN poetry install --no-interaction --no-ansi
+
+# Copy application code
+COPY . .
+
+# Set development environment
+ENV ENVIRONMENT=development
+
+# Expose ports
+EXPOSE 8083 9090
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8083/health || exit 1
+
+# Run development server with hot reload
+CMD ["python", "-m", "uvicorn", "main_flexible:app", "--host", "0.0.0.0", "--port", "8083", "--reload"]
+
+# Production stage
+FROM base as production
+
+# Install only production dependencies
+RUN poetry install --no-interaction --no-ansi --only=main
+
+# Create non-root user
+RUN groupadd -r atlas && useradd -r -g atlas atlas
+
+# Copy application code
+COPY --chown=atlas:atlas . .
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/cache /app/models && \
+    chown -R atlas:atlas /app
+
+# Set production environment
+ENV ENVIRONMENT=production
+
+# Switch to non-root user
+USER atlas
+
+# Expose ports
+EXPOSE 8083 9090
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8083/health || exit 1
+
+# Production command
+CMD ["python", "-m", "gunicorn", "main_flexible:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8083", "--timeout", "30", "--keep-alive", "5", "--max-requests", "1000", "--max-requests-jitter", "50", "--preload"]
+
+# Multi-stage build optimization
+FROM production as final
+
+# Copy startup script
+COPY --chown=atlas:atlas scripts/startup.sh /app/startup.sh
+RUN chmod +x /app/startup.sh
+
+# Final startup command with initialization
+CMD ["/app/startup.sh"]

@@ -7,11 +7,14 @@ import os
 import logging
 from contextlib import asynccontextmanager
 from typing import Dict, Any, List
+import time
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel, ValidationError
 import structlog
+import jwt
 
 from src.config import settings
 from src.ai.insights_generator import InsightsGenerator
@@ -19,6 +22,10 @@ from src.data.hasura_client import HasuraClient
 from src.models.insights import InsightRequest, InsightResponse, HealthResponse
 from src.financial.calculations import FinancialCalculations
 from src.financial.precision_client import FinancialAmount
+from src.middleware.input_validation import (
+    input_validator, rate_limiter, anomaly_detector, 
+    SecureInsightRequest, ValidationResult
+)
 
 # Configure structured logging
 structlog.configure(
@@ -93,14 +100,86 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Add CORS middleware
+# Security configuration
+security = HTTPBearer(auto_error=False)
+
+# Add CORS middleware - HARDENED
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:8081"],  # Frontend and Hasura
+    allow_origins=settings.cors_origins,  # Use configurable origins
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],  # Restricted methods
+    allow_headers=["Authorization", "Content-Type"],  # Restricted headers
 )
+
+# Authentication dependency
+async def verify_jwt_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+    """Verify JWT token and return user ID"""
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    try:
+        if not settings.jwt_secret_key:
+            raise HTTPException(status_code=500, detail="JWT secret not configured")
+        
+        payload = jwt.decode(
+            credentials.credentials, 
+            settings.jwt_secret_key, 
+            algorithms=["HS256", "RS256"]
+        )
+        
+        # Verify token expiration
+        if 'exp' in payload and payload['exp'] < time.time():
+            raise HTTPException(status_code=401, detail="Token expired")
+        
+        user_id = payload.get('sub') or payload.get('user_id')
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+        
+        return user_id
+        
+    except jwt.InvalidTokenError as e:
+        logger.warning("Invalid JWT token", error=str(e))
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+# Input validation middleware
+async def validate_request_middleware(request: Request) -> ValidationResult:
+    """Validate all incoming requests for security threats"""
+    validation_result = await input_validator.validate_request(request)
+    
+    if not validation_result.is_valid:
+        logger.warning(
+            "Request validation failed",
+            violations=validation_result.violations,
+            risk_score=validation_result.risk_score,
+            client_ip=request.client.host
+        )
+        
+        # Block high-risk requests immediately
+        if validation_result.risk_score >= 0.8:
+            raise HTTPException(
+                status_code=400, 
+                detail="Request blocked: High security risk detected"
+            )
+        
+        # Log medium-risk requests but allow with warning
+        if validation_result.risk_score >= 0.5:
+            logger.warning("Medium-risk request allowed", violations=validation_result.violations)
+    
+    return validation_result
+
+# Rate limiting middleware
+async def rate_limit_middleware(request: Request, user_id: str = None) -> None:
+    """Rate limiting based on IP and user ID"""
+    client_ip = request.client.host
+    identifier = user_id or client_ip
+    
+    if not rate_limiter.is_allowed(identifier):
+        logger.warning("Rate limit exceeded", identifier=identifier, client_ip=client_ip)
+        raise HTTPException(
+            status_code=429, 
+            detail="Rate limit exceeded. Try again later."
+        )
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
@@ -128,23 +207,65 @@ async def health_check():
 
 @app.post("/insights/generate", response_model=InsightResponse)
 async def generate_insights(
-    request: InsightRequest,
-    background_tasks: BackgroundTasks
+    http_request: Request,
+    background_tasks: BackgroundTasks,
+    user_id: str = Depends(verify_jwt_token)
 ) -> InsightResponse:
-    """Generate financial insights for a user"""
-    logger.info("Generating insights", user_id=request.user_id, insight_type=request.insight_type)
-
+    """Generate financial insights for a user - SECURED"""
+    
+    # Apply security middleware
+    await rate_limit_middleware(http_request, user_id)
+    validation_result = await validate_request_middleware(http_request)
+    
     try:
-        # Generate insights using AI engine
-        insights = await insights_generator.generate_insights(request)
+        # Parse and validate request body
+        body = await http_request.body()
+        if not body:
+            raise HTTPException(status_code=400, detail="Request body required")
+        
+        import json
+        request_data = json.loads(body)
+        
+        # Validate with secure schema
+        try:
+            secure_request = SecureInsightRequest(**request_data)
+        except ValidationError as e:
+            logger.warning("Request validation failed", user_id=user_id, errors=e.errors())
+            raise HTTPException(status_code=400, detail="Invalid request format")
+        
+        # Verify user_id matches token
+        if secure_request.user_id != user_id:
+            logger.warning("User ID mismatch", token_user=user_id, request_user=secure_request.user_id)
+            raise HTTPException(status_code=403, detail="User ID mismatch")
+        
+        # Anomaly detection
+        anomaly_score = anomaly_detector.analyze_request(user_id, request_data)
+        if anomaly_score > 0.8:
+            logger.warning("High anomaly score detected", user_id=user_id, score=anomaly_score)
+            raise HTTPException(status_code=400, detail="Suspicious request pattern detected")
+        
+        logger.info("Generating insights", user_id=user_id, insight_type=secure_request.insight_type)
+        
+        # Use sanitized data from validation
+        sanitized_request = InsightRequest(
+            user_id=secure_request.user_id,
+            insight_type=secure_request.insight_type,
+            context=validation_result.sanitized_data.get('context'),
+            parameters=validation_result.sanitized_data.get('parameters')
+        )
+        
+        # Generate insights using AI engine with sanitized data
+        insights = await insights_generator.generate_insights(sanitized_request)
 
         # Store insights back to database in background
-        background_tasks.add_task(store_insights, request.user_id, insights)
+        background_tasks.add_task(store_insights, user_id, insights)
 
         return insights
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error("Failed to generate insights", user_id=request.user_id, error=str(e))
+        logger.error("Failed to generate insights", user_id=user_id, error=str(e))
         raise HTTPException(status_code=500, detail="Failed to generate insights")
 
 @app.post("/insights/budget-check")
@@ -155,7 +276,7 @@ async def budget_check(user_id: str) -> Dict[str, Any]:
     try:
         # Get user's financial data
         financial_data = await hasura_client.get_user_financial_data(user_id)
-        
+
         # Extract monthly income with precision validation
         monthly_income = FinancialAmount(str(financial_data.get("monthly_income", "0")))
 
@@ -172,7 +293,7 @@ async def budget_check(user_id: str) -> Dict[str, Any]:
             },
             "percentages": {
                 "needs": "75%",
-                "wants": "15%", 
+                "wants": "15%",
                 "savings": "10%"
             },
             "precision": "DECIMAL(19,4)",
@@ -191,10 +312,10 @@ async def debt_snowball_analysis(user_id: str, extra_payment: float = 0.0) -> Di
     try:
         from src.financial.calculations import DebtInfo
         from decimal import Decimal
-        
+
         # Get user's debt data
         debt_data = await hasura_client.get_user_debt_data(user_id)
-        
+
         # Convert to DebtInfo objects with precision validation
         debts = []
         for debt in debt_data.get("debts", []):
@@ -205,7 +326,7 @@ async def debt_snowball_analysis(user_id: str, extra_payment: float = 0.0) -> Di
                 interest_rate=Decimal(str(debt["interest_rate"]))
             )
             debts.append(debt_info)
-        
+
         # Extra payment amount
         extra_payment_amount = FinancialAmount(str(extra_payment))
 
@@ -238,20 +359,20 @@ async def portfolio_analysis(user_id: str) -> Dict[str, Any]:
     try:
         # Get user's investment and asset data
         portfolio_data = await hasura_client.get_user_portfolio_data(user_id)
-        
+
         # Extract assets and liabilities with precision validation
         assets = []
         liabilities = []
-        
+
         for asset in portfolio_data.get("assets", []):
             assets.append(FinancialAmount(str(asset["value"])))
-        
+
         for liability in portfolio_data.get("liabilities", []):
             liabilities.append(FinancialAmount(str(liability["balance"])))
-        
+
         # Calculate net worth using Rust Financial Engine
         net_worth = await financial_calculations.calculate_net_worth(assets, liabilities)
-        
+
         # Calculate emergency fund target
         monthly_expenses = FinancialAmount(str(portfolio_data.get("monthly_expenses", "0")))
         emergency_fund_target = await financial_calculations.calculate_emergency_fund_target(monthly_expenses)

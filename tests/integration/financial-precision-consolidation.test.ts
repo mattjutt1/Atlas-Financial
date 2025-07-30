@@ -1,7 +1,7 @@
 /**
  * Financial Precision Consolidation Test Suite
  * Phase 2.4: Validates single source of truth across all Atlas Financial services
- * 
+ *
  * SUCCESS CRITERIA:
  * - All services use same precision implementation
  * - Zero IEEE 754 errors across all calculations
@@ -27,7 +27,7 @@ describe('Financial Precision Consolidation - Phase 2.4', () => {
   describe('Single Source of Truth Validation', () => {
     it('should use Rust Financial Engine as primary calculation service', async () => {
       const response = await axios.get(`${RUST_ENGINE_URL}/api/v1/financial/health`);
-      
+
       expect(response.status).toBe(200);
       expect(response.data.status).toBe('healthy');
       expect(response.data.precision).toBe('DECIMAL(19,4)');
@@ -38,17 +38,17 @@ describe('Financial Precision Consolidation - Phase 2.4', () => {
     it('should have consistent precision across all services', async () => {
       const testAmount = '1234.5678';
       const testCurrency = 'USD';
-      
+
       // Test shared library (TypeScript)
       const sharedAmount = new FinancialAmount(testAmount);
       expect(sharedAmount.toString()).toBe('1234.5678');
-      
+
       // Test Rust engine validation
       const rustValidation = await axios.post(`${RUST_ENGINE_URL}/api/v1/validate`, {
         amount: testAmount,
         currency: testCurrency
       });
-      
+
       expect(rustValidation.data.is_valid).toBe(true);
       expect(rustValidation.data.precision_check).toBe(true);
       expect(rustValidation.data.errors).toHaveLength(0);
@@ -60,22 +60,22 @@ describe('Financial Precision Consolidation - Phase 2.4', () => {
         { amount: '100.25', currency: 'USD' },
         { amount: '50.75', currency: 'USD' }
       ];
-      
+
       // Test Rust engine calculation
       const rustResult = await axios.post(`${RUST_ENGINE_URL}/api/v1/calculate`, {
         operation: 'add',
         operands: operands
       });
-      
+
       expect(rustResult.data.amount).toBe('151.00');
       expect(rustResult.data.precision).toBe('DECIMAL(19,4)');
       expect(rustResult.data.engine).toBe('atlas-rust-financial-core');
-      
+
       // Test shared library calculation
       const amount1 = new FinancialAmount('100.25');
       const amount2 = new FinancialAmount('50.75');
       const sharedResult = amount1.add(amount2);
-      
+
       expect(sharedResult.toString()).toBe('151.0000');
       expect(rustResult.data.amount).toBe(sharedResult.toString().substring(0, 6)); // Compare first 6 chars
     });
@@ -90,7 +90,7 @@ describe('Financial Precision Consolidation - Phase 2.4', () => {
         { a: '1.005', b: '2.005', expected: '3.0100' },
         { a: '999999999999999.9999', b: '0.0001', expected: '1000000000000000.0000' }
       ];
-      
+
       for (const testCase of testCases) {
         // Test Rust engine
         const rustResult = await axios.post(`${RUST_ENGINE_URL}/api/v1/calculate`, {
@@ -100,14 +100,14 @@ describe('Financial Precision Consolidation - Phase 2.4', () => {
             { amount: testCase.b, currency: 'USD' }
           ]
         });
-        
+
         expect(rustResult.data.amount).toBe(testCase.expected);
-        
+
         // Test shared library
         const amount1 = new FinancialAmount(testCase.a);
         const amount2 = new FinancialAmount(testCase.b);
         const result = amount1.add(amount2);
-        
+
         expect(result.toString()).toBe(testCase.expected);
       }
     });
@@ -118,7 +118,7 @@ describe('Financial Precision Consolidation - Phase 2.4', () => {
         { amount: '1.005', factor: '100', expected: '100.5000' },
         { amount: '99999999999999.9999', factor: '1.0001', expected: '100009999999999.9999' }
       ];
-      
+
       for (const testCase of testCases) {
         // Test Rust engine
         const rustResult = await axios.post(`${RUST_ENGINE_URL}/api/v1/calculate`, {
@@ -126,13 +126,13 @@ describe('Financial Precision Consolidation - Phase 2.4', () => {
           operands: [{ amount: testCase.amount, currency: 'USD' }],
           factor: testCase.factor
         });
-        
+
         expect(rustResult.data.amount).toBe(testCase.expected);
-        
+
         // Test shared library
         const amount = new FinancialAmount(testCase.amount);
         const result = amount.multiply(testCase.factor);
-        
+
         expect(result.toString()).toBe(testCase.expected);
       }
     });
@@ -144,15 +144,15 @@ describe('Financial Precision Consolidation - Phase 2.4', () => {
         { amount: '123.12345', valid: false }, // Too many decimal places
         { amount: '123.1234', valid: true }
       ];
-      
+
       for (const testCase of testCases) {
         const validation = await axios.post(`${RUST_ENGINE_URL}/api/v1/validate`, {
           amount: testCase.amount,
           currency: 'USD'
         });
-        
+
         expect(validation.data.is_valid).toBe(testCase.valid);
-        
+
         // Test shared library validation
         if (testCase.valid) {
           expect(() => new FinancialAmount(testCase.amount)).not.toThrow();
@@ -167,14 +167,14 @@ describe('Financial Precision Consolidation - Phase 2.4', () => {
     it('should integrate with AI Engine financial calculations', async () => {
       // Mock user data for budget check
       const mockUserId = 'test-user-123';
-      
+
       try {
         // Test AI engine budget calculation
-        const budgetResult = await axios.post(`${AI_ENGINE_URL}/insights/budget-check`, 
+        const budgetResult = await axios.post(`${AI_ENGINE_URL}/insights/budget-check`,
           mockUserId,
           { headers: { 'Content-Type': 'application/json' } }
         );
-        
+
         if (budgetResult.status === 200) {
           expect(budgetResult.data.precision).toBe('DECIMAL(19,4)');
           expect(budgetResult.data.engine).toBe('rust-financial-engine');
@@ -195,19 +195,19 @@ describe('Financial Precision Consolidation - Phase 2.4', () => {
         { name: 'Credit Card 2', balance: '1800.00', minimum_payment: '35.00', interest_rate: '22.0' },
         { name: 'Car Loan', balance: '15000.00', minimum_payment: '350.00', interest_rate: '5.5' }
       ];
-      
+
       try {
         const snowballResult = await axios.post(`${AI_ENGINE_URL}/insights/debt-snowball`, {
           user_id: 'test-user-123',
           extra_payment: 200.00
         });
-        
+
         if (snowballResult.status === 200) {
           expect(snowballResult.data.precision).toBe('DECIMAL(19,4)');
           expect(snowballResult.data.engine).toBe('rust-financial-engine');
           expect(snowballResult.data.method).toBe('debt_snowball');
           expect(snowballResult.data.debts).toBeInstanceOf(Array);
-          
+
           // Verify precision in debt calculations
           snowballResult.data.debts.forEach(debt => {
             expect(debt.balance).toMatch(/^\d+(\.\d{1,4})?$/);
@@ -228,9 +228,9 @@ describe('Financial Precision Consolidation - Phase 2.4', () => {
         compounds_per_year: 12,
         years: 10
       };
-      
+
       const result = await axios.post(`${RUST_ENGINE_URL}/api/v1/calculate`, compoundInterestTest);
-      
+
       expect(result.status).toBe(200);
       expect(result.data.amount).toMatch(/^\d+\.\d{4}$/);
       expect(parseFloat(result.data.amount)).toBeGreaterThan(10000);
@@ -245,9 +245,9 @@ describe('Financial Precision Consolidation - Phase 2.4', () => {
         annual_rate: '4.5',
         term_months: 360
       };
-      
+
       const result = await axios.post(`${RUST_ENGINE_URL}/api/v1/calculate`, loanPaymentTest);
-      
+
       expect(result.status).toBe(200);
       expect(result.data.amount).toMatch(/^\d+\.\d{4}$/);
       expect(parseFloat(result.data.amount)).toBeGreaterThan(1000);
@@ -259,9 +259,9 @@ describe('Financial Precision Consolidation - Phase 2.4', () => {
   describe('Performance and Reliability', () => {
     it('should maintain performance targets for calculations', async () => {
       const startTime = Date.now();
-      
+
       // Perform 100 calculations to test performance
-      const promises = Array.from({ length: 100 }, (_, i) => 
+      const promises = Array.from({ length: 100 }, (_, i) =>
         axios.post(`${RUST_ENGINE_URL}/api/v1/calculate`, {
           operation: 'add',
           operands: [
@@ -270,17 +270,17 @@ describe('Financial Precision Consolidation - Phase 2.4', () => {
           ]
         })
       );
-      
+
       const results = await Promise.all(promises);
       const endTime = Date.now();
       const duration = endTime - startTime;
-      
+
       // All calculations should succeed
       results.forEach(result => {
         expect(result.status).toBe(200);
         expect(result.data.precision).toBe('DECIMAL(19,4)');
       });
-      
+
       // Should complete 100 calculations in under 5 seconds (50ms per calculation)
       expect(duration).toBeLessThan(5000);
       console.log(`100 calculations completed in ${duration}ms (${duration/100}ms avg)`);
@@ -293,16 +293,16 @@ describe('Financial Precision Consolidation - Phase 2.4', () => {
         { amount: '0.0000', description: 'Zero value' },
         { amount: '1.0000', description: 'Whole number with decimals' }
       ];
-      
+
       for (const testCase of edgeCases) {
         const validation = await axios.post(`${RUST_ENGINE_URL}/api/v1/validate`, {
           amount: testCase.amount,
           currency: 'USD'
         });
-        
+
         expect(validation.data.is_valid).toBe(true);
         expect(validation.data.precision_check).toBe(true);
-        
+
         // Test round-trip precision
         const amount = new FinancialAmount(testCase.amount);
         expect(amount.toString()).toBe(testCase.amount);
@@ -317,7 +317,7 @@ async function verifyServiceHealth() {
     { name: 'Rust Financial Engine', url: `${RUST_ENGINE_URL}/health` },
     { name: 'AI Engine', url: `${AI_ENGINE_URL}/health` }
   ];
-  
+
   for (const service of services) {
     try {
       const response = await axios.get(service.url, { timeout: 5000 });

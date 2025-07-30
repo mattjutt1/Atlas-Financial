@@ -17,7 +17,7 @@ try:
     # Import atlas-shared configuration if available
     from config import (
         createConfig,
-        getServiceConfig, 
+        getServiceConfig,
         getEnvironment,
         getRequiredEnv,
         getOptionalEnv,
@@ -30,27 +30,27 @@ try:
 except ImportError as e:
     print(f"⚠️  Atlas-shared configuration not available: {e}")
     ATLAS_SHARED_AVAILABLE = False
-    
+
     # Fallback implementations
     def getEnvironment():
         env = os.getenv('NODE_ENV', os.getenv('ENVIRONMENT', 'development'))
         return env.lower() if env else 'development'
-    
+
     def getRequiredEnv(key: str) -> str:
         value = os.getenv(key)
         if not value:
             raise ValueError(f"Required environment variable {key} is not set")
         return value
-    
+
     def getOptionalEnv(key: str, fallback: str) -> str:
         return os.getenv(key, fallback)
-    
+
     def getBooleanEnv(key: str, fallback: bool = False) -> bool:
         value = os.getenv(key)
         if not value:
             return fallback
         return value.lower() in ['true', '1', 'yes', 'on']
-    
+
     def getNumberEnv(key: str, fallback: int) -> int:
         value = os.getenv(key)
         if not value:
@@ -64,17 +64,17 @@ class AtlasConfigBridge:
     """
     Configuration bridge that integrates with atlas-shared patterns
     """
-    
+
     def __init__(self, service_name: str = "ai-engine"):
         self.service_name = service_name
         self.environment = getEnvironment()
         self._atlas_config = self._load_atlas_config()
-        
+
     def _load_atlas_config(self) -> Optional[Dict[str, Any]]:
         """Load atlas-shared configuration if available"""
         if not ATLAS_SHARED_AVAILABLE:
             return None
-            
+
         try:
             # Get service-specific configuration from atlas-shared
             config = getServiceConfig(self.service_name, self.environment)
@@ -82,7 +82,7 @@ class AtlasConfigBridge:
         except Exception as e:
             print(f"⚠️  Failed to load atlas-shared config: {e}")
             return None
-    
+
     def get_api_config(self) -> Dict[str, Any]:
         """Get API configuration using atlas-shared patterns"""
         if self._atlas_config and 'api' in self._atlas_config:
@@ -107,7 +107,7 @@ class AtlasConfigBridge:
                     'window': 60000
                 }
             }
-    
+
     def get_auth_config(self) -> Dict[str, Any]:
         """Get authentication configuration using atlas-shared patterns"""
         if self._atlas_config and 'auth' in self._atlas_config:
@@ -128,7 +128,7 @@ class AtlasConfigBridge:
                 'token_expiry': getNumberEnv('JWT_TOKEN_EXPIRY', 3600),
                 'cookie_secure': self.environment == 'production'
             }
-    
+
     def get_monitoring_config(self) -> Dict[str, Any]:
         """Get monitoring configuration using atlas-shared patterns"""
         if self._atlas_config and 'monitoring' in self._atlas_config:
@@ -164,7 +164,7 @@ class AtlasConfigBridge:
                     'sample_rate': float(getOptionalEnv('TRACING_SAMPLE_RATE', '0.1'))
                 }
             }
-    
+
     def get_feature_flags(self) -> Dict[str, Any]:
         """Get feature flags using atlas-shared patterns"""
         if self._atlas_config and 'features' in self._atlas_config:
@@ -186,7 +186,7 @@ class AtlasConfigBridge:
                 'enable_metrics': getBooleanEnv('FEATURE_METRICS', True),
                 'enable_rate_limiting': getBooleanEnv('FEATURE_RATE_LIMITING', True)
             }
-    
+
     def get_database_config(self) -> Optional[Dict[str, Any]]:
         """Get database configuration using atlas-shared patterns"""
         if self._atlas_config and 'database' in self._atlas_config:
@@ -200,7 +200,7 @@ class AtlasConfigBridge:
         else:
             # Fallback - AI Engine should NOT have direct database access
             return None
-    
+
     def get_redis_config(self) -> Dict[str, Any]:
         """Get Redis configuration using atlas-shared patterns"""
         if self._atlas_config and 'redis' in self._atlas_config:
@@ -221,40 +221,40 @@ class AtlasConfigBridge:
                 'default_ttl': getNumberEnv('REDIS_DEFAULT_TTL', 3600),
                 'enabled': getBooleanEnv('REDIS_ENABLED', True)
             }
-    
+
     def validate_configuration(self) -> None:
         """Validate configuration for architectural compliance"""
         errors = []
-        
+
         # Ensure API gateway is configured (eliminates direct DB access)
         api_config = self.get_api_config()
         if not api_config['base_url']:
             errors.append("API_GATEWAY_URL is required for proper service boundaries")
-        
+
         # Ensure authentication is properly configured
         auth_config = self.get_auth_config()
         if not auth_config['jwt_secret']:
             errors.append("JWT_SECRET is required for authentication")
-        
+
         # Ensure database is NOT directly accessible (architectural violation)
         db_config = self.get_database_config()
         if db_config and db_config.get('url'):
             errors.append("⚠️  ARCHITECTURAL VIOLATION: AI Engine should not have direct database access")
-        
+
         # Production-specific validation
         if self.environment == 'production':
             monitoring_config = self.get_monitoring_config()
             if not monitoring_config['enabled']:
                 errors.append("Monitoring should be enabled in production")
-            
+
             features = self.get_feature_flags()
             if features['enable_debug_mode']:
                 errors.append("Debug mode should be disabled in production")
-        
+
         if errors:
             error_message = f"Configuration validation failed:\n" + "\n".join(f"  - {error}" for error in errors)
             raise ValueError(error_message)
-    
+
     def get_consolidated_config(self) -> Dict[str, Any]:
         """Get consolidated configuration for the AI Engine"""
         return {

@@ -3,7 +3,7 @@
  *
  * Eliminates IEEE 754 floating-point errors through comprehensive precision-first architecture
  * using Decimal.js for ALL financial calculations to achieve bank-grade precision (4 decimal places)
- * 
+ *
  * UNIFIED IMPLEMENTATION - Single source of truth for all Atlas Financial applications
  * Consolidates duplicate implementations from apps/web and provides enhanced functionality
  */

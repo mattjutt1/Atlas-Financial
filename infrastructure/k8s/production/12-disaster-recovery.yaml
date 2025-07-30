@@ -1,0 +1,658 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: disaster-recovery-test
+  namespace: atlas-ai-production
+  labels:
+    purpose: disaster-recovery
+    test-type: automated
+    security-tier: high
+spec:
+  template:
+    metadata:
+      labels:
+        purpose: disaster-recovery
+    spec:
+      serviceAccountName: disaster-recovery-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+      containers:
+      - name: dr-test-runner
+        image: atlas-financial/disaster-recovery:v1.0.0
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -euo pipefail
+          
+          echo "Starting Disaster Recovery Test..."
+          TEST_DATE=$(date +%Y-%m-%d-%H-%M-%S)
+          DR_REPORT="/tmp/dr-test-report-$TEST_DATE.json"
+          
+          # Initialize test report
+          cat > $DR_REPORT << EOF
+          {
+            "test_date": "$TEST_DATE",
+            "test_type": "automated_dr_validation",
+            "rto_target": "4h",
+            "rpo_target": "1h",
+            "tests": []
+          }
+          EOF
+          
+          # Test 1: Backup Integrity Validation
+          echo "Testing backup integrity..."
+          BACKUP_TEST_RESULT=$(aws s3 ls s3://atlas-ai-backups/ --recursive | wc -l)
+          if [ $BACKUP_TEST_RESULT -gt 0 ]; then
+            BACKUP_STATUS="PASS"
+            echo "✓ Backup integrity check passed ($BACKUP_TEST_RESULT files found)"
+          else
+            BACKUP_STATUS="FAIL"
+            echo "✗ Backup integrity check failed"
+          fi
+          
+          # Test 2: Database Connectivity Test
+          echo "Testing database connectivity..."
+          if pg_isready -h timescaledb.atlas-ai-production -p 5432 -U ai_features_user; then
+            DB_STATUS="PASS"
+            echo "✓ Database connectivity test passed"
+          else
+            DB_STATUS="FAIL"
+            echo "✗ Database connectivity test failed"
+          fi
+          
+          # Test 3: Redis Cluster Health Check
+          echo "Testing Redis cluster health..."
+          REDIS_NODES=$(kubectl exec -n atlas-ai-production redis-cluster-0 -- redis-cli cluster nodes | grep master | wc -l)
+          if [ $REDIS_NODES -ge 3 ]; then
+            REDIS_STATUS="PASS"
+            echo "✓ Redis cluster health check passed ($REDIS_NODES masters)"
+          else
+            REDIS_STATUS="FAIL"
+            echo "✗ Redis cluster health check failed ($REDIS_NODES masters)"
+          fi
+          
+          # Test 4: AI Services Health Check
+          echo "Testing AI services health..."
+          AI_HEALTHY=$(kubectl get pods -n atlas-ai-production -l tier=ai-services --no-headers | grep Running | wc -l)
+          AI_TOTAL=$(kubectl get pods -n atlas-ai-production -l tier=ai-services --no-headers | wc -l)
+          if [ $AI_HEALTHY -eq $AI_TOTAL ] && [ $AI_TOTAL -gt 0 ]; then
+            AI_STATUS="PASS"
+            echo "✓ AI services health check passed ($AI_HEALTHY/$AI_TOTAL healthy)"
+          else
+            AI_STATUS="FAIL"
+            echo "✗ AI services health check failed ($AI_HEALTHY/$AI_TOTAL healthy)"
+          fi
+          
+          # Test 5: Monitoring Stack Health
+          echo "Testing monitoring stack health..."
+          if curl -s http://prometheus.atlas-monitoring:9090/-/healthy > /dev/null; then
+            MONITORING_STATUS="PASS"
+            echo "✓ Monitoring stack health check passed"
+          else
+            MONITORING_STATUS="FAIL"
+            echo "✗ Monitoring stack health check failed"
+          fi
+          
+          # Test 6: Cross-Region Backup Availability
+          echo "Testing cross-region backup availability..."
+          CROSS_REGION_BACKUPS=$(aws s3 ls s3://atlas-ai-backups-dr/ --recursive | wc -l)
+          if [ $CROSS_REGION_BACKUPS -gt 0 ]; then
+            CROSS_REGION_STATUS="PASS"
+            echo "✓ Cross-region backup availability test passed ($CROSS_REGION_BACKUPS files)"
+          else
+            CROSS_REGION_STATUS="FAIL"
+            echo "✗ Cross-region backup availability test failed"
+          fi
+          
+          # Test 7: Network Connectivity Test
+          echo "Testing network connectivity..."
+          if ping -c 3 atlas-financial.com > /dev/null 2>&1; then
+            NETWORK_STATUS="PASS"
+            echo "✓ Network connectivity test passed"
+          else
+            NETWORK_STATUS="FAIL"
+            echo "✗ Network connectivity test failed"
+          fi
+          
+          # Test 8: SSL Certificate Validity
+          echo "Testing SSL certificate validity..."
+          CERT_EXPIRY=$(openssl s_client -connect ai.atlas-financial.com:443 -servername ai.atlas-financial.com 2>/dev/null | openssl x509 -noout -dates | grep notAfter | cut -d= -f2)
+          CERT_EXPIRY_EPOCH=$(date -d "$CERT_EXPIRY" +%s)
+          CURRENT_EPOCH=$(date +%s)
+          DAYS_UNTIL_EXPIRY=$(( (CERT_EXPIRY_EPOCH - CURRENT_EPOCH) / 86400 ))
+          
+          if [ $DAYS_UNTIL_EXPIRY -gt 30 ]; then
+            SSL_STATUS="PASS"
+            echo "✓ SSL certificate validity test passed ($DAYS_UNTIL_EXPIRY days remaining)"
+          else
+            SSL_STATUS="FAIL"
+            echo "✗ SSL certificate validity test failed ($DAYS_UNTIL_EXPIRY days remaining)"
+          fi
+          
+          # Update test report with results
+          cat > $DR_REPORT << EOF
+          {
+            "test_date": "$TEST_DATE",
+            "test_type": "automated_dr_validation",
+            "rto_target": "4h",
+            "rpo_target": "1h",
+            "overall_status": "$([ "$BACKUP_STATUS" = "PASS" ] && [ "$DB_STATUS" = "PASS" ] && [ "$REDIS_STATUS" = "PASS" ] && [ "$AI_STATUS" = "PASS" ] && [ "$MONITORING_STATUS" = "PASS" ] && [ "$CROSS_REGION_STATUS" = "PASS" ] && [ "$NETWORK_STATUS" = "PASS" ] && [ "$SSL_STATUS" = "PASS" ] && echo "PASS" || echo "FAIL")",
+            "tests": [
+              {
+                "name": "backup_integrity",
+                "status": "$BACKUP_STATUS",
+                "details": "Found $BACKUP_TEST_RESULT backup files"
+              },
+              {
+                "name": "database_connectivity",
+                "status": "$DB_STATUS",
+                "details": "TimescaleDB connection test"
+              },
+              {
+                "name": "redis_cluster_health",
+                "status": "$REDIS_STATUS",
+                "details": "$REDIS_NODES master nodes available"
+              },
+              {
+                "name": "ai_services_health",
+                "status": "$AI_STATUS",
+                "details": "$AI_HEALTHY/$AI_TOTAL services healthy"
+              },
+              {
+                "name": "monitoring_stack_health",
+                "status": "$MONITORING_STATUS",
+                "details": "Prometheus health check"
+              },
+              {
+                "name": "cross_region_backup_availability",
+                "status": "$CROSS_REGION_STATUS",
+                "details": "$CROSS_REGION_BACKUPS cross-region backup files"
+              },
+              {
+                "name": "network_connectivity",
+                "status": "$NETWORK_STATUS",
+                "details": "External network connectivity test"
+              },
+              {
+                "name": "ssl_certificate_validity",
+                "status": "$SSL_STATUS",
+                "details": "$DAYS_UNTIL_EXPIRY days until certificate expiry"
+              }
+            ],
+            "recommendations": [
+              "Schedule regular DR drills every quarter",
+              "Monitor backup retention policies",
+              "Validate cross-region replication",
+              "Test failover procedures"
+            ]
+          }
+          EOF
+          
+          # Upload test report
+          aws s3 cp $DR_REPORT s3://atlas-ai-reports/disaster-recovery/
+          
+          # Send alert if any tests failed
+          OVERALL_STATUS=$(cat $DR_REPORT | jq -r '.overall_status')
+          if [ "$OVERALL_STATUS" = "FAIL" ]; then
+            echo "ALERT: Disaster Recovery Test Failed!"
+            curl -X POST \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer $ALERT_WEBHOOK_TOKEN" \
+              -d @$DR_REPORT \
+              https://alerts.atlas-financial.com/api/v1/disaster-recovery
+          fi
+          
+          echo "Disaster Recovery Test completed with status: $OVERALL_STATUS"
+          cat $DR_REPORT | jq '.'
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: disaster-recovery-secrets
+              key: aws-access-key-id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: disaster-recovery-secrets
+              key: aws-secret-access-key
+        - name: AWS_DEFAULT_REGION
+          value: "us-east-1"
+        - name: ALERT_WEBHOOK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: disaster-recovery-secrets
+              key: alert-webhook-token
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 65534
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir:
+          sizeLimit: 1Gi
+      restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: disaster-recovery-test-schedule
+  namespace: atlas-ai-production
+  labels:
+    purpose: disaster-recovery
+    test-type: scheduled
+spec:
+  schedule: "0 6 * * 1"  # Weekly on Monday at 6 AM
+  successfulJobsHistoryLimit: 4
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            purpose: disaster-recovery
+        spec:
+          serviceAccountName: disaster-recovery-sa
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            fsGroup: 65534
+          containers:
+          - name: scheduled-dr-test
+            image: atlas-financial/disaster-recovery:v1.0.0
+            command:
+            - /bin/bash
+            - /scripts/disaster-recovery-test.sh
+            env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: disaster-recovery-secrets
+                  key: aws-access-key-id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: disaster-recovery-secrets
+                  key: aws-secret-access-key
+            - name: AWS_DEFAULT_REGION
+              value: "us-east-1"
+            - name: DR_SECONDARY_REGION
+              value: "us-west-2"
+            resources:
+              requests:
+                memory: "512Mi"
+                cpu: "250m"
+              limits:
+                memory: "1Gi"
+                cpu: "500m"
+            volumeMounts:
+            - name: dr-scripts
+              mountPath: /scripts
+              readOnly: true
+          volumes:
+          - name: dr-scripts
+            configMap:
+              name: disaster-recovery-scripts
+              defaultMode: 0755
+          restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: disaster-recovery-runbook
+  namespace: atlas-ai-production
+  labels:
+    purpose: disaster-recovery
+    security-tier: high
+data:
+  runbook.md: |
+    # Atlas AI Disaster Recovery Runbook
+    
+    ## Overview
+    This runbook provides step-by-step procedures for disaster recovery scenarios affecting Atlas AI services.
+    
+    ## Incident Classification
+    
+    ### Severity Levels
+    - **P0 (Critical)**: Complete service outage, data loss risk
+    - **P1 (High)**: Partial service outage, degraded performance
+    - **P2 (Medium)**: Service issues, workarounds available
+    - **P3 (Low)**: Minor issues, scheduled maintenance
+    
+    ## Recovery Procedures
+    
+    ### Scenario 1: Complete Data Center Outage
+    **RTO**: 4 hours | **RPO**: 1 hour
+    
+    1. **Immediate Actions (0-15 minutes)**
+       - Activate incident response team
+       - Assess scope and impact
+       - Communicate status to stakeholders
+       - Initiate cross-region failover
+    
+    2. **Infrastructure Recovery (15-60 minutes)**
+       ```bash
+       # Switch DNS to DR region
+       aws route53 change-resource-record-sets --hosted-zone-id Z123456789 --change-batch file://failover-dns.json
+       
+       # Deploy services in DR region
+       kubectl apply -f infrastructure/k8s/disaster-recovery/
+       
+       # Verify service health
+       kubectl get pods -n atlas-ai-production -o wide
+       ```
+    
+    3. **Data Recovery (60-180 minutes)**
+       ```bash
+       # Restore latest backups
+       ./scripts/restore-backup.sh features $(date -d '1 hour ago' +%Y-%m-%d-%H)
+       ./scripts/restore-backup.sh models $(date -d '1 hour ago' +%Y-%m-%d-%H)
+       ./scripts/restore-backup.sh redis $(date -d '1 hour ago' +%Y-%m-%d-%H)
+       ```
+    
+    4. **Service Validation (180-240 minutes)**
+       - Run health checks on all services
+       - Validate AI model integrity
+       - Test critical user workflows
+       - Monitor performance metrics
+    
+    ### Scenario 2: Database Corruption
+    **RTO**: 2 hours | **RPO**: 1 hour
+    
+    1. **Immediate Actions**
+       - Stop write operations to affected database
+       - Preserve current state for forensics
+       - Switch to read replicas for read operations
+    
+    2. **Recovery Process**
+       ```bash
+       # Restore from point-in-time backup
+       pg_restore -h timescaledb-dr.atlas-ai-production -U postgres -d features_recovery /backups/features_$(date -d '2 hours ago' +%Y-%m-%d-%H).dump
+       
+       # Validate data integrity
+       psql -h timescaledb-dr.atlas-ai-production -U postgres -d features_recovery -c "SELECT COUNT(*) FROM user_financial_features;"
+       
+       # Switch traffic to recovered database
+       kubectl patch deployment ai-engine -p '{"spec":{"template":{"spec":{"containers":[{"name":"ai-engine","env":[{"name":"POSTGRES_URL","value":"postgresql://timescaledb-dr.atlas-ai-production:5432/features_recovery"}]}]}}}}'
+       ```
+    
+    ### Scenario 3: AI Model Corruption
+    **RTO**: 1 hour | **RPO**: 24 hours
+    
+    1. **Immediate Actions**
+       - Switch to backup AI models
+       - Disable affected model endpoints
+    
+    2. **Recovery Process**
+       ```bash
+       # Download latest model backup
+       aws s3 sync s3://atlas-ai-backups/models/$(date -d '1 day ago' +%Y-%m-%d)/ /app/models/
+       
+       # Validate model integrity
+       python /scripts/validate-model.py --model-path /app/models/
+       
+       # Restart AI services with recovered models
+       kubectl rollout restart deployment/ai-engine -n atlas-ai-production
+       ```
+    
+    ## Contact Information
+    
+    ### Incident Response Team
+    - **Incident Commander**: oncall-commander@atlas-financial.com
+    - **Technical Lead**: oncall-tech@atlas-financial.com
+    - **Communications Lead**: oncall-comms@atlas-financial.com
+    
+    ### External Contacts
+    - **AWS Support**: +1-800-123-4567 (Premium Support)
+    - **Security Team**: security@atlas-financial.com
+    - **Legal/Compliance**: compliance@atlas-financial.com
+    
+    ## Post-Incident Procedures
+    
+    1. **Immediate Post-Recovery**
+       - Verify all services are operational
+       - Monitor for 24 hours post-recovery
+       - Document timeline and actions taken
+    
+    2. **Post-Incident Review**
+       - Schedule within 48 hours
+       - Identify root cause
+       - Document lessons learned
+       - Update runbooks and procedures
+    
+    3. **Follow-up Actions**
+       - Implement preventive measures
+       - Update monitoring and alerting
+       - Test recovery procedures
+       - Update disaster recovery plan
+  
+  recovery-scripts.sh: |
+    #!/bin/bash
+    set -euo pipefail
+    
+    # Atlas AI Disaster Recovery Scripts
+    
+    function log() {
+        echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
+    }
+    
+    function check_prerequisites() {
+        log "Checking disaster recovery prerequisites..."
+        
+        # Check AWS CLI
+        if ! command -v aws &> /dev/null; then
+            log "ERROR: AWS CLI not found"
+            exit 1
+        fi
+        
+        # Check kubectl
+        if ! command -v kubectl &> /dev/null; then
+            log "ERROR: kubectl not found"
+            exit 1
+        fi
+        
+        # Check required environment variables
+        if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
+            log "ERROR: AWS_ACCESS_KEY_ID not set"
+            exit 1
+        fi
+        
+        log "Prerequisites check passed"
+    }
+    
+    function initiate_failover() {
+        log "Initiating failover to disaster recovery region..."
+        
+        # Update DNS records
+        aws route53 change-resource-record-sets \
+            --hosted-zone-id "${DR_HOSTED_ZONE_ID}" \
+            --change-batch file:///config/failover-dns.json
+        
+        # Deploy DR infrastructure
+        kubectl apply -f /config/disaster-recovery/ --recursive
+        
+        # Wait for pods to be ready
+        kubectl wait --for=condition=ready pod -l tier=ai-services -n atlas-ai-production --timeout=600s
+        
+        log "Failover initiated successfully"
+    }
+    
+    function restore_data() {
+        local backup_type=$1
+        local backup_date=$2
+        
+        log "Restoring $backup_type data from $backup_date..."
+        
+        case $backup_type in
+            "features")
+                restore_feature_store $backup_date
+                ;;
+            "models")
+                restore_ai_models $backup_date
+                ;;
+            "redis")
+                restore_redis_data $backup_date
+                ;;
+            *)
+                log "ERROR: Unknown backup type $backup_type"
+                exit 1
+                ;;
+        esac
+        
+        log "$backup_type data restored successfully"
+    }
+    
+    function restore_feature_store() {
+        local backup_date=$1
+        local backup_file="features_$backup_date.sql.gz"
+        
+        aws s3 cp "s3://atlas-ai-backups-dr/features/$backup_file" /tmp/
+        gunzip "/tmp/$backup_file"
+        
+        psql -h timescaledb.atlas-ai-production -U ai_features_user -d features \
+            -f "/tmp/features_$backup_date.sql"
+        
+        rm "/tmp/features_$backup_date.sql"
+    }
+    
+    function restore_ai_models() {
+        local backup_date=$1
+        
+        aws s3 sync "s3://atlas-ai-backups-dr/models/$backup_date/" /app/models/
+        
+        # Validate model integrity
+        find /app/models -name "*.pkl" -exec python -c "import pickle; pickle.load(open('{}', 'rb'))" \;
+    }
+    
+    function restore_redis_data() {
+        local backup_date=$1
+        local backup_file="dump_$backup_date.rdb.lz4"
+        
+        aws s3 cp "s3://atlas-ai-backups-dr/redis/$backup_file" /tmp/
+        lz4 -d "/tmp/$backup_file" /tmp/dump.rdb
+        
+        kubectl exec -n atlas-ai-production redis-cluster-0 -- redis-cli FLUSHALL
+        kubectl cp /tmp/dump.rdb atlas-ai-production/redis-cluster-0:/data/dump.rdb
+        kubectl exec -n atlas-ai-production redis-cluster-0 -- redis-cli DEBUG RESTART
+        
+        rm /tmp/dump.rdb
+    }
+    
+    function validate_recovery() {
+        log "Validating disaster recovery..."
+        
+        # Check service health
+        local healthy_pods=$(kubectl get pods -n atlas-ai-production -l tier=ai-services --no-headers | grep Running | wc -l)
+        local total_pods=$(kubectl get pods -n atlas-ai-production -l tier=ai-services --no-headers | wc -l)
+        
+        if [[ $healthy_pods -eq $total_pods ]]; then
+            log "Service health validation passed ($healthy_pods/$total_pods healthy)"
+        else
+            log "ERROR: Service health validation failed ($healthy_pods/$total_pods healthy)"
+            exit 1
+        fi
+        
+        # Test API endpoints
+        if curl -f -s http://ai-engine-service.atlas-ai-production:8083/health > /dev/null; then
+            log "API health check passed"
+        else
+            log "ERROR: API health check failed"
+            exit 1
+        fi
+        
+        log "Disaster recovery validation completed successfully"
+    }
+    
+    # Main execution
+    case ${1:-""} in
+        "check")
+            check_prerequisites
+            ;;
+        "failover")
+            check_prerequisites
+            initiate_failover
+            ;;
+        "restore")
+            check_prerequisites
+            restore_data "$2" "$3"
+            ;;
+        "validate")
+            validate_recovery
+            ;;
+        *)
+            echo "Usage: $0 {check|failover|restore|validate} [backup_type] [backup_date]"
+            exit 1
+            ;;
+    esac
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: disaster-recovery-sa
+  namespace: atlas-ai-production
+  labels:
+    purpose: disaster-recovery
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: disaster-recovery-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets", "persistentvolumes", "persistentvolumeclaims"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets", "daemonsets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses", "networkpolicies"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch", "create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: disaster-recovery-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: disaster-recovery-role
+subjects:
+- kind: ServiceAccount
+  name: disaster-recovery-sa
+  namespace: atlas-ai-production
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: disaster-recovery-secrets
+  namespace: atlas-ai-production
+  labels:
+    purpose: disaster-recovery
+    security-tier: critical
+type: Opaque
+stringData:
+  aws-access-key-id: "${DR_AWS_ACCESS_KEY_ID}"
+  aws-secret-access-key: "${DR_AWS_SECRET_ACCESS_KEY}"
+  alert-webhook-token: "${DR_ALERT_WEBHOOK_TOKEN}"
+  dr-hosted-zone-id: "${DR_HOSTED_ZONE_ID}"

@@ -47,7 +47,7 @@ class AtlasApiClient:
     - Provides service boundary isolation
     """
 
-    def __init__(self, 
+    def __init__(self,
                  base_url: str = None,
                  auth_token: str = None,
                  timeout: int = 30):
@@ -55,8 +55,8 @@ class AtlasApiClient:
         self.auth_token = auth_token
         self.timeout = timeout
         self.session: Optional[aiohttp.ClientSession] = None
-        
-        logger.info("Initializing Atlas API Client", 
+
+        logger.info("Initializing Atlas API Client",
                    base_url=self.base_url,
                    has_auth_token=bool(auth_token))
 
@@ -78,9 +78,9 @@ class AtlasApiClient:
                 ttl_dns_cache=300,
                 use_dns_cache=True,
             )
-            
+
             timeout = aiohttp.ClientTimeout(total=self.timeout)
-            
+
             self.session = aiohttp.ClientSession(
                 connector=connector,
                 timeout=timeout,
@@ -120,12 +120,12 @@ class AtlasApiClient:
             config = RequestConfig()
 
         await self._ensure_session()
-        
+
         url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
         headers = self._prepare_headers(config.require_auth)
 
         last_exception = None
-        
+
         for attempt in range(config.retries + 1):
             try:
                 logger.debug("Making API request",
@@ -141,7 +141,7 @@ class AtlasApiClient:
                     params=params,
                     headers=headers
                 ) as response:
-                    
+
                     # Handle specific HTTP status codes
                     if response.status == 401:
                         error_data = await self._safe_json_response(response)
@@ -149,21 +149,21 @@ class AtlasApiClient:
                             error_data.get('message', 'Authentication failed'),
                             metadata={'status_code': response.status, 'url': url}
                         )
-                    
+
                     elif response.status == 403:
                         error_data = await self._safe_json_response(response)
                         raise AuthorizationError(
                             error_data.get('message', 'Access denied'),
                             metadata={'status_code': response.status, 'url': url}
                         )
-                    
+
                     elif response.status == 404:
                         raise NotFoundError(
                             'endpoint',
                             endpoint,
                             metadata={'status_code': response.status, 'url': url}
                         )
-                    
+
                     elif response.status == 429:
                         retry_after = response.headers.get('Retry-After', '60')
                         raise RateLimitError(
@@ -172,7 +172,7 @@ class AtlasApiClient:
                             retryAfter=int(retry_after),
                             metadata={'status_code': response.status, 'url': url}
                         )
-                    
+
                     elif response.status >= 500:
                         error_data = await self._safe_json_response(response)
                         raise ExternalServiceError(
@@ -180,7 +180,7 @@ class AtlasApiClient:
                             error_data.get('message', f'Server error: {response.status}'),
                             metadata={'status_code': response.status, 'url': url}
                         )
-                    
+
                     elif response.status >= 400:
                         error_data = await self._safe_json_response(response)
                         raise AtlasError(
@@ -195,13 +195,13 @@ class AtlasApiClient:
 
                     # Success response
                     response_data = await self._safe_json_response(response)
-                    
+
                     logger.info("API request successful",
                               method=method,
                               url=url,
                               status_code=response.status,
                               attempt=attempt + 1)
-                    
+
                     return response_data
 
             except (aiohttp.ClientTimeout, asyncio.TimeoutError) as e:
@@ -209,18 +209,18 @@ class AtlasApiClient:
                     config.timeout * 1000,
                     metadata={'url': url, 'attempt': attempt + 1}
                 )
-                
+
             except (aiohttp.ClientError, OSError) as e:
                 last_exception = ExternalServiceError(
                     'api-gateway',
                     f'Network error: {str(e)}',
                     metadata={'url': url, 'attempt': attempt + 1}
                 )
-            
+
             except AtlasError:
                 # Re-raise AtlasErrors immediately
                 raise
-                
+
             except Exception as e:
                 last_exception = handleError(e, f"API request to {url}")
 
@@ -239,7 +239,7 @@ class AtlasApiClient:
                     method=method,
                     url=url,
                     attempts=config.retries + 1)
-        
+
         if last_exception:
             raise last_exception
         else:
@@ -285,8 +285,8 @@ class AtlasApiClient:
         )
         return response.get('accounts', [])
 
-    async def get_user_transactions(self, 
-                                  user_id: str, 
+    async def get_user_transactions(self,
+                                  user_id: str,
                                   limit: int = 100,
                                   offset: int = 0) -> List[Dict[str, Any]]:
         """Get user's transactions through API gateway"""

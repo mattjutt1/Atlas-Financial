@@ -22,9 +22,9 @@ FAILED_CRITERIA=()
 validate_criterion() {
     local criterion="$1"
     local test_command="$2"
-    
+
     echo -e "\n${BLUE}Testing: $criterion${NC}"
-    
+
     if eval "$test_command"; then
         echo -e "${GREEN}✅ PASSED: $criterion${NC}"
         SUCCESS_CRITERIA+=("$criterion")

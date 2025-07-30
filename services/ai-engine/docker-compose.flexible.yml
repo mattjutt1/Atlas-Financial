@@ -1,0 +1,471 @@
+version: '3.8'
+
+services:
+  # AI Engine Core Service
+  ai-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile.flexible
+    container_name: atlas-ai-engine
+    ports:
+      - "8083:8083"
+      - "9090:9090"  # Metrics port
+    environment:
+      # Core configuration
+      - AI_DEPLOYMENT_MODE=${AI_DEPLOYMENT_MODE:-monolithic}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      
+      # Database connections
+      - REDIS_URL=redis://redis:6379
+      - POSTGRES_CONNECTION_URI=postgresql://atlas_user:atlas_password@postgres:5432/atlas_financial
+      
+      # Authentication
+      - SUPERTOKENS_CONNECTION_URI=http://supertokens:3567
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-secret-key}
+      
+      # Model endpoints (configurable based on deployment mode)
+      - MONOLITHIC_MODEL_ENDPOINT=${MONOLITHIC_MODEL_ENDPOINT:-http://monolithic-model:8080}
+      - SUPERVISOR_ENDPOINT=${SUPERVISOR_ENDPOINT:-http://supervisor-agent:8080}
+      - BUDGET_AGENT_ENDPOINT=${BUDGET_AGENT_ENDPOINT:-http://budget-agent:8080}
+      - INVESTMENT_AGENT_ENDPOINT=${INVESTMENT_AGENT_ENDPOINT:-http://investment-agent:8080}
+      - DEBT_AGENT_ENDPOINT=${DEBT_AGENT_ENDPOINT:-http://debt-agent:8080}
+      - MARKET_AGENT_ENDPOINT=${MARKET_AGENT_ENDPOINT:-http://market-agent:8080}
+      - GOAL_AGENT_ENDPOINT=${GOAL_AGENT_ENDPOINT:-http://goal-agent:8080}
+      
+      # Performance tuning
+      - MAX_CONCURRENT_REQUESTS=${MAX_CONCURRENT_REQUESTS:-100}
+      - REQUEST_TIMEOUT_MS=${REQUEST_TIMEOUT_MS:-10000}
+      - CONTEXT_CACHE_TTL=${CONTEXT_CACHE_TTL:-3600}
+      
+      # Security
+      - ENABLE_RATE_LIMITING=${ENABLE_RATE_LIMITING:-true}
+      - RATE_LIMIT_RPM=${RATE_LIMIT_RPM:-100}
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
+      
+      # Monitoring
+      - ENABLE_PROMETHEUS=${ENABLE_PROMETHEUS:-true}
+      - ENABLE_TRACING=${ENABLE_TRACING:-true}
+      - METRICS_PORT=9090
+      
+      # A/B Testing
+      - AB_TESTING_ENABLED=${AB_TESTING_ENABLED:-false}
+      - AB_MONOLITHIC_TRAFFIC=${AB_MONOLITHIC_TRAFFIC:-0.5}
+      - AB_MULTI_AGENT_TRAFFIC=${AB_MULTI_AGENT_TRAFFIC:-0.5}
+    
+    volumes:
+      - ./config:/app/config:ro
+      - ai_models:/models:ro
+    
+    depends_on:
+      - redis
+      - postgres
+      - supertokens
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    networks:
+      - atlas-network
+    
+    restart: unless-stopped
+
+  # Monolithic Model Service (when AI_DEPLOYMENT_MODE=monolithic or hybrid)
+  monolithic-model:
+    image: atlas/monolithic-model:latest
+    container_name: atlas-monolithic-model
+    profiles:
+      - monolithic
+      - hybrid
+    ports:
+      - "8080:8080"
+    environment:
+      - MODEL_PATH=/models/atlas-financial-3b
+      - MAX_BATCH_SIZE=32
+      - GPU_MEMORY_FRACTION=0.8
+      - WORKER_TIMEOUT=30
+    volumes:
+      - ai_models:/models:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - atlas-network
+    restart: unless-stopped
+
+  # Supervisor Agent (when AI_DEPLOYMENT_MODE=multi_agent or hybrid)
+  supervisor-agent:
+    image: atlas/supervisor-agent:latest
+    container_name: atlas-supervisor-agent
+    profiles:
+      - multi-agent
+      - hybrid
+    ports:
+      - "8081:8080"
+    environment:
+      - MODEL_PATH=/models/atlas-supervisor-7b
+      - MAX_AGENTS_PER_REQUEST=5
+      - COORDINATION_STRATEGY=parallel_execution
+      - QUALITY_THRESHOLD=0.85
+      - WORKER_DISCOVERY_ENDPOINT=http://ai-engine:8083/ai/admin/backends
+    volumes:
+      - ai_models:/models:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - atlas-network
+    restart: unless-stopped
+
+  # Budget Optimization Agent
+  budget-agent:
+    image: atlas/budget-agent:latest
+    container_name: atlas-budget-agent
+    profiles:
+      - multi-agent
+      - hybrid
+    environment:
+      - MODEL_PATH=/models/atlas-budget-800m
+      - SPECIALIZATION_FOCUS=spending_analysis
+      - ANOMALY_DETECTION_SENSITIVITY=0.8
+      - CATEGORY_OPTIMIZATION=true
+    volumes:
+      - ai_models:/models:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+        limits:
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+    networks:
+      - atlas-network
+    restart: unless-stopped
+
+  # Investment Analysis Agent
+  investment-agent:
+    image: atlas/investment-agent:latest
+    container_name: atlas-investment-agent
+    profiles:
+      - multi-agent
+      - hybrid
+    environment:
+      - MODEL_PATH=/models/atlas-investment-800m
+      - PORTFOLIO_ANALYSIS_DEPTH=comprehensive
+      - RISK_MODELING=monte_carlo
+      - REBALANCING_FREQUENCY=monthly
+    volumes:
+      - ai_models:/models:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+        limits:
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+    networks:
+      - atlas-network
+    restart: unless-stopped
+
+  # Debt Strategy Agent
+  debt-agent:
+    image: atlas/debt-agent:latest
+    container_name: atlas-debt-agent
+    profiles:
+      - multi-agent
+      - hybrid
+    environment:
+      - MODEL_PATH=/models/atlas-debt-600m
+      - STRATEGY_OPTIMIZATION=interest_minimization
+      - CONSOLIDATION_ANALYSIS=true
+      - PAYMENT_PLANNING_HORIZON=60
+    volumes:
+      - ai_models:/models:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+        limits:
+          memory: 1.5G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+    networks:
+      - atlas-network
+    restart: unless-stopped
+
+  # Market Intelligence Agent
+  market-agent:
+    image: atlas/market-agent:latest
+    container_name: atlas-market-agent
+    profiles:
+      - multi-agent
+      - hybrid
+    environment:
+      - MODEL_PATH=/models/atlas-market-800m
+      - REAL_TIME_PROCESSING=true
+      - ALERT_GENERATION=true
+      - TREND_ANALYSIS_WINDOW=30d
+      - CORRELATION_ANALYSIS=true
+      - MARKET_DATA_STREAM_URL=${MARKET_DATA_STREAM_URL:-ws://market-data:8080/stream}
+    volumes:
+      - ai_models:/models:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+        limits:
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+    networks:
+      - atlas-network
+    restart: unless-stopped
+
+  # Goal Planning Agent
+  goal-agent:
+    image: atlas/goal-agent:latest
+    container_name: atlas-goal-agent
+    profiles:
+      - multi-agent
+      - hybrid
+    environment:
+      - MODEL_PATH=/models/atlas-goal-600m
+      - TIMELINE_OPTIMIZATION=true
+      - MILESTONE_TRACKING=true
+      - ADAPTIVE_PLANNING=true
+      - RISK_ADJUSTMENT=dynamic
+    volumes:
+      - ai_models:/models:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+        limits:
+          memory: 1.5G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+    networks:
+      - atlas-network
+    restart: unless-stopped
+
+  # Infrastructure Dependencies (shared across all modes)
+  redis:
+    image: redis:7.2-alpine
+    container_name: atlas-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./infrastructure/docker/data-platform/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - atlas-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15.4-alpine
+    container_name: atlas-postgres
+    environment:
+      - POSTGRES_DB=atlas_financial
+      - POSTGRES_USER=atlas_user
+      - POSTGRES_PASSWORD=atlas_password
+      - POSTGRES_MULTIPLE_DATABASES=atlas_core,atlas_auth,atlas_supertokens
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/data-platform/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atlas_user -d atlas_financial"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - atlas-network
+    restart: unless-stopped
+
+  supertokens:
+    image: registry.supertokens.io/supertokens/supertokens-postgresql:7.0
+    container_name: atlas-supertokens
+    environment:
+      - POSTGRESQL_CONNECTION_URI=postgresql://atlas_user:atlas_password@postgres:5432/atlas_supertokens
+      - API_KEYS=${SUPERTOKENS_API_KEY:-your-supertokens-api-key}
+    ports:
+      - "3567:3567"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3567/hello"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - atlas-network
+    restart: unless-stopped
+
+  # Monitoring Stack
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: atlas-prometheus
+    profiles:
+      - monitoring
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./infrastructure/docker/prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infrastructure/docker/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - atlas-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: atlas-grafana
+    profiles:
+      - monitoring
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./infrastructure/docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - atlas-network
+    restart: unless-stopped
+
+  # Model Registry (for managing model versions and deployments)
+  model-registry:
+    image: atlas/model-registry:latest
+    container_name: atlas-model-registry
+    profiles:
+      - model-management
+    ports:
+      - "8084:8080"
+    environment:
+      - DATABASE_URL=postgresql://atlas_user:atlas_password@postgres:5432/atlas_models
+      - MODEL_STORAGE_PATH=/models
+      - REGISTRY_MODE=production
+    volumes:
+      - ai_models:/models
+      - model_metadata:/app/metadata
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - atlas-network
+    restart: unless-stopped
+
+volumes:
+  ai_models:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${AI_MODELS_PATH:-./models}
+  
+  redis_data:
+    driver: local
+  
+  postgres_data:
+    driver: local
+  
+  prometheus_data:
+    driver: local
+  
+  grafana_data:
+    driver: local
+  
+  model_metadata:
+    driver: local
+
+networks:
+  atlas-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

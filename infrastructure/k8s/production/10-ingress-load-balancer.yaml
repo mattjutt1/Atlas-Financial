@@ -1,0 +1,359 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ai-services-ingress
+  namespace: atlas-ai-production
+  labels:
+    app: ai-services-ingress
+    tier: networking
+    security-tier: high
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/client-body-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
+    # Rate limiting
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/rate-limit-connections: "10"
+    # Security headers
+    nginx.ingress.kubernetes.io/server-snippet: |
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+      add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self'; object-src 'none'; media-src 'self'; frame-src 'none';" always;
+      add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+    # Request/Response buffering
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "8k"
+    nginx.ingress.kubernetes.io/proxy-buffers-number: "8"
+    # Load balancing
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$binary_remote_addr"
+    # Custom error pages
+    nginx.ingress.kubernetes.io/custom-http-errors: "404,500,502,503,504"
+spec:
+  tls:
+  - hosts:
+    - ai.atlas-financial.com
+    - api.atlas-financial.com
+    secretName: atlas-ai-tls-cert
+  rules:
+  - host: ai.atlas-financial.com
+    http:
+      paths:
+      # AI Engine endpoints
+      - path: /api/v2/ai/insights
+        pathType: Prefix
+        backend:
+          service:
+            name: ai-engine-service
+            port:
+              number: 8083
+      - path: /api/v2/ai/models
+        pathType: Prefix
+        backend:
+          service:
+            name: ai-engine-service
+            port:
+              number: 8083
+      - path: /api/v2/ai/budget-check
+        pathType: Prefix
+        backend:
+          service:
+            name: ai-engine-service
+            port:
+              number: 8083
+      - path: /api/v2/ai/debt-snowball
+        pathType: Prefix
+        backend:
+          service:
+            name: ai-engine-service
+            port:
+              number: 8083
+      - path: /api/v2/ai/portfolio-analysis
+        pathType: Prefix
+        backend:
+          service:
+            name: ai-engine-service
+            port:
+              number: 8083
+      # Market Data Service endpoints
+      - path: /api/v2/market-data
+        pathType: Prefix
+        backend:
+          service:
+            name: market-data-service
+            port:
+              number: 4000
+      - path: /ws/market-data
+        pathType: Prefix
+        backend:
+          service:
+            name: market-data-service
+            port:
+              number: 4001
+      # A/B Testing Service endpoints
+      - path: /api/v2/experiments
+        pathType: Prefix
+        backend:
+          service:
+            name: ab-testing-service
+            port:
+              number: 8085
+      # Health check endpoints (publicly accessible)
+      - path: /health
+        pathType: Prefix
+        backend:
+          service:
+            name: ai-engine-service
+            port:
+              number: 8083
+  - host: api.atlas-financial.com
+    http:
+      paths:
+      # API Gateway for AI services (alternative domain)
+      - path: /ai
+        pathType: Prefix
+        backend:
+          service:
+            name: ai-engine-service
+            port:
+              number: 8083
+      - path: /market-data
+        pathType: Prefix
+        backend:
+          service:
+            name: market-data-service
+            port:
+              number: 4000
+      - path: /experiments
+        pathType: Prefix
+        backend:
+          service:
+            name: ab-testing-service
+            port:
+              number: 8085
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-ingress-controller
+  namespace: ingress-nginx
+  labels:
+    app: nginx-ingress-controller
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
+    service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "60"
+    service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: "*"
+    external-dns.alpha.kubernetes.io/hostname: "ai.atlas-financial.com,api.atlas-financial.com"
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  selector:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/component: controller
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: https
+    protocol: TCP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-configuration
+  namespace: ingress-nginx
+  labels:
+    app: nginx-ingress-controller
+data:
+  # Basic configuration
+  worker-processes: "auto"
+  worker-connections: "10240"
+  worker-rlimit-nofile: "65536"
+  
+  # Performance tuning
+  keepalive-requests: "10000"
+  keepalive-timeout: "75"
+  client-body-buffer-size: "1m"
+  client-header-buffer-size: "1k"
+  large-client-header-buffers: "4 8k"
+  
+  # Security settings
+  server-tokens: "false"
+  hide-headers: "Server,X-Powered-By"
+  ssl-protocols: "TLSv1.2 TLSv1.3"
+  ssl-ciphers: "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256"
+  ssl-prefer-server-ciphers: "true"
+  ssl-session-cache: "shared:SSL:10m"
+  ssl-session-timeout: "10m"
+  
+  # Rate limiting
+  rate-limit-rpm: "100"
+  connections-per-ip-limit: "10"
+  
+  # Logging
+  access-log-path: "/var/log/nginx/access.log"
+  error-log-path: "/var/log/nginx/error.log"
+  log-format-json: "true"
+  log-format-upstream: '{"timestamp":"$time_iso8601","remote_addr":"$remote_addr","x_forwarded_for":"$http_x_forwarded_for","request_id":"$req_id","remote_user":"$remote_user","bytes_sent":$bytes_sent,"request_time":$request_time,"status":$status,"vhost":"$server_name","request_proto":"$server_protocol","path":"$uri","request_query":"$args","request_length":$request_length,"duration":$request_time,"method":"$request_method","http_referrer":"$http_referer","http_user_agent":"$http_user_agent","upstream_addr":"$upstream_addr","upstream_response_length":$upstream_response_length,"upstream_response_time":$upstream_response_time,"upstream_status":"$upstream_status"}'
+  
+  # Custom error pages
+  custom-http-errors: "404,500,502,503,504"
+  
+  # Compression
+  enable-gzip: "true"
+  gzip-types: "text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript application/x-javascript"
+  gzip-level: "6"
+  
+  # Proxy settings
+  proxy-connect-timeout: "300"
+  proxy-send-timeout: "300"
+  proxy-read-timeout: "300"
+  proxy-body-size: "50m"
+  proxy-buffer-size: "8k"
+  proxy-buffers-number: "8"
+  
+  # Health checks
+  upstream-keepalive-connections: "32"
+  upstream-keepalive-requests: "100"
+  upstream-keepalive-timeout: "60"
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+  labels:
+    security-tier: high
+spec:
+  acme:
+    email: security@atlas-financial.com
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-prod-private-key
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+    - dns01:
+        route53:
+          region: us-east-1
+          accessKeyID: "${AWS_ACCESS_KEY_ID}"
+          secretAccessKeySecretRef:
+            name: aws-route53-credentials
+            key: secret-access-key
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: custom-error-pages
+  namespace: ingress-nginx
+  labels:
+    app: nginx-ingress-controller
+data:
+  "404": |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Atlas Financial - Page Not Found</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
+            .container { max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            h1 { color: #333; font-size: 48px; margin-bottom: 20px; }
+            p { color: #666; font-size: 18px; line-height: 1.6; }
+            .logo { width: 200px; margin-bottom: 30px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>404</h1>
+            <p>The AI service endpoint you're looking for could not be found.</p>
+            <p>Please check the URL or contact support if you believe this is an error.</p>
+        </div>
+    </body>
+    </html>
+  
+  "500": |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Atlas Financial - Service Error</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
+            .container { max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            h1 { color: #e74c3c; font-size: 48px; margin-bottom: 20px; }
+            p { color: #666; font-size: 18px; line-height: 1.6; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>500</h1>
+            <p>Our AI services are experiencing technical difficulties.</p>
+            <p>Our team has been notified and is working to resolve the issue.</p>
+            <p>Please try again in a few minutes.</p>
+        </div>
+    </body>
+    </html>
+  
+  "502": |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Atlas Financial - Service Unavailable</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
+            .container { max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            h1 { color: #f39c12; font-size: 48px; margin-bottom: 20px; }
+            p { color: #666; font-size: 18px; line-height: 1.6; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>502</h1>
+            <p>AI services are temporarily unavailable.</p>
+            <p>We're working to restore service as quickly as possible.</p>
+        </div>
+    </body>
+    </html>
+  
+  "503": |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Atlas Financial - Maintenance Mode</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
+            .container { max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            h1 { color: #3498db; font-size: 48px; margin-bottom: 20px; }
+            p { color: #666; font-size: 18px; line-height: 1.6; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>503</h1>
+            <p>AI services are undergoing scheduled maintenance.</p>
+            <p>We'll be back online shortly. Thank you for your patience.</p>
+        </div>
+    </body>
+    </html>

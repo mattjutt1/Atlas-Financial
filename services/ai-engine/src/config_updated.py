@@ -14,7 +14,7 @@ from enum import Enum
 try:
     # This would be available when properly integrated with atlas-shared
     from atlas_shared.config import (
-        getServiceConfig, 
+        getServiceConfig,
         getEnvironment,
         getRequiredEnv,
         getOptionalEnv,
@@ -26,26 +26,26 @@ try:
 except ImportError:
     # Fallback implementations for local development
     HAS_ATLAS_SHARED = False
-    
+
     def getEnvironment():
         env = os.getenv('NODE_ENV', os.getenv('ENVIRONMENT', 'development'))
         return env.lower() if env else 'development'
-    
+
     def getRequiredEnv(key: str) -> str:
         value = os.getenv(key)
         if not value:
             raise ValueError(f"Required environment variable {key} is not set")
         return value
-    
+
     def getOptionalEnv(key: str, fallback: str) -> str:
         return os.getenv(key, fallback)
-    
+
     def getBooleanEnv(key: str, fallback: bool = False) -> bool:
         value = os.getenv(key)
         if not value:
             return fallback
         return value.lower() in ['true', '1', 'yes', 'on']
-    
+
     def getNumberEnv(key: str, fallback: int) -> int:
         value = os.getenv(key)
         if not value:
@@ -72,7 +72,7 @@ class AIModelConfig:
     honesty_level: HonestyLevel
     include_tough_love: bool
 
-@dataclass 
+@dataclass
 class ProcessingConfig:
     """Processing and performance configuration"""
     max_concurrent_requests: int
@@ -105,7 +105,7 @@ class Settings(BaseSettings):
     app_name: str = "Atlas Financial AI Engine"
     version: str = "1.2.0"  # Updated version for architectural alignment
     service_name: str = "ai-engine"
-    
+
     # Environment configuration using atlas-shared patterns
     environment: str = Field(default_factory=getEnvironment)
     debug: bool = Field(default_factory=lambda: getBooleanEnv("DEBUG", False))
@@ -113,18 +113,18 @@ class Settings(BaseSettings):
 
     # API Gateway configuration (NEW - replaces direct DB access)
     api_gateway_url: str = Field(default_factory=lambda: getOptionalEnv(
-        "API_GATEWAY_URL", 
+        "API_GATEWAY_URL",
         "http://atlas-api-gateway:8080"
     ))
     api_timeout: int = Field(default_factory=lambda: getNumberEnv("API_TIMEOUT", 30))
-    
+
     # Authentication configuration using atlas-shared patterns
     jwt_secret_key: str = Field(default_factory=lambda: getRequiredEnv("JWT_SECRET"))
     supertokens_core_url: str = Field(default_factory=lambda: getOptionalEnv(
         "SUPERTOKENS_CORE_URL",
         "http://atlas-core:3567"
     ))
-    
+
     # Legacy Hasura configuration (for backwards compatibility)
     hasura_endpoint: str = Field(default_factory=lambda: getOptionalEnv(
         "HASURA_ENDPOINT",
@@ -289,7 +289,7 @@ class Settings(BaseSettings):
         if self.is_production():
             if self.debug:
                 errors.append("DEBUG mode should be disabled in production")
-            
+
             if not self.enable_metrics:
                 errors.append("Metrics should be enabled in production")
 
